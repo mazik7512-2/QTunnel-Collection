@@ -4,7 +4,6 @@
 #include <vector>
 #include <array>
 #include <memory>
-#include <bitset>
 
 
 namespace QVPN {
@@ -12,15 +11,6 @@ namespace QVPN {
 	{
 		namespace DataStructures {
 
-
-			class Adapter;
-
-			template<class EndianessPacketLike>
-			concept is_adapter_criteria =
-				requires (EndianessPacketLike t) {
-					{ true };
-					{ t.check_criteria(std::declval<const Adapter&>()) } -> std::same_as<bool>;
-			};
 
 			using Byte = char;
 			using UByte = unsigned char;
@@ -42,6 +32,7 @@ namespace QVPN {
 				Ipv6ManagedAddressConfigurationSupported = 0x200
 			};
 
+			template <class AdapterHandle>
 			class Adapter final {
 			private:
 				std::string adapter_name;
@@ -50,56 +41,171 @@ namespace QVPN {
 				std::vector<Byte> PhysAdress;
 				ULong Flags = 0;
 				ULong Mtu = 0;
+				AdapterHandle handle;
 
 			public:
 
-				Adapter();
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname);
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu);
-				Adapter(const Byte* begin, const Byte* end);
+				Adapter()
+				{
+					PhysAdress.reserve(10);
+				}
 
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, const Byte* begin, const Byte* end);
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu, const Byte* begin, const Byte* end);
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu, std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end);
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname)
+				{
+					PhysAdress.reserve(10);
+				}
 
-				void set_data(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu);
-				void set_name(std::string_view a_name);
-				void set_desc(std::string_view a_desc);
-				void set_friendly_name(std::string_view a_fname);
-				void set_phys_addr(std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end);
-				void set_phys_addr(const Byte* begin, const Byte* end);
-				void set_phys_addr(std::unique_ptr<Byte> begin, std::unique_ptr<Byte> end);
-				void set_flags(ULong flags);
-				void set_mtu(ULong mtu);
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
+				{
+					PhysAdress.reserve(10);
+				}
+
+				Adapter(const Byte* begin, const Byte* end)
+					: QVPN::Core::DataStructures::Adapter::Adapter()
+				{
+					PhysAdress.insert(PhysAdress.cend(), begin, end);
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, const Byte* begin, const Byte* end)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname)
+				{
+					PhysAdress.reserve(10);
+					PhysAdress.insert(PhysAdress.cend(), begin, end);
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu, const Byte* begin, const Byte* end)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
+				{
+					PhysAdress.reserve(10);
+					PhysAdress.insert(PhysAdress.cend(), begin, end);
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu, std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
+				{
+					PhysAdress.reserve(10);
+					PhysAdress.insert(PhysAdress.cend(), begin, end);
+				}
+
+				void set_data(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu)
+				{
+					adapter_name = a_name;
+					adapter_desc = a_desc;
+					friendly_name = a_fname;
+					Flags = flags;
+					Mtu = mtu;
+				}
+
+				void set_name(std::string_view a_name)
+				{
+					adapter_name = a_name;
+				}
+
+				void set_desc(std::string_view a_desc)
+				{
+					adapter_desc = a_desc;
+				}
+
+				void set_friendly_name(std::string_view a_fname)
+				{
+					friendly_name = a_fname;
+				}
+
+				void set_phys_addr(std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end)
+				{
+					PhysAdress.clear();
+					PhysAdress.insert(PhysAdress.end(), begin, end);
+				}
+
+				void set_phys_addr(const Byte* begin, const Byte* end)
+				{
+					PhysAdress.clear();
+					PhysAdress.insert(PhysAdress.end(), begin, end);
+				}
+
+				void set_phys_addr(std::unique_ptr<Byte> begin, std::unique_ptr<Byte> end)
+				{
+					PhysAdress.clear();
+					PhysAdress.insert(PhysAdress.end(), begin.get(), end.get());
+				}
+
+				void set_flags(ULong flags)
+				{
+					Flags = flags;
+				}
+
+				void set_mtu(ULong mtu)
+				{
+					Mtu = mtu;
+				}
 
 
-				std::string_view get_name() const;
-				std::string_view get_desc() const;
-				std::string_view get_friendly_name() const;
-				std::pair<std::vector<Byte>::const_iterator, std::vector<Byte>::const_iterator> get_phys_addr() const;
-				ULong get_flags() const;
-				ULong get_mtu() const;
-				ULong get_flag(AdapterFlags flag) const;
+				std::string_view get_name() const
+				{
+					return adapter_name;
+				}
 
-				~Adapter();
+				std::string_view get_desc() const
+				{
+					return adapter_desc;
+				}
+
+				std::string_view get_friendly_name() const
+				{
+					return friendly_name;
+				}
+
+				std::pair<std::vector<Byte>::const_iterator, std::vector<Byte>::const_iterator> get_phys_addr() const
+				{
+					return std::make_pair<>(PhysAdress.cbegin(), PhysAdress.cend());
+				}
+
+				ULong get_flags() const
+				{
+					return Flags;
+				}
+
+				ULong get_mtu() const
+				{
+					return Mtu;
+				}
+
+				ULong get_flag(AdapterFlags flag) const
+				{
+					return Flags & flag;
+				}
+
+				~Adapter()
+				{
+
+				}
 
 
 			};
 
 
+			template<class EndianessPacketLike, class AdapterHandle>
+			concept is_adapter_criteria =
+				requires (EndianessPacketLike t) {
+					{ true };
+					{ t.check_criteria(std::declval<const Adapter<AdapterHandle>&>()) } -> std::same_as<bool>;
+			};
 
-			class AdapterList final : public std::vector<Adapter> {
+			template <class AdapterHandle>
+			class AdapterList final : public std::vector<Adapter<AdapterHandle>> {
 
 			public:
 
-				template<is_adapter_criteria U>
-				std::unique_ptr<Adapter> get_default_adapter()
+				template<class U, class AdapterHandle> requires is_adapter_criteria<U, AdapterHandle>
+				std::unique_ptr<Adapter<AdapterHandle>> get_default_adapter()
 				{
 					for (const auto& it : *this)
 					{
 						if (U::check_criteria(it))
 						{
-							return std::make_unique<Adapter>(it);
+							return std::make_unique<Adapter<AdapterHandle>>(it);
 						}
 					}
 					return nullptr;
@@ -133,11 +239,17 @@ namespace QVPN {
 			class Ipv4PacketLittleEndian {
 
 			private:
-				unsigned char header_[20];
+				UByte header_[20];
 				std::vector<UByte> additional_header_;
 				std::vector<UByte> data_;
 
 			public:
+
+				Ipv4PacketLittleEndian(unsigned char* begin, int size);
+				Ipv4PacketLittleEndian(UByte* begin, UByte* end);
+				Ipv4PacketLittleEndian(ubyte_const_iter begin, ubyte_const_iter end);
+
+				void parse_packet(UByte* begin, UByte* end);
 
 				UByte get_version_impl() const;
 				UByte get_header_length_impl() const;
@@ -168,7 +280,26 @@ namespace QVPN {
 
 			template <EndianessPacket EndianessPacketLike>
 			class Ipv4Packet_ final : private EndianessPacketLike {
+
 			public:
+
+				Ipv4Packet_(unsigned char* begin, int size)
+					: EndianessPacketLike(begin, size)
+				{
+
+				}
+
+				Ipv4Packet_(UByte* begin, UByte* end)
+					: EndianessPacketLike(begin, end)
+				{
+
+				}
+
+				Ipv4Packet_(ubyte_const_iter begin, ubyte_const_iter end)
+					: EndianessPacketLike(begin, end)
+				{
+
+				}
 
 				UByte get_version() const
 				{
@@ -249,7 +380,7 @@ namespace QVPN {
 
 
 			using Ipv4Packet = Ipv4Packet_<Ipv4PacketLittleEndian>;
-		}
+}
 	}
 }
 

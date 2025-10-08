@@ -11,6 +11,7 @@ project(${PROJECT_NAME}
 
 
 # Build options
+
 option(QVPN_BUILD_TEST "Build QVPN tests" OFF)
 
 option(QVPN_BUILD_CLIENT "Build QVPN client app only" OFF)
@@ -50,9 +51,16 @@ set(QVPN_SERVER_APP_PATH "QVPN/${QVPN_SERVER_APP}")
 set(QVPN_CLIENT_APP_PATH "QVPN/${QVPN_CLIENT_APP}")
 
 
+
 # Includes
 set(PROJ_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/QVPN/${QVPN_LIBRARY}/include")
 include_directories(${PROJ_INCLUDE})
+
+# OS Includes
+set(OS_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/QVPN/${QVPN_LIBRARY}/include/${CMAKE_SYSTEM_NAME}")
+include_directories(${OS_INCLUDE})
+
+
 
 
 # Project Dirs
@@ -62,8 +70,20 @@ add_subdirectory("${QVPN_CLIENT_APP_PATH}")
 
 
 #Lib files
-file(GLOB_RECURSE lib_src "${QVPN_LIBRARY_PATH}/*.cpp")
-file(GLOB_RECURSE lib_incl "${QVPN_LIBRARY_PATH}/*.hpp")
+file(GLOB_RECURSE _lib_src "${QVPN_LIBRARY_PATH}/*.cpp")
+file(GLOB_RECURSE _lib_incl "${QVPN_LIBRARY_PATH}/*.hpp")
+
+# Windows files
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+
+	file(GLOB_RECURSE os_lib_src "${QVPN_LIBRARY_PATH}/Windows/*.cpp")
+	file(GLOB_RECURSE os_lib_incl "${QVPN_LIBRARY_PATH}/Windows/*.hpp")
+
+endif()
+
+
+set(lib_src "${_lib_src};${os_lib_src}")
+set(lib_incl "${_lib_incl};${os_lib_incl}")
 
 
 # External libs
@@ -80,6 +100,12 @@ link_directories(${NPCAP_PATH}/Lib/x64)
 set(WINTUN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/wintun")
 include_directories(${WINTUN_PATH}/include)
 link_directories(${WINTUN_PATH}/bin/amd64)
+
+
+# Подключение WinDivert
+set(WINDIVERT_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/windivert")
+include_directories(${WINDIVERT_PATH}/include)
+link_directories(${WINDIVERT_PATH}/x64)
 
 #find_package(PCAP REQUIRED)  # не работает
 #include(FINDPCAP.cmake)  # аналогично
@@ -106,19 +132,40 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
 endif()
 
 
-# Предположим, ваша библиотека находится здесь
-set(WINTUN_DLL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/wintun/bin/amd64/wintun.dll")
 
-# Определяем целевую директорию вывода (обычно это директория сборки)
+set(WINTUN_DLL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/wintun/bin/amd64/wintun.dll")
+set(WINDIVERT_DLL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/windivert/x64/windivert.dll")
+set(WINDIVERT_DRIVER_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/windivert/x64/WinDivert64.sys")
+
+# Определяем целевую директорию вывода 
 set(TARGET_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE}")
 
-# Создаем команду для копирования файла после компиляции
+# Копирование dll wintun
 add_custom_command(
     TARGET ${QVPN_LIBRARY_NAME} POST_BUILD 
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${WINTUN_DLL_PATH}
             ${TARGET_DIRECTORY}/wintun.dll
-    COMMENT "Copying wintun.dll to ${TARGET_DIRECTORY} directory"
+    COMMENT "Copying wintun.dll to ${TARGET_DIRECTORY} directory\n"
+)
+
+
+# Копирование dll windivert
+add_custom_command(
+    TARGET ${QVPN_LIBRARY_NAME} POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${WINDIVERT_DLL_PATH}
+            ${TARGET_DIRECTORY}/windivert.dll
+    COMMENT "Copying windivert.dll to ${TARGET_DIRECTORY} directory\n"
+)
+
+# Копирование драйвера windivert
+add_custom_command(
+    TARGET ${QVPN_LIBRARY_NAME} POST_BUILD 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${WINDIVERT_DRIVER_PATH}
+            ${TARGET_DIRECTORY}/WinDivert64.sys
+    COMMENT "Copying WinDivert64.sys to ${TARGET_DIRECTORY} directory\n"
 )
 
 

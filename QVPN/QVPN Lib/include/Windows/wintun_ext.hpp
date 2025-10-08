@@ -11,9 +11,15 @@ namespace QVPN
 
 		class WinTunDriver final
 		{
+
+		public:
+			using AdapterHandle_t = WINTUN_ADAPTER_HANDLE;
+			using Adapter_t = QVPN::Core::DataStructures::Adapter<AdapterHandle_t>;
+			using AdapterList_t = QVPN::Core::DataStructures::AdapterList<AdapterHandle_t>;
+
 		private:
-			QVPN::Core::DataStructures::AdapterList captured_adapters_;
-			QVPN::Core::DataStructures::Adapter main_adapter_;
+			QVPN::Core::DataStructures::AdapterList<WINTUN_ADAPTER_HANDLE> captured_adapters_;
+			QVPN::Core::DataStructures::Adapter<WINTUN_ADAPTER_HANDLE> main_adapter_;
 			
 
 		private:
@@ -36,16 +42,16 @@ namespace QVPN
 			void capture_main_adapter_impl();
 			void capture_adapter_impl();
 			void capture_adapter_impl(std::string_view adapter);
-			void capture_adapter_impl(QVPN::Core::DataStructures::Adapter& adapter);
-			void close_adapter_impl(std::unique_ptr<QVPN::Core::DataStructures::Adapter> adapter);
+			void capture_adapter_impl(Adapter_t& adapter);
+			void close_adapter_impl(Adapter_t& adapter);
 			void close_all_adapters_impl();
 
-			std::unique_ptr<QVPN::Core::DataStructures::AdapterList> get_adapters_list_impl() const;
+			std::unique_ptr<AdapterList_t> get_adapters_list_impl() const;
 
 		private:
 			void main_adapter_loop_handler();
-			void adapter_loop_handler(std::unique_ptr<QVPN::Core::DataStructures::Adapter> adapter);
-			void choose_main_adapter(QVPN::Core::DataStructures::AdapterList adapters);
+			void adapter_loop_handler(Adapter_t& adapter);
+			void choose_main_adapter(AdapterList_t& adapters);
 			void init_wintun();
 
 

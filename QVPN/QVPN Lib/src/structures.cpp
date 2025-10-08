@@ -7,143 +7,30 @@ using UInt = QVPN::Core::DataStructures::UInt;
 using ubyte_const_iter = QVPN::Core::DataStructures::ubyte_const_iter;
 
 
-QVPN::Core::DataStructures::Adapter::Adapter()
+
+QVPN::Core::DataStructures::Ipv4PacketLittleEndian::Ipv4PacketLittleEndian(unsigned char* begin, int size)
 {
-	PhysAdress.reserve(10);
+	parse_packet(begin, begin + size);
 }
 
-QVPN::Core::DataStructures::Adapter::Adapter(const Byte* begin, const Byte* end)
-	: QVPN::Core::DataStructures::Adapter::Adapter()
+QVPN::Core::DataStructures::Ipv4PacketLittleEndian::Ipv4PacketLittleEndian(UByte* begin, UByte* end)
 {
-	PhysAdress.insert(PhysAdress.cend(), begin, end);
+	parse_packet(begin, end);
 }
 
-QVPN::Core::DataStructures::Adapter::Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname)
-	: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname)
+QVPN::Core::DataStructures::Ipv4PacketLittleEndian::Ipv4PacketLittleEndian(ubyte_const_iter begin, ubyte_const_iter end)
 {
-	PhysAdress.reserve(10);
+	
 }
 
-QVPN::Core::DataStructures::Adapter::Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, const Byte* begin, const Byte* end)
-	: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname)
+void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::parse_packet(UByte* begin, UByte* end)
 {
-	PhysAdress.reserve(10);
-	PhysAdress.insert(PhysAdress.cend(), begin, end);
-}
-
-QVPN::Core::DataStructures::Adapter::Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu)
-	: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
-{
-	PhysAdress.reserve(10);
-}
-
-QVPN::Core::DataStructures::Adapter::Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu, const Byte* begin, const Byte* end)
-	: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
-{
-	PhysAdress.reserve(10);
-	PhysAdress.insert(PhysAdress.cend(), begin, end);
-}
-
-QVPN::Core::DataStructures::Adapter::Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu, std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end)
-	: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
-{
-	PhysAdress.reserve(10);
-	PhysAdress.insert(PhysAdress.cend(), begin, end);
-}
-
-
-
-void QVPN::Core::DataStructures::Adapter::set_data(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu)
-{
-	adapter_name = a_name;
-	adapter_desc = a_desc;
-	friendly_name = a_fname;
-	Flags = flags;
-	Mtu = mtu;
-}
-
-void QVPN::Core::DataStructures::Adapter::set_name(std::string_view a_name)
-{
-	adapter_name = a_name;
-}
-
-void QVPN::Core::DataStructures::Adapter::set_desc(std::string_view a_desc)
-{
-	adapter_desc = a_desc;
-}
-
-void QVPN::Core::DataStructures::Adapter::set_friendly_name(std::string_view a_fname)
-{
-	friendly_name = a_fname;
-}
-
-void QVPN::Core::DataStructures::Adapter::set_phys_addr(std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end)
-{
-	PhysAdress.clear();
-	PhysAdress.insert(PhysAdress.end(), begin, end);
-}
-
-void QVPN::Core::DataStructures::Adapter::set_phys_addr(const Byte* begin, const Byte* end)
-{
-	PhysAdress.clear();
-	PhysAdress.insert(PhysAdress.end(), begin, end);
-}
-
-void QVPN::Core::DataStructures::Adapter::set_phys_addr(std::unique_ptr<Byte> begin, std::unique_ptr<Byte> end)
-{
-	PhysAdress.clear();
-	PhysAdress.insert(PhysAdress.end(), begin.get(), end.get());
-}
-
-void QVPN::Core::DataStructures::Adapter::set_flags(ULong flags)
-{
-	Flags = flags;
-}
-
-void QVPN::Core::DataStructures::Adapter::set_mtu(ULong mtu)
-{
-	Mtu = mtu;
-}
-
-std::string_view QVPN::Core::DataStructures::Adapter::get_name() const
-{
-	return adapter_name;
-}
-
-std::string_view QVPN::Core::DataStructures::Adapter::get_desc() const
-{
-	return adapter_desc;
-}
-
-std::string_view QVPN::Core::DataStructures::Adapter::get_friendly_name() const
-{
-	return friendly_name;
-}
-
-std::pair<std::vector<Byte>::const_iterator, std::vector<Byte>::const_iterator> QVPN::Core::DataStructures::Adapter::get_phys_addr() const
-{
-	return std::make_pair<>(PhysAdress.cbegin(), PhysAdress.cend());
-}
-
-
-QVPN::Core::DataStructures::ULong QVPN::Core::DataStructures::Adapter::get_flags() const
-{
-	return Flags;
-}
-
-QVPN::Core::DataStructures::ULong QVPN::Core::DataStructures::Adapter::get_flag(AdapterFlags flag) const
-{
-	return Flags & flag;
-}
-
-
-QVPN::Core::DataStructures::ULong QVPN::Core::DataStructures::Adapter::get_mtu() const
-{
-	return Mtu;
-}
-
-QVPN::Core::DataStructures::Adapter::~Adapter()
-{
+	memcpy(header_, begin, 20);
+	auto start = begin + 20;
+	for (auto i = 0; i < get_total_length_impl() - get_header_length_impl(); i++, start += sizeof(UByte))
+	{
+		data_.push_back((UByte)start);
+	}
 }
 
 UByte QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_version_impl() const

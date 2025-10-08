@@ -1,5 +1,11 @@
 #include "wintun_ext.hpp"
 #include <iostream>
+#include <winsock2.h>
+#include <ws2ipdef.h>
+#include <iphlpapi.h>
+
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "ws2_32.lib")
 
 
 static WINTUN_CREATE_ADAPTER_FUNC* WintunCreateAdapter;
@@ -43,13 +49,24 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_impl()
         }
         trying = false;
     }
+
+    
+    MIB_UNICASTIPADDRESS_ROW AddressRow;
+    InitializeUnicastIpAddressEntry(&AddressRow);
+    WintunGetAdapterLUID(adapter_, &AddressRow.InterfaceLuid);
+    AddressRow.Address.Ipv4.sin_family = AF_INET;
+    AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = htonl((192 << 24) | (168 << 16) | (50 << 8) | (25 << 0));
+    AddressRow.OnLinkPrefixLength = 24;
+    AddressRow.DadState = IpDadStatePreferred;
+    auto LastError = CreateUnicastIpAddressEntry(&AddressRow);
+    
 }
 
 void QVPN::WinTunExt::WinTunDriver::capture_main_adapter_impl()
 {
 }
 
-void QVPN::WinTunExt::WinTunDriver::close_adapter_impl(std::unique_ptr<QVPN::Core::DataStructures::Adapter> adapter)
+void QVPN::WinTunExt::WinTunDriver::close_adapter_impl(Adapter_t& adapter)
 {
 }
 
@@ -57,20 +74,48 @@ void QVPN::WinTunExt::WinTunDriver::close_all_adapters_impl()
 {
 }
 
-std::unique_ptr<QVPN::Core::DataStructures::AdapterList> QVPN::WinTunExt::WinTunDriver::get_adapters_list_impl() const
+std::unique_ptr<QVPN::WinTunExt::WinTunDriver::AdapterList_t> QVPN::WinTunExt::WinTunDriver::get_adapters_list_impl() const
 {
-    return std::unique_ptr<QVPN::Core::DataStructures::AdapterList>();
+    return std::unique_ptr<QVPN::WinTunExt::WinTunDriver::AdapterList_t>();
 }
 
 void QVPN::WinTunExt::WinTunDriver::main_adapter_loop_handler()
 {
+    for (;;)
+    {
+        DWORD IncomingPacketSize;
+        BYTE* IncomingPacket = WintunReceivePacket(session_, &IncomingPacketSize);
+        if (IncomingPacket)
+        {
+            std::cout << IncomingPacketSize << std::endl;
+
+            auto packet = (unsigned char*)IncomingPacket;
+            QVPN::Core::DataStructures::Ipv4Packet package(IncomingPacket, IncomingPacketSize);
+            auto [start, end] = package.get_data();
+            for (start; start < end; start++)
+            {
+                std::cout << *start;
+            }
+            std::cout << std::endl;
+            WintunReleaseReceivePacket(session_, IncomingPacket);
+        }
+        else if (GetLastError() == ERROR_NO_MORE_ITEMS)
+            WaitForSingleObject(WintunGetReadWaitEvent(session_), INFINITE);
+        else
+        {
+            std::cout << "fail to read packet" << std::endl;
+            break;
+        }
+
+
+    }
 }
 
-void QVPN::WinTunExt::WinTunDriver::adapter_loop_handler(std::unique_ptr<QVPN::Core::DataStructures::Adapter> adapter)
+void QVPN::WinTunExt::WinTunDriver::adapter_loop_handler(Adapter_t& adapter)
 {
 }
 
-void QVPN::WinTunExt::WinTunDriver::choose_main_adapter(QVPN::Core::DataStructures::AdapterList adapters)
+void QVPN::WinTunExt::WinTunDriver::choose_main_adapter(AdapterList_t& adapters)
 {
 }
 
@@ -103,6 +148,7 @@ void QVPN::WinTunExt::WinTunDriver::init_wintun()
 void QVPN::WinTunExt::WinTunDriver::capture_adapter_impl()
 {
     session_ = WintunStartSession(adapter_, 0x400000);
+    //main_adapter_loop_handler();
 }
 
 void QVPN::WinTunExt::WinTunDriver::capture_adapter_impl(std::string_view adapter)
@@ -110,6 +156,6 @@ void QVPN::WinTunExt::WinTunDriver::capture_adapter_impl(std::string_view adapte
     
 }
 
-void QVPN::WinTunExt::WinTunDriver::capture_adapter_impl(QVPN::Core::DataStructures::Adapter& adapter)
+void QVPN::WinTunExt::WinTunDriver::capture_adapter_impl(Adapter_t& adapter)
 {
 }

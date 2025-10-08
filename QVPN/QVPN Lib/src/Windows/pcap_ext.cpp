@@ -18,12 +18,12 @@ QVPN::Core::DataStructures::Adapter QVPN::PcapExt::PcapNetDriver::convert_from_p
 */
 
 // RVO 
-QVPN::Core::DataStructures::Adapter QVPN::PcapExt::PcapNetDriver::convert_from_pcap_adapter(const pcap_if_t* adapter)
+QVPN::PcapExt::PcapNetDriver::Adapter_t QVPN::PcapExt::PcapNetDriver::convert_from_pcap_adapter(const pcap_if_t* adapter)
 {
-	return QVPN::Core::DataStructures::Adapter(adapter->name, adapter->description, adapter->name, adapter->flags, 0, std::begin(adapter->addresses->addr->sa_data), std::end(adapter->addresses->addr->sa_data));
+	return Adapter_t(adapter->name, adapter->description, adapter->name, adapter->flags, 0, std::begin(adapter->addresses->addr->sa_data), std::end(adapter->addresses->addr->sa_data));
 }
 
-std::unique_ptr<QVPN::Core::DataStructures::AdapterList> QVPN::PcapExt::PcapNetDriver::get_adapters_list_impl() const
+std::unique_ptr<QVPN::PcapExt::PcapNetDriver::AdapterList_t> QVPN::PcapExt::PcapNetDriver::get_adapters_list_impl() const
 {
 	/*
 	ULONG size_p = WORKING_BUFFER_SIZE;
@@ -42,7 +42,7 @@ std::unique_ptr<QVPN::Core::DataStructures::AdapterList> QVPN::PcapExt::PcapNetD
 	*/
 	pcap_if_t* alldevs;
 	char errbuf[PCAP_ERRBUF_SIZE];
-	QVPN::Core::DataStructures::AdapterList adapters;
+	QVPN::PcapExt::PcapNetDriver::AdapterList_t adapters;
 	if (pcap_findalldevs(&alldevs, errbuf) != -1)
 	{
 		for (pcap_if_t* d = alldevs; d != NULL; d = d->next)
@@ -87,7 +87,7 @@ void QVPN::PcapExt::PcapNetDriver::capture_adapter_impl(std::string_view adapter
 }
 
 
-void QVPN::PcapExt::PcapNetDriver::capture_adapter_impl(QVPN::Core::DataStructures::Adapter& adapter)
+void QVPN::PcapExt::PcapNetDriver::capture_adapter_impl(QVPN::PcapExt::PcapNetDriver::Adapter_t& adapter)
 {
 	capture_adapter_impl(std::forward<std::string_view>(adapter.get_friendly_name()));
 }
@@ -95,7 +95,7 @@ void QVPN::PcapExt::PcapNetDriver::capture_adapter_impl(QVPN::Core::DataStructur
 
 // TODO: изменить на более подходящую, а то слишком костыльно
 // Проверка на физический адаптер
-bool is_physical_adapter(const QVPN::Core::DataStructures::Adapter& adapter) {
+bool is_physical_adapter(const QVPN::PcapExt::PcapNetDriver::Adapter_t& adapter) {
 	std::string name = static_cast<std::string>(adapter.get_desc());
 	return (
 		name.find("Realtek") != std::string::npos ||
@@ -104,7 +104,7 @@ bool is_physical_adapter(const QVPN::Core::DataStructures::Adapter& adapter) {
 		);
 }
 
-bool QVPN::PcapExt::AdapterCriteria::check_criteria(const QVPN::Core::DataStructures::Adapter& adapter)
+bool QVPN::PcapExt::AdapterCriteria<QVPN::PcapExt::PcapNetDriver::AdapterHandle_t>::check_criteria(const QVPN::PcapExt::PcapNetDriver::Adapter_t& adapter)
 {
 	if (adapter.get_flags() & (PCAP_IF_UP | PCAP_IF_RUNNING) && is_physical_adapter(adapter))
 		return true;

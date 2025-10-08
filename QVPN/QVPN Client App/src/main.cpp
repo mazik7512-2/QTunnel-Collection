@@ -1,15 +1,31 @@
 #include <lib.hpp>
 #include <iostream>
 #include <bitset>
-#include <pcap_ext.hpp>
+//#include <pcap_ext.hpp>
 #include <wintun_ext.hpp>
+#include <windivert.h>
 
-using PcapDriver = QVPN::Core::NetDriver<QVPN::PcapExt::PcapNetDriver>;
+#pragma comment(lib, "windivert.lib")
+
+//using PcapDriver = QVPN::Core::NetDriver<QVPN::PcapExt::PcapNetDriver>;
 using WinTunNetDriver = QVPN::Core::NetDriver<QVPN::WinTunExt::WinTunDriver>;
-using AdapterCriteria = QVPN::PcapExt::AdapterCriteria;
+
+
+
 
 int main()
 {
+    HANDLE hDivert = WinDivertOpen("true", WINDIVERT_LAYER_NETWORK, 0, 0);
+    if (hDivert != INVALID_HANDLE_VALUE)
+    {
+        printf("Driver is working correctly.\n");
+        WinDivertClose(hDivert);
+    }
+    else
+    {
+        printf("Error opening driver.\n");
+        return 0;
+    }
     WinTunNetDriver d;
     d.create_adapter();
     d.capture_adapter();
