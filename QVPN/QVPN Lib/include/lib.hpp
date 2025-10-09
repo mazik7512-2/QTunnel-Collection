@@ -33,7 +33,7 @@ namespace QVPN
         template <class T>
         concept is_net_driver =
             requires (T t) {
-                { t.add_traffice_filter(std::declval<std::string_view>()) } -> std::same_as<void>;
+                { t.add_traffic_filter(std::declval<std::string_view>()) } -> std::same_as<void>;
                 { t.start_capture_traffic() } -> std::same_as<void>;
                 { t.stop_capture_traffic() } -> std::same_as<void>;
         };
@@ -44,6 +44,7 @@ namespace QVPN
         {
 
         };
+
 
 
         class IPv4Address final
@@ -70,6 +71,8 @@ namespace QVPN
 
             UByte operator[](size_t elem);
 
+            std::unique_ptr<std::array<UByte, 4>> to_bytes();
+
             ~IPv4Address();
 
             
@@ -85,6 +88,8 @@ namespace QVPN
             { f.ipv6() } -> std::same_as<typename Filter::Filter_t>;
             { f.tcp() } -> std::same_as<typename Filter::Filter_t>;
             { f.udp() } -> std::same_as<typename Filter::Filter_t>;
+            { f.source_ipv4(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
+            { f.dest_ipv4(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
         };
 
         template <class FilterImpl>
