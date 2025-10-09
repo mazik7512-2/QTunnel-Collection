@@ -9,54 +9,90 @@ namespace QVPN
     {
 
         template <typename T>
-        concept is_net_driver =
+        concept is_adapter_driver =
             requires(T t) {
-                { true };
+
                 typename T::AdapterList_t;
                 typename T::Adapter_t;
                 typename T::AdapterHandle_t;
-                /*
-                { t.create_adapter_impl(std::declval<std::string_view>()) } -> std::same_as<void>;
-                { t.close_adapter_impl() } -> std::same_as<void>;
-                { t.get_adapter_list_impl() } -> std::same_as<std::unique_ptr<std::vector<std::string>>>;*/
+                
+                { t.create_adapter() } -> std::same_as<void>;
+                { t.capture_adapter() } -> std::same_as<void>;
+                { t.close_adapter() } -> std::same_as<void>;
         };
 
-        template <class T>
-            requires is_net_driver<T>
-        class NetDriver final
+        template <class AdapterDriverImpl>
+            requires is_adapter_driver<AdapterDriverImpl>
+        class AdapterDriver final : public AdapterDriverImpl
         {
-        private:
-            using AdaptetList_t = T::AdapterList_t;
-            T driver_;
+
+
+        };
+
+
+        template <class T>
+        concept is_net_driver =
+            requires (T t) {
+                { t.add_traffice_filter(std::declval<std::string_view>()) } -> std::same_as<void>;
+                { t.start_capture_traffic() } -> std::same_as<void>;
+                { t.stop_capture_traffic() } -> std::same_as<void>;
+        };
+        
+        template <class NetDriverImpl>
+            requires is_net_driver<NetDriverImpl>
+        class NetDriver final : public NetDriverImpl
+        {
+
+        };
+
+
+        class IPv4Address final
+        {
 
         public:
 
-            inline void create_adapter()
-            {
-                driver_.create_adapter_impl();
-            }
+            using UByte = Core::DataStructures::UByte;
 
-            inline std::unique_ptr<AdaptetList_t> get_adapters_list() const
-            {
-                return driver_.get_adapters_list_impl();
-            }
+        private:
 
-            inline void capture_adapter()
-            {
-                driver_.capture_adapter_impl();
-            }
+            std::array<UByte, 4> ip_{};
 
-            inline void capture_adapter(std::string_view adapter)
-            {
-                driver_.capture_adapter_impl(adapter);
-            }
+        public:
 
-            inline void capture_adapter(T::Adapter_t& adapter)
-            {
-                driver_.capture_adapter_impl(adapter);
-            }
+            IPv4Address();
+            IPv4Address(UByte first, UByte second, UByte third, UByte four);
+            IPv4Address(const IPv4Address& other);
+            IPv4Address(IPv4Address&& other);
+            IPv4Address& operator=(const IPv4Address& other);
+            IPv4Address& operator=(IPv4Address&& other);
+            IPv4Address& operator=(const std::array<UByte, 4>& other);
+            IPv4Address& operator=(std::array<UByte, 4>&& other);
+
+            UByte operator[](size_t elem);
+
+            ~IPv4Address();
+
+            
+        };
+
+        template <class Filter>
+        concept is_filter =
+            requires (Filter f) {
+
+            typename Filter::Filter_t;
+
+            { f.ipv4() } -> std::same_as<typename Filter::Filter_t>;
+            { f.ipv6() } -> std::same_as<typename Filter::Filter_t>;
+            { f.tcp() } -> std::same_as<typename Filter::Filter_t>;
+            { f.udp() } -> std::same_as<typename Filter::Filter_t>;
+        };
+
+        template <class FilterImpl>
+        class TrafficFilter final : public FilterImpl
+        {
 
         };
+
     }
     
 }

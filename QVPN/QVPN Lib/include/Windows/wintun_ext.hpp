@@ -9,7 +9,7 @@ namespace QVPN
 	namespace WinTunExt
 	{
 
-		class WinTunDriver final
+		class WinTunDriver
 		{
 
 		public:
@@ -36,17 +36,18 @@ namespace QVPN
 			WinTunDriver& operator=(const WinTunDriver&) = delete;
 			WinTunDriver& operator=(WinTunDriver&&) = delete;
 
-			~WinTunDriver();
+			virtual ~WinTunDriver();
 
-			void create_adapter_impl();
-			void capture_main_adapter_impl();
-			void capture_adapter_impl();
-			void capture_adapter_impl(std::string_view adapter);
-			void capture_adapter_impl(Adapter_t& adapter);
-			void close_adapter_impl(Adapter_t& adapter);
-			void close_all_adapters_impl();
+			void create_adapter();
+			void capture_main_adapter();
+			void capture_adapter();
+			void capture_adapter(std::string_view adapter);
+			void capture_adapter(Adapter_t& adapter);
+			void close_adapter();
+			void close_adapter(Adapter_t& adapter);
+			void close_all_adapters();
 
-			std::unique_ptr<AdapterList_t> get_adapters_list_impl() const;
+			std::unique_ptr<AdapterList_t> get_adapters_list() const;
 
 		private:
 			void main_adapter_loop_handler();

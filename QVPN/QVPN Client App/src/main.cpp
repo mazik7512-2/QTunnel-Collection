@@ -7,8 +7,8 @@
 
 #pragma comment(lib, "windivert.lib")
 
-//using PcapDriver = QVPN::Core::NetDriver<QVPN::PcapExt::PcapNetDriver>;
-using WinTunNetDriver = QVPN::Core::NetDriver<QVPN::WinTunExt::WinTunDriver>;
+//using PcapDriver = QVPN::Core::AdapterDriver<QVPN::PcapExt::PcapNetDriver>;
+using WinTunAdapterDriver = QVPN::Core::AdapterDriver<QVPN::WinTunExt::WinTunDriver>;
 
 
 
@@ -26,7 +26,7 @@ int main()
         printf("Error opening driver.\n");
         return 0;
     }
-    WinTunNetDriver d;
+    WinTunAdapterDriver d;
     d.create_adapter();
     d.capture_adapter();
     /*

@@ -48,6 +48,7 @@ namespace QVPN {
 				Adapter()
 				{
 					PhysAdress.reserve(10);
+					handle = nullptr;
 				}
 
 				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname)
@@ -56,8 +57,20 @@ namespace QVPN {
 					PhysAdress.reserve(10);
 				}
 
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handle)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), handle(a_handle)
+				{
+					PhysAdress.reserve(10);
+				}
+
 				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu)
 					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
+				{
+					PhysAdress.reserve(10);
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handle, ULong flags, ULong mtu)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu), handle(a_handle)
 				{
 					PhysAdress.reserve(10);
 				}
@@ -82,11 +95,45 @@ namespace QVPN {
 					PhysAdress.insert(PhysAdress.cend(), begin, end);
 				}
 
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handle, const Byte* begin, const Byte* end)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), handle(a_handle)
+				{
+					PhysAdress.reserve(10);
+					PhysAdress.insert(PhysAdress.cend(), begin, end);
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, AdapterHandle a_handle, ULong mtu, const Byte* begin, const Byte* end)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu), handle(a_handle)
+				{
+					PhysAdress.reserve(10);
+					PhysAdress.insert(PhysAdress.cend(), begin, end);
+				}
+
 				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu, std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end)
 					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
 				{
 					PhysAdress.reserve(10);
 					PhysAdress.insert(PhysAdress.cend(), begin, end);
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handler, ULong flags, ULong mtu, const Byte* begin, const Byte* end)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu), handle(a_handler)
+				{
+					PhysAdress.reserve(10);
+					PhysAdress.insert(PhysAdress.cend(), begin, end);
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handler, ULong flags, ULong mtu, std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu), handle(a_handler)
+				{
+					PhysAdress.reserve(10);
+					PhysAdress.insert(PhysAdress.cend(), begin, end);
+				}
+
+
+				void set_handle(const AdapterHandle a_handle)
+				{
+					handle = a_handle;
 				}
 
 				void set_data(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu)
@@ -177,6 +224,11 @@ namespace QVPN {
 					return Flags & flag;
 				}
 
+				const AdapterHandle get_handle() const
+				{
+					return const_cast<AdapterHandle>(handle);
+				}
+
 				~Adapter()
 				{
 
@@ -219,20 +271,20 @@ namespace QVPN {
 			concept EndianessPacket =
 				requires (EndianessPacketLike t) {
 					{ true };
-					{ t.get_version_impl() } -> std::same_as<UByte>;
-					{ t.get_header_length_impl() } -> std::same_as<UByte>;
-					{ t.get_dscp_impl() } -> std::same_as<UByte>;
-					{ t.get_ecn_impl() } -> std::same_as<UByte>;
-					{ t.get_total_length_impl() } -> std::same_as<UShort>;
-					{ t.get_id_impl() } -> std::same_as<UShort>;
-					{ t.get_flags_impl() } -> std::same_as<UByte>;
-					{ t.get_offset_impl() } -> std::same_as<UShort>;
-					{ t.get_ttl_impl() } -> std::same_as<UByte>;
-					{ t.get_checksum_impl() } -> std::same_as<UShort>;
-					{ t.get_source_impl() } -> std::same_as<UInt>;
-					{ t.get_dest_impl() } -> std::same_as<UInt>;
-					{ t.get_additional_header_impl() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
-					{ t.get_data_impl() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+					{ t.get_version() } -> std::same_as<UByte>;
+					{ t.get_header_length() } -> std::same_as<UByte>;
+					{ t.get_dscp() } -> std::same_as<UByte>;
+					{ t.get_ecn() } -> std::same_as<UByte>;
+					{ t.get_total_length() } -> std::same_as<UShort>;
+					{ t.get_id() } -> std::same_as<UShort>;
+					{ t.get_flags() } -> std::same_as<UByte>;
+					{ t.get_offset() } -> std::same_as<UShort>;
+					{ t.get_ttl() } -> std::same_as<UByte>;
+					{ t.get_checksum() } -> std::same_as<UShort>;
+					{ t.get_source() } -> std::same_as<UInt>;
+					{ t.get_dest() } -> std::same_as<UInt>;
+					{ t.get_additional_header() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+					{ t.get_data() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
 			};
 
 
@@ -251,132 +303,49 @@ namespace QVPN {
 
 				void parse_packet(UByte* begin, UByte* end);
 
-				UByte get_version_impl() const;
-				UByte get_header_length_impl() const;
+				UByte get_version() const;
+				UByte get_header_length() const;
 
-				UByte get_dscp_impl() const;
-				UByte get_ecn_impl() const;
+				UByte get_dscp() const;
+				UByte get_ecn() const;
 
-				UShort get_total_length_impl() const;
+				UShort get_total_length() const;
 
-				UShort get_id_impl() const;
+				UShort get_id() const;
 
-				UByte  get_flags_impl() const;
-				UShort get_offset_impl() const;
+				UByte  get_flags() const;
+				UShort get_offset() const;
 
-				UByte get_ttl_impl() const;
-				UByte get_protocol_impl() const;
+				UByte get_ttl() const;
+				UByte get_protocol() const;
 
-				UShort get_checksum_impl() const;
+				UShort get_checksum() const;
 
-				UInt get_source_impl() const;
-				UInt get_dest_impl() const;
+				UInt get_source() const;
+				UInt get_dest() const;
 
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_additional_header_impl() const;
+				std::pair<ubyte_const_iter, ubyte_const_iter> get_additional_header() const;
 
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_data_impl() const;
+				std::pair<ubyte_const_iter, ubyte_const_iter> get_data() const;
 			};
 
 
 			template <EndianessPacket EndianessPacketLike>
-			class Ipv4Packet_ final : private EndianessPacketLike {
+			class Ipv4Packet_ final : public EndianessPacketLike {
 
 			public:
 
 				Ipv4Packet_(unsigned char* begin, int size)
-					: EndianessPacketLike(begin, size)
-				{
-
-				}
+					: EndianessPacketLike(begin, size) {}
 
 				Ipv4Packet_(UByte* begin, UByte* end)
-					: EndianessPacketLike(begin, end)
-				{
-
-				}
+					: EndianessPacketLike(begin, end) {}
 
 				Ipv4Packet_(ubyte_const_iter begin, ubyte_const_iter end)
-					: EndianessPacketLike(begin, end)
-				{
+					: EndianessPacketLike(begin, end) {}
 
-				}
-
-				UByte get_version() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_version_impl();
-				}
-
-				UByte get_header_length() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_header_length_impl();
-				}
-
-				UByte get_dscp() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_dscp_impl();
-				}
-
-				UByte get_ecn() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_ecn_impl();
-				}
-
-				UShort get_total_length() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_total_length_impl();
-				}
-
-				UShort get_id() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_id_impl();
-				}
-
-				UByte  get_flags() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_flags_impl();
-				}
-
-				UShort get_offset() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_offset_impl();
-				}
-
-				UByte get_ttl() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_ttl_impl();
-				}
-
-				UByte get_protocol() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_protocol_impl();
-				}
-
-				UShort get_checksum() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_checksum_impl();
-				}
-
-				UInt get_source() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_source_impl();
-				}
-
-				UInt get_dest() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_dest_impl();
-				}
-
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_additional_header() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_additional_header_impl();
-				}
-
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_data() const
-				{
-					return static_cast<const EndianessPacketLike*>(this)->get_data_impl();
-				}
 			};
-
+			
 
 
 			using Ipv4Packet = Ipv4Packet_<Ipv4PacketLittleEndian>;

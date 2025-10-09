@@ -23,7 +23,7 @@ QVPN::PcapExt::PcapNetDriver::Adapter_t QVPN::PcapExt::PcapNetDriver::convert_fr
 	return Adapter_t(adapter->name, adapter->description, adapter->name, adapter->flags, 0, std::begin(adapter->addresses->addr->sa_data), std::end(adapter->addresses->addr->sa_data));
 }
 
-std::unique_ptr<QVPN::PcapExt::PcapNetDriver::AdapterList_t> QVPN::PcapExt::PcapNetDriver::get_adapters_list_impl() const
+std::unique_ptr<QVPN::PcapExt::PcapNetDriver::AdapterList_t> QVPN::PcapExt::PcapNetDriver::get_adapters_list() const
 {
 	/*
 	ULONG size_p = WORKING_BUFFER_SIZE;
@@ -71,7 +71,7 @@ void packet_handler(u_char* args, const struct pcap_pkthdr* pkthdr, const u_char
 
 }
 
-void QVPN::PcapExt::PcapNetDriver::capture_adapter_impl(std::string_view adapter)
+void QVPN::PcapExt::PcapNetDriver::capture_adapter(std::string_view adapter)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
 	//char a[100];
@@ -87,9 +87,9 @@ void QVPN::PcapExt::PcapNetDriver::capture_adapter_impl(std::string_view adapter
 }
 
 
-void QVPN::PcapExt::PcapNetDriver::capture_adapter_impl(QVPN::PcapExt::PcapNetDriver::Adapter_t& adapter)
+void QVPN::PcapExt::PcapNetDriver::capture_adapter(QVPN::PcapExt::PcapNetDriver::Adapter_t& adapter)
 {
-	capture_adapter_impl(std::forward<std::string_view>(adapter.get_friendly_name()));
+	capture_adapter(std::forward<std::string_view>(adapter.get_friendly_name()));
 }
 
 

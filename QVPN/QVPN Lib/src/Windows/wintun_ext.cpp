@@ -34,7 +34,7 @@ QVPN::WinTunExt::WinTunDriver::~WinTunDriver()
     WintunEndSession(session_);
 }
 
-void QVPN::WinTunExt::WinTunDriver::create_adapter_impl()
+void QVPN::WinTunExt::WinTunDriver::create_adapter()
 {
     GUID ExampleGuid = { 0xdeadbabe, 0xcafe, 0xbeef, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef } };
     int try_numbers = 20;
@@ -62,19 +62,20 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_impl()
     
 }
 
-void QVPN::WinTunExt::WinTunDriver::capture_main_adapter_impl()
+
+void QVPN::WinTunExt::WinTunDriver::capture_main_adapter()
 {
 }
 
-void QVPN::WinTunExt::WinTunDriver::close_adapter_impl(Adapter_t& adapter)
+void QVPN::WinTunExt::WinTunDriver::close_adapter(Adapter_t& adapter)
 {
 }
 
-void QVPN::WinTunExt::WinTunDriver::close_all_adapters_impl()
+void QVPN::WinTunExt::WinTunDriver::close_all_adapters()
 {
 }
 
-std::unique_ptr<QVPN::WinTunExt::WinTunDriver::AdapterList_t> QVPN::WinTunExt::WinTunDriver::get_adapters_list_impl() const
+std::unique_ptr<QVPN::WinTunExt::WinTunDriver::AdapterList_t> QVPN::WinTunExt::WinTunDriver::get_adapters_list() const
 {
     return std::unique_ptr<QVPN::WinTunExt::WinTunDriver::AdapterList_t>();
 }
@@ -145,17 +146,21 @@ void QVPN::WinTunExt::WinTunDriver::init_wintun()
     wintun_ = Wintun;
 }
 
-void QVPN::WinTunExt::WinTunDriver::capture_adapter_impl()
+void QVPN::WinTunExt::WinTunDriver::capture_adapter()
 {
     session_ = WintunStartSession(adapter_, 0x400000);
     //main_adapter_loop_handler();
 }
 
-void QVPN::WinTunExt::WinTunDriver::capture_adapter_impl(std::string_view adapter)
+void QVPN::WinTunExt::WinTunDriver::capture_adapter(std::string_view adapter)
 {
     
 }
 
-void QVPN::WinTunExt::WinTunDriver::capture_adapter_impl(Adapter_t& adapter)
+void QVPN::WinTunExt::WinTunDriver::capture_adapter(Adapter_t& adapter)
+{
+}
+
+void QVPN::WinTunExt::WinTunDriver::close_adapter()
 {
 }
