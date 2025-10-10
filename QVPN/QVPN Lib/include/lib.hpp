@@ -108,7 +108,8 @@ namespace QVPN
             { f.tcp_dest_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
             { f.udp_source_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
             { f.udp_dest_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
-            { f.add_filter() } -> std::same_as<typename Filter::Filter_t>;
+            { f.source_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
+            { f.dst_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
         };
 
         template <class FilterImpl>
