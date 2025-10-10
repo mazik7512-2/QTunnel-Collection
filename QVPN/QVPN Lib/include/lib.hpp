@@ -72,11 +72,25 @@ namespace QVPN
             UByte operator[](size_t elem);
 
             std::unique_ptr<std::array<UByte, 4>> to_bytes();
+            std::string to_string();
 
             ~IPv4Address();
 
             
         };
+
+
+        template <class Filter>
+        concept is_filter_type =
+            requires (Filter f, typename Filter::Convertable_to c_t) {
+            typename Filter::Convertable_to;
+            typename Filter::Convertable_from;
+
+            { f.operator&&(std::declval<const Filter>()) } -> std::same_as<Filter>;
+            { Filter(c_t) };
+            { f.operator Filter::Convertable_to() };
+        };
+
 
         template <class Filter>
         concept is_filter =
@@ -88,8 +102,13 @@ namespace QVPN
             { f.ipv6() } -> std::same_as<typename Filter::Filter_t>;
             { f.tcp() } -> std::same_as<typename Filter::Filter_t>;
             { f.udp() } -> std::same_as<typename Filter::Filter_t>;
-            { f.source_ipv4(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
-            { f.dest_ipv4(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
+            { f.source(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
+            { f.dest(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
+            { f.tcp_source_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
+            { f.tcp_dest_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
+            { f.udp_source_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
+            { f.udp_dest_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
+            { f.add_filter() } -> std::same_as<typename Filter::Filter_t>;
         };
 
         template <class FilterImpl>

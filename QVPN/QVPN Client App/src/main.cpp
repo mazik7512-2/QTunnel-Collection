@@ -4,6 +4,7 @@
 //#include <pcap_ext.hpp>
 #include <wintun_ext.hpp>
 #include <windivert.h>
+#include <windivert_ext.hpp>
 
 #pragma comment(lib, "windivert.lib")
 
@@ -11,10 +12,20 @@
 using WinTunAdapterDriver = QVPN::Core::AdapterDriver<QVPN::WinTunExt::WinTunDriver>;
 
 
+void test(std::string_view t) {
+    std::cout << t << std::endl;
+}
 
 
 int main()
 {
+    QVPN::WinDivertExt::WinDivertTrafficFilter filter;
+    test(filter.ipv4() && filter.tcp() && filter.udp());
+
+    QVPN::Core::IPv4Address ip4(1, 2, 3, 4);
+
+    std::cout << ip4.to_string() << std::endl;
+
     HANDLE hDivert = WinDivertOpen("true", WINDIVERT_LAYER_NETWORK, 0, 0);
     if (hDivert != INVALID_HANDLE_VALUE)
     {
