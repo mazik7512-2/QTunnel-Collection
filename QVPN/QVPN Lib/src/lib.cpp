@@ -12,10 +12,12 @@ QVPN::Core::IPv4Address::IPv4Address(UByte first, UByte second, UByte third, UBy
 
 QVPN::Core::IPv4Address::IPv4Address(const IPv4Address& other)
 {
+    std::copy(other.ip_.begin(), other.ip_.end(), ip_.begin());
 }
 
 QVPN::Core::IPv4Address::IPv4Address(IPv4Address&& other)
 {
+    ip_ = std::exchange(other.ip_, {});
 }
 
 QVPN::Core::IPv4Address& QVPN::Core::IPv4Address::operator=(const IPv4Address& other)

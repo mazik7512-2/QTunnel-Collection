@@ -17,9 +17,12 @@ void test(std::string_view t) {
 }
 
 
+
+
 int main()
 {
     QVPN::WinDivertExt::WinDivertTrafficFilter filter;
+
     test(filter.ipv4() && filter.tcp() && filter.udp());
 
     QVPN::Core::IPv4Address ip4(1, 2, 3, 4);

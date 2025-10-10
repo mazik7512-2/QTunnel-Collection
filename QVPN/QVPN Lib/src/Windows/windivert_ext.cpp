@@ -1,6 +1,7 @@
 #include <windivert_ext.hpp>
 #include <sstream>
 
+using WinDivertTrafficFilterType = QVPN::WinDivertExt::WinDivertTrafficFilterType;
 
 
 QVPN::WinDivertExt::WinDivertTrafficFilterType::WinDivertTrafficFilterType(Convertable_from filter)
@@ -9,21 +10,40 @@ QVPN::WinDivertExt::WinDivertTrafficFilterType::WinDivertTrafficFilterType(Conve
 }
 
 
+QVPN::WinDivertExt::WinDivertTrafficFilterType::WinDivertTrafficFilterType(const WinDivertTrafficFilterType& filter)
+{
+    filter_ = filter.filter_;
+}
+
+QVPN::WinDivertExt::WinDivertTrafficFilterType::WinDivertTrafficFilterType(WinDivertTrafficFilterType&& filter) noexcept
+{
+    std::swap(filter_, filter.filter_);
+}
+
+WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTrafficFilterType::operator=(const WinDivertTrafficFilterType& filter)
+{
+    filter_ = filter.filter_;
+    return *this;
+}
+
+WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTrafficFilterType::operator=(WinDivertTrafficFilterType&& filter) noexcept
+{
+    std::swap(filter_, filter.filter_);
+    return *this;
+}
+
+
+
 QVPN::WinDivertExt::WinDivertTrafficFilterType::operator Convertable_to() const
 {
     return filter_;
 }
 
-/*
-Filter_t QVPN::WinDivertExt::operator&&(const Filter_t f1, const Filter_t f2)
-{
-    return Filter_t(" and ");
-}
-*/
-
-QVPN::WinDivertExt::WinDivertTrafficFilterType QVPN::WinDivertExt::WinDivertTrafficFilterType::operator&&(const WinDivertTrafficFilterType t)
+QVPN::WinDivertExt::WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTrafficFilterType::operator&&(const WinDivertTrafficFilterType& t)
 {
     std::stringstream f;
     f << filter_ << " and " << t.filter_;
-    return WinDivertTrafficFilterType(f.str());
+    filter_ = f.str(); 
+    return *this;
 }
+

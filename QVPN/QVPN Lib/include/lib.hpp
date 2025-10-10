@@ -83,10 +83,11 @@ namespace QVPN
         template <class Filter>
         concept is_filter_type =
             requires (Filter f, typename Filter::Convertable_to c_t) {
+
             typename Filter::Convertable_to;
             typename Filter::Convertable_from;
 
-            { f.operator&&(std::declval<const Filter>()) } -> std::same_as<Filter>;
+            { f.operator&&(std::declval<const Filter&>()) } -> std::same_as<Filter&>;
             { Filter(c_t) };
             { f.operator Filter::Convertable_to() };
         };
@@ -113,6 +114,7 @@ namespace QVPN
         };
 
         template <class FilterImpl>
+            requires is_filter<FilterImpl>
         class TrafficFilter final : public FilterImpl
         {
 

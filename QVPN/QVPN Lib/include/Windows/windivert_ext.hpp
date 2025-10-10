@@ -20,9 +20,17 @@ namespace QVPN {
 			using Convertable_to = std::string_view;
 			using Convertable_from = std::string_view;
 
+			WinDivertTrafficFilterType() = delete;
 			WinDivertTrafficFilterType(Convertable_from filter);
+			
+			WinDivertTrafficFilterType(const WinDivertTrafficFilterType& filter);
+			WinDivertTrafficFilterType(WinDivertTrafficFilterType&& filter) noexcept;
 
-			WinDivertTrafficFilterType operator&&(const WinDivertTrafficFilterType t);
+			WinDivertTrafficFilterType& operator=(const WinDivertTrafficFilterType& filter);
+			WinDivertTrafficFilterType& operator=(WinDivertTrafficFilterType&& filter) noexcept;
+			
+			WinDivertTrafficFilterType& operator&&(const WinDivertTrafficFilterType& t);
+			
 			operator Convertable_to() const;
 
 		};
