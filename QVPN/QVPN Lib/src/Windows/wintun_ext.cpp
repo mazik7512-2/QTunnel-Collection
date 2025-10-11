@@ -34,14 +34,24 @@ QVPN::WinTunExt::WinTunDriver::~WinTunDriver()
     WintunEndSession(session_);
 }
 
-void QVPN::WinTunExt::WinTunDriver::create_adapter()
+void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4()
 {
+    QVPN::Core::IPv4Address address(192, 168, 50, 25);
+    create_adapter_ipv4("QVPN Adapter", "Quiet and fast", address);
+    
+}
+
+void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& address)
+{
+
     GUID ExampleGuid = { 0xdeadbabe, 0xcafe, 0xbeef, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef } };
     int try_numbers = 20;
     bool trying = true;
+    std::wstring adapter_name(a_name.begin(), a_name.end());
+    std::wstring adapter_desc(a_desc.begin(), a_desc.end());
     while (trying && try_numbers-- > 0)
     {
-        adapter_ = WintunCreateAdapter(L"QVPN Adapter", L"QVPN", &ExampleGuid);
+        adapter_ = WintunCreateAdapter(adapter_name.c_str(), adapter_desc.c_str(), &ExampleGuid);
         if (!adapter_) {
             auto LastError = GetLastError();
             std::cout << "Error while creating adapter. Error ¹" << LastError << std::endl;
@@ -50,16 +60,21 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter()
         trying = false;
     }
 
-    
+
     MIB_UNICASTIPADDRESS_ROW AddressRow;
     InitializeUnicastIpAddressEntry(&AddressRow);
     WintunGetAdapterLUID(adapter_, &AddressRow.InterfaceLuid);
     AddressRow.Address.Ipv4.sin_family = AF_INET;
-    AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = htonl((192 << 24) | (168 << 16) | (50 << 8) | (25 << 0));
+    AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = htonl(address.to_uint());
     AddressRow.OnLinkPrefixLength = 24;
     AddressRow.DadState = IpDadStatePreferred;
     auto LastError = CreateUnicastIpAddressEntry(&AddressRow);
-    
+
+    if (LastError)
+    {
+        std::cout << "Error while creating unicast ip address. Error ¹" << LastError << std::endl;
+    }
+
 }
 
 

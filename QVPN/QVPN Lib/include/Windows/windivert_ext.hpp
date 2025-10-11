@@ -64,52 +64,86 @@ namespace QVPN {
 
 			Filter_t source(const QVPN::Core::IPv4Address& addr) const noexcept
 			{
-				return Filter_t("localAddr ==");
+				return Filter_t("localAddr == " + addr.to_string());
 			}
 
 			Filter_t dest(const QVPN::Core::IPv4Address& addr) const noexcept
 			{
-				return Filter_t("remoteAddr ==");
+				return Filter_t("remoteAddr == " + addr.to_string());
 			}
 
-			Filter_t source_port(unsigned int port) const noexcept
+			Filter_t src_port(unsigned int port) const noexcept
 			{
-				return Filter_t("localPor t==");
+				return Filter_t("localPort == " + std::to_string(port));
 			}
 
-			Filter_t dest_port(unsigned int port) const noexcept
+			Filter_t dst_port(unsigned int port) const noexcept
 			{
-				return Filter_t("remotePort ==");
+				return Filter_t("remotePort == " + std::to_string(port));
 			}
 
-			Filter_t tcp_source_port(unsigned int port) const noexcept
+			Filter_t tcp_src_port(unsigned int port) const noexcept
 			{
-				return Filter_t("tcp.SrcPort ==");
+				return Filter_t("tcp.SrcPort == " + std::to_string(port));
 			}
 
-			Filter_t tcp_dest_port(unsigned int port) const noexcept
+			Filter_t tcp_dst_port(unsigned int port) const noexcept
 			{
-				return Filter_t("tcp.DstPort ==");
+				return Filter_t("tcp.DstPort == " + std::to_string(port));
 			}
 
-			Filter_t udp_source_port(unsigned int port) const noexcept
+			Filter_t udp_src_port(unsigned int port) const noexcept
 			{
-				return Filter_t("udp.SrcPort ==");
+				return Filter_t("udp.SrcPort == " + std::to_string(port));
 			}
 
-			Filter_t udp_dest_port(unsigned int port) const noexcept
+			Filter_t udp_dst_port(unsigned int port) const noexcept
 			{
-				return Filter_t("udp.DstPort ==");
+				return Filter_t("udp.DstPort == " + std::to_string(port));
 			}
 
-			Filter_t custom_protocol() const noexcept
+			Filter_t custom_protocol(unsigned int protocol) const noexcept
 			{
-				return Filter_t("protocol ==");
+				return Filter_t("protocol == " + std::to_string(protocol));
 			}
 			
 		};
 
+
+		template <QVPN::Core::is_filter Filter>
+		class WinDivertNetDriver_ : public Filter
+		{
+
+		public:
+
+			using Filter_t = Filter::Filter_t;
+
+		private:
+
+			std::vector<Filter_t> filters_;
+
+		public:
+
+			void add_traffic_filter(Filter_t filter)
+			{
+
+			}
+
+			void start_capture_traffic()
+			{
+
+			}
+
+			void stop_capture_traffic()
+			{
+
+			}
+
+		};
+
 		using WinDivertTrafficFilter = WinDivertTrafficFilter_<WinDivertTrafficFilterType>;
+		using WinDivertNetDriver = WinDivertNetDriver_<WinDivertTrafficFilter>;
 	}
+
 
 }

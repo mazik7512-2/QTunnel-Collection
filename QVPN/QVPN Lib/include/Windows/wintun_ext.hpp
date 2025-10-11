@@ -2,6 +2,7 @@
 #include "general.hpp"
 #include "structures.hpp"
 #include <wintun.h>
+#include <lib.hpp>
 
 
 namespace QVPN
@@ -38,7 +39,8 @@ namespace QVPN
 
 			virtual ~WinTunDriver();
 
-			void create_adapter();
+			void create_adapter_ipv4();
+			void create_adapter_ipv4(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& address);
 			void capture_main_adapter();
 			void capture_adapter();
 			void capture_adapter(std::string_view adapter);

@@ -5,11 +5,13 @@
 #include <wintun_ext.hpp>
 #include <windivert.h>
 #include <windivert_ext.hpp>
+#include <qvpn_api.h>
 
 #pragma comment(lib, "windivert.lib")
 
 //using PcapDriver = QVPN::Core::AdapterDriver<QVPN::PcapExt::PcapNetDriver>;
 using WinTunAdapterDriver = QVPN::Core::AdapterDriver<QVPN::WinTunExt::WinTunDriver>;
+using TrafficFilter = QVPN::Core::TrafficFilter_<QVPN::WinDivertExt::WinDivertTrafficFilter>;
 
 
 void test(std::string_view t) {
@@ -21,11 +23,17 @@ void test(std::string_view t) {
 
 int main()
 {
+    QVPN::VPNDriver vpn;
+    vpn.create_adapter_ipv4();
+    
+
     QVPN::WinDivertExt::WinDivertTrafficFilter filter;
 
     test(filter.ipv4() && filter.tcp() && filter.udp());
 
     QVPN::Core::IPv4Address ip4(1, 2, 3, 4);
+
+    test(filter.source(ip4));
 
     std::cout << ip4.to_string() << std::endl;
 
@@ -41,7 +49,7 @@ int main()
         return 0;
     }
     WinTunAdapterDriver d;
-    d.create_adapter();
+    d.create_adapter_ipv4();
     d.capture_adapter();
     /*
     PcapDriver driver;

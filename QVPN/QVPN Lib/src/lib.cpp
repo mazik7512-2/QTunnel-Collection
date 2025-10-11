@@ -48,22 +48,27 @@ QVPN::Core::IPv4Address& QVPN::Core::IPv4Address::operator=(std::array<UByte, 4>
     return *this;
 }
 
-QVPN::Core::IPv4Address::UByte QVPN::Core::IPv4Address::operator[](size_t elem)
+QVPN::Core::IPv4Address::UByte QVPN::Core::IPv4Address::operator[](int elem) const
 {
     return ip_[elem];
 }
 
-std::unique_ptr<std::array<QVPN::Core::IPv4Address::UByte, 4>> QVPN::Core::IPv4Address::to_bytes()
+std::unique_ptr<std::array<QVPN::Core::IPv4Address::UByte, 4>> QVPN::Core::IPv4Address::to_bytes() const
 {
     return std::make_unique<decltype(ip_)>(ip_);
 }
 
-std::string QVPN::Core::IPv4Address::to_string()
+std::string QVPN::Core::IPv4Address::to_string() const
 {
     std::stringstream ip;
     ip << (int)ip_[0] << "." << (int)ip_[1] << "." << (int)ip_[2] << "." << (int)ip_[3];
     return ip.str();
 
+}
+
+QVPN::Core::DataStructures::UInt QVPN::Core::IPv4Address::to_uint() const
+{
+    return (ip_[0] << 24 | ip_[1] << 16 | ip_[2] << 8 | ip_[3]);
 }
 
 QVPN::Core::IPv4Address::~IPv4Address()
