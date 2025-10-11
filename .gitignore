@@ -7,3 +7,6 @@ Hints.txt
 *Examples*
 ipv4-package.png
 ipv6-package.jpg
+.gitignore
+tcp-package.jpg
+udp-package.jpg
