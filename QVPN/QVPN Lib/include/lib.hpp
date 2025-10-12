@@ -8,6 +8,7 @@ namespace QVPN
 	namespace Core
 	{
 
+
 		class IPv4Address;
 
 		template <typename T>
@@ -62,6 +63,8 @@ namespace QVPN
 			{ f.udp() } -> std::same_as<typename Filter::Filter_t>;
 			{ f.source(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.dest(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
+			{ f.no_source(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
+			{ f.no_dest(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.tcp_src_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.tcp_dst_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.udp_src_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;

@@ -72,6 +72,16 @@ namespace QVPN {
 				return Filter_t("remoteAddr == " + addr.to_string());
 			}
 
+			Filter_t no_source(const QVPN::Core::IPv4Address& addr) const noexcept
+			{
+				return Filter_t("localAddr != " + addr.to_string());
+			}
+
+			Filter_t no_dest(const QVPN::Core::IPv4Address& addr) const noexcept
+			{
+				return Filter_t("remoteAddr != " + addr.to_string());
+			}
+
 			Filter_t src_port(unsigned int port) const noexcept
 			{
 				return Filter_t("localPort == " + std::to_string(port));
