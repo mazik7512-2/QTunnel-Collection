@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <lib.hpp>
 
 
 namespace QVPN {
@@ -39,6 +40,7 @@ namespace QVPN {
 				std::string adapter_desc;
 				std::string friendly_name;
 				std::vector<Byte> PhysAdress;
+				QVPN::Core::IPv4Address address;
 				ULong Flags = 0;
 				ULong Mtu = 0;
 				AdapterHandle handle;
@@ -55,6 +57,18 @@ namespace QVPN {
 					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname)
 				{
 					PhysAdress.reserve(10);
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& addr)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_name), address(addr)
+				{
+
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& addr, AdapterHandle hnd)
+					: Adapter(a_name, a_desc, addr)
+				{
+					handle = hnd;
 				}
 
 				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handle)
@@ -227,6 +241,11 @@ namespace QVPN {
 				const AdapterHandle get_handle() const
 				{
 					return const_cast<AdapterHandle>(handle);
+				}
+
+				const QVPN::Core::IPv4Address& get_addr() const
+				{
+					return address;
 				}
 
 				~Adapter()

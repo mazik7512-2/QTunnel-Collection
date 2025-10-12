@@ -1,15 +1,55 @@
 #pragma once
 
-#include "general.hpp"
-#include <structures.hpp>
+#include <general.hpp>
+#include <array>
 
 namespace QVPN
 {
 	namespace Core
 	{
 
+		namespace BaseTypes
+		{
+			using Byte = char;
+			using UByte = unsigned char;
+			using UShort = unsigned short;
+			using UInt = unsigned int;
+			using ULong = unsigned long long;
+			using ubyte_const_iter = std::vector<unsigned char>::const_iterator;
+		}
 
-		class IPv4Address;
+		class IPv4Address final
+		{
+
+		public:
+
+			using UByte = Core::BaseTypes::UByte;
+
+		private:
+
+			std::array<UByte, 4> ip_{};
+
+		public:
+
+			IPv4Address();
+			IPv4Address(UByte first, UByte second, UByte third, UByte four);
+			IPv4Address(const IPv4Address& other);
+			IPv4Address(IPv4Address&& other);
+			IPv4Address& operator=(const IPv4Address& other);
+			IPv4Address& operator=(IPv4Address&& other);
+			IPv4Address& operator=(const std::array<UByte, 4>& other);
+			IPv4Address& operator=(std::array<UByte, 4>&& other);
+
+			UByte operator[](int elem) const;
+
+			std::unique_ptr<std::array<UByte, 4>> to_bytes() const;
+			std::string to_string() const;
+			QVPN::Core::BaseTypes::UInt to_uint() const;
+
+			~IPv4Address();
+
+
+		};
 
 		template <typename T>
 		concept is_adapter_driver =
@@ -91,39 +131,6 @@ namespace QVPN
 
 		};
 
-
-		class IPv4Address final
-		{
-
-		public:
-
-			using UByte = Core::DataStructures::UByte;
-
-		private:
-
-			std::array<UByte, 4> ip_{};
-
-		public:
-
-			IPv4Address();
-			IPv4Address(UByte first, UByte second, UByte third, UByte four);
-			IPv4Address(const IPv4Address& other);
-			IPv4Address(IPv4Address&& other);
-			IPv4Address& operator=(const IPv4Address& other);
-			IPv4Address& operator=(IPv4Address&& other);
-			IPv4Address& operator=(const std::array<UByte, 4>& other);
-			IPv4Address& operator=(std::array<UByte, 4>&& other);
-
-			UByte operator[](int elem) const;
-
-			std::unique_ptr<std::array<UByte, 4>> to_bytes() const;
-			std::string to_string() const;
-			QVPN::Core::DataStructures::UInt to_uint() const;
-
-			~IPv4Address();
-
-
-		};
 
 
 		template <class FilterImpl>

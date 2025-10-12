@@ -43,7 +43,8 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4()
 
 void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& address)
 {
-
+    
+    QVPN::WinTunExt::WinTunDriver::AdapterHandle_t adapter;
     GUID ExampleGuid = { 0xdeadbabe, 0xcafe, 0xbeef, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef } };
     int try_numbers = 20;
     bool trying = true;
@@ -51,8 +52,8 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name,
     std::wstring adapter_desc(a_desc.begin(), a_desc.end());
     while (trying && try_numbers-- > 0)
     {
-        adapter_ = WintunCreateAdapter(adapter_name.c_str(), adapter_desc.c_str(), &ExampleGuid);
-        if (!adapter_) {
+        adapter = WintunCreateAdapter(adapter_name.c_str(), adapter_desc.c_str(), &ExampleGuid);
+        if (!adapter) {
             auto LastError = GetLastError();
             std::cout << "Error while creating adapter. Error ¹" << LastError << std::endl;
             continue;
@@ -63,7 +64,7 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name,
 
     MIB_UNICASTIPADDRESS_ROW AddressRow;
     InitializeUnicastIpAddressEntry(&AddressRow);
-    WintunGetAdapterLUID(adapter_, &AddressRow.InterfaceLuid);
+    WintunGetAdapterLUID(adapter, &AddressRow.InterfaceLuid);
     AddressRow.Address.Ipv4.sin_family = AF_INET;
     AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = htonl(address.to_uint());
     AddressRow.OnLinkPrefixLength = 24;
@@ -74,7 +75,7 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name,
     {
         std::cout << "Error while creating unicast ip address. Error ¹" << LastError << std::endl;
     }
-
+    adapter_ = QVPN::WinTunExt::WinTunDriver::Adapter_t(a_name, a_desc, address, adapter); // ???
 }
 
 
@@ -163,7 +164,7 @@ void QVPN::WinTunExt::WinTunDriver::init_wintun()
 
 void QVPN::WinTunExt::WinTunDriver::capture_adapter()
 {
-    session_ = WintunStartSession(adapter_, 0x400000);
+    session_ = WintunStartSession(adapter_.get_handle(), 0x400000);
     //main_adapter_loop_handler();
 }
 

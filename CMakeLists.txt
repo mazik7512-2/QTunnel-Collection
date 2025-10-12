@@ -73,16 +73,15 @@ add_subdirectory("${QVPN_CLIENT_APP_PATH}")
 file(GLOB_RECURSE _lib_src "${QVPN_LIBRARY_PATH}/*.cpp")
 file(GLOB_RECURSE _lib_incl "${QVPN_LIBRARY_PATH}/*.hpp")
 
+
+
 # OS files
 file(GLOB_RECURSE os_lib_src "${QVPN_LIBRARY_PATH}/${CMAKE_SYSTEM_NAME}/*.cpp")
 file(GLOB_RECURSE os_lib_incl "${QVPN_LIBRARY_PATH}/${CMAKE_SYSTEM_NAME}/*.hpp")
 
 
-
-
 set(lib_src "${_lib_src};${os_lib_src}")
 set(lib_incl "${_lib_incl};${os_lib_incl}")
-
 
 # External libs
 

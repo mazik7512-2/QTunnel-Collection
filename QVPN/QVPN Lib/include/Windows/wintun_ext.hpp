@@ -19,14 +19,13 @@ namespace QVPN
 			using AdapterList_t = QVPN::Core::DataStructures::AdapterList<AdapterHandle_t>;
 
 		private:
-			QVPN::Core::DataStructures::AdapterList<WINTUN_ADAPTER_HANDLE> captured_adapters_;
-			QVPN::Core::DataStructures::Adapter<WINTUN_ADAPTER_HANDLE> main_adapter_;
+			QVPN::Core::DataStructures::Adapter<AdapterHandle_t> adapter_;
 			
 
 		private:
 			HMODULE wintun_;
 			WINTUN_SESSION_HANDLE session_;
-			WINTUN_ADAPTER_HANDLE adapter_;
+			//WINTUN_ADAPTER_HANDLE adapter_;
 
 		public:
 

@@ -66,7 +66,7 @@ std::string QVPN::Core::IPv4Address::to_string() const
 
 }
 
-QVPN::Core::DataStructures::UInt QVPN::Core::IPv4Address::to_uint() const
+QVPN::Core::BaseTypes::UInt QVPN::Core::IPv4Address::to_uint() const
 {
     return (ip_[0] << 24 | ip_[1] << 16 | ip_[2] << 8 | ip_[3]);
 }
