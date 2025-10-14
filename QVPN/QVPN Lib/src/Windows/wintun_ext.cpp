@@ -107,13 +107,7 @@ void QVPN::WinTunExt::WinTunDriver::main_adapter_loop_handler()
             std::cout << IncomingPacketSize << std::endl;
 
             auto packet = (unsigned char*)IncomingPacket;
-            QVPN::Core::DataStructures::Ipv4Packet package(IncomingPacket, IncomingPacketSize);
-            auto [start, end] = package.get_data();
-            for (start; start < end; start++)
-            {
-                std::cout << *start;
-            }
-            std::cout << std::endl;
+            QVPN::Core::DataStructures::Ipv4Packet package(IncomingPacket, IncomingPacket + IncomingPacketSize);
             WintunReleaseReceivePacket(session_, IncomingPacket);
         }
         else if (GetLastError() == ERROR_NO_MORE_ITEMS)

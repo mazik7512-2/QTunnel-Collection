@@ -5,7 +5,6 @@
 #include <thread>
 #include <stdio.h>
 #include <stdlib.h>
-#include <chrono>
 #include <iostream>
 #include <structures.hpp>
 
@@ -209,28 +208,7 @@ namespace QVPN {
 					
 
 					QVPN::Core::DataStructures::Ipv4Packet package(std::begin(packet), std::end(packet));
-					std::cout << package.to_friendly_view() << std::endl;
-					/*
-					auto now = std::chrono::steady_clock::now();
-					std::chrono::duration<double, std::milli> timer_diff_ms = timer - now;
-					if (timer_diff_ms >= iter_dur)
-					{
-						if (!WinDivertRecv(hDivert_, packet, sizeof(packet), &packet_len, &addr))
-						{
-							fprintf(stderr, "warning: failed to read packet (%d)\n",
-								GetLastError());
-							continue;
-						}
-
-						WinDivertHelperParsePacket(packet, packet_len, &ip_header, NULL,
-							NULL, NULL, NULL, &tcp_header, NULL, &payload, &payload_len,
-							NULL, NULL);
-
-						printf(static_cast<const char* const>(packet));
-						timer = std::chrono::steady_clock::now();
-
-					}
-					*/
+					std::cout << package.ip_to_friendly_view() << std::endl;
 					/*
 					if (ip_header == NULL || tcp_header == NULL || payload == NULL ||
 						!BlackListPayloadMatch(blacklist, payload, (UINT16)payload_len))
@@ -262,7 +240,8 @@ namespace QVPN {
 
 			void start_capture_traffic()
 			{
-				worker_ = std::thread([this]() { start_capture_traffic_(); });
+				//worker_ = std::thread([this]() { start_capture_traffic_(); });
+				start_capture_traffic_();
 			}
 
 			void stop_capture_traffic()

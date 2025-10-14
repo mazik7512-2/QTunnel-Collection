@@ -223,7 +223,7 @@ namespace QVPN {
 					return std::make_pair<>(PhysAdress.cbegin(), PhysAdress.cend());
 				}
 
-				ULong get_flags() const
+				ULong get_ip_flags() const
 				{
 					return Flags;
 				}
@@ -289,23 +289,24 @@ namespace QVPN {
 			template <class EndianessPacketLike>
 			concept EndianessPacket =
 				requires (EndianessPacketLike t) {
-					{ true };
-					{ t.get_version() } -> std::same_as<UByte>;
-					{ t.get_header_length() } -> std::same_as<UByte>;
-					{ t.get_dscp() } -> std::same_as<UByte>;
-					{ t.get_ecn() } -> std::same_as<UByte>;
-					{ t.get_total_length() } -> std::same_as<UShort>;
-					{ t.get_id() } -> std::same_as<UShort>;
-					{ t.get_flags() } -> std::same_as<UByte>;
-					{ t.get_offset() } -> std::same_as<UShort>;
-					{ t.get_ttl() } -> std::same_as<UByte>;
-					{ t.get_checksum() } -> std::same_as<UShort>;
-					{ t.get_source() } -> std::same_as<UInt>;
-					{ t.get_dest() } -> std::same_as<UInt>;
-					{ t.get_additional_header() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
-					{ t.get_data() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
-					{ t.to_friendly_view() } -> std::same_as<std::string>;
+					{ EndianessPacketLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
+					{ t.get_ip_version() } -> std::same_as<UByte>;
+					{ t.get_ip_header_length() } -> std::same_as<UByte>;
+					{ t.get_ip_dscp() } -> std::same_as<UByte>;
+					{ t.get_ip_ecn() } -> std::same_as<UByte>;
+					{ t.get_ip_total_length() } -> std::same_as<UShort>;
+					{ t.get_ip_id() } -> std::same_as<UShort>;
+					{ t.get_ip_flags() } -> std::same_as<UByte>;
+					{ t.get_ip_offset() } -> std::same_as<UShort>;
+					{ t.get_ip_ttl() } -> std::same_as<UByte>;
+					{ t.get_ip_checksum() } -> std::same_as<UShort>;
+					{ t.get_ip_source() } -> std::same_as<UInt>;
+					{ t.get_ip_dest() } -> std::same_as<UInt>;
+					{ t.get_ip_additional_header() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+					{ t.ip_to_friendly_view() } -> std::same_as<std::string>;
 			};
+
 
 
 			class Ipv4PacketLittleEndian {
@@ -313,42 +314,37 @@ namespace QVPN {
 			private:
 				UByte header_[20];
 				std::vector<UByte> additional_header_;
-				std::vector<UByte> data_;
 
 			public:
 
-				Ipv4PacketLittleEndian(unsigned char* begin, int size);
 				Ipv4PacketLittleEndian(UByte* begin, UByte* end);
-				Ipv4PacketLittleEndian(ubyte_const_iter begin, ubyte_const_iter end);
 
 				void parse_packet(UByte* begin, UByte* end);
 
-				UByte get_version() const;
-				UByte get_header_length() const;
+				UByte get_ip_version() const;
+				UByte get_ip_header_length() const;
 
-				UByte get_dscp() const;
-				UByte get_ecn() const;
+				UByte get_ip_dscp() const;
+				UByte get_ip_ecn() const;
 
-				UShort get_total_length() const;
+				UShort get_ip_total_length() const;
 
-				UShort get_id() const;
+				UShort get_ip_id() const;
 
-				UByte  get_flags() const;
-				UShort get_offset() const;
+				UByte  get_ip_flags() const;
+				UShort get_ip_offset() const;
 
-				UByte get_ttl() const;
-				UByte get_protocol() const;
+				UByte get_ip_ttl() const;
+				UByte get_ip_protocol() const;
 
-				UShort get_checksum() const;
+				UShort get_ip_checksum() const;
 
-				UInt get_source() const;
-				UInt get_dest() const;
+				UInt get_ip_source() const;
+				UInt get_ip_dest() const;
 
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_additional_header() const;
+				std::pair<ubyte_const_iter, ubyte_const_iter> get_ip_additional_header() const;
 
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_data() const;
-
-				std::string to_friendly_view() const;
+				std::string ip_to_friendly_view() const;
 			};
 
 
@@ -357,20 +353,146 @@ namespace QVPN {
 
 			public:
 
-				Ipv4Packet_(unsigned char* begin, int size)
-					: EndianessPacketLike(begin, size) {}
-
 				Ipv4Packet_(UByte* begin, UByte* end)
-					: EndianessPacketLike(begin, end) {}
-
-				Ipv4Packet_(ubyte_const_iter begin, ubyte_const_iter end)
 					: EndianessPacketLike(begin, end) {}
 
 			};
 			
 
+			template <class EndianessTcpLike>
+			concept EndianessTcp =
+				requires (EndianessTcpLike t) {
 
+					{ EndianessTcpLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
+					{ t.get_tcp_src_port() } -> std::same_as<UShort>;
+					{ t.get_tcp_dst_port() } -> std::same_as<UShort>;
+					{ t.get_tcp_seq_number() } -> std::same_as<UInt>;
+					{ t.get_tcp_ack_number() } -> std::same_as<UInt>;
+					{ t.get_tcp_header_length() } -> std::same_as<UByte>;
+					{ t.get_tcp_reserved() } -> std::same_as<UByte>;
+					{ t.get_tcp_flags() } -> std::same_as<UByte>;
+					{ t.get_tcp_window_size() } -> std::same_as<UShort>;
+					{ t.get_tcp_checksum() } -> std::same_as<UShort>;
+					{ t.get_tcp_urgent_pointer() } -> std::same_as<UShort>;
+					{ t.get_tcp_options() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+			};
+
+			class TcpPacketLittleEndian
+			{
+			private:
+				UByte header_[20];
+				std::vector<UByte> options_;
+
+			public:
+
+				TcpPacketLittleEndian(UByte* begin, UByte* end);
+
+				void parse_packet(UByte* begin, UByte* end);
+
+				UShort get_tcp_src_port();
+				UShort get_tcp_dst_port();
+				UInt get_tcp_seq_number();
+				UInt get_tcp_ack_number();
+				UByte get_tcp_header_length();
+				UByte get_tcp_reserved();
+				UByte get_tcp_flags();
+				UShort get_tcp_window_size();
+				UShort get_tcp_checksum();
+				UShort get_tcp_urgent_pointer();
+				std::pair<ubyte_const_iter, ubyte_const_iter> get_tcp_options();
+
+			};
+
+			template <EndianessTcp EndianessTcpLike>
+			class TcpPacket_ final : public EndianessTcpLike {
+			public:
+				TcpPacket_(UByte* begin, UByte* end)
+					: EndianessTcpLike(begin, end) {}
+
+
+			};
+
+			
+			template <class EndianessUdpLike>
+			concept EndianessUdp =
+				requires (EndianessUdpLike t){
+					
+					{ EndianessUdpLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
+					{ t.get_udp_src_port() } -> std::same_as<UShort>;
+					{ t.get_udp_dst_port() } -> std::same_as<UShort>;
+					{ t.get_udp_length() } -> std::same_as<UShort>;
+					{ t.get_udp_checksum() } -> std::same_as<UShort>;
+
+			};
+
+			class UdpPacketLittleEndian
+			{
+			private:
+				UByte header_[8];
+
+			public:
+
+				UdpPacketLittleEndian(UByte* begin, UByte* end);
+
+				void parse_packet(UByte* begin, UByte* end);
+
+				UShort get_udp_src_port();
+				UShort get_udp_dst_port();
+				UShort get_udp_length();
+				UShort get_udp_checksum();
+			};
+
+			template <EndianessUdp EndianessUdpLike>
+			class UdpPacket_ final : public EndianessUdpLike {
+
+			public:
+
+				UdpPacket_(UByte* begin, UByte* end)
+					: UdpPacketLittleEndian(begin, end) {}
+
+
+			};
+
+
+			template <class EndiannessCustomPacketLike>
+			concept EndianessCustomPacket =
+				requires (EndiannessCustomPacketLike t) {
+					
+					{ EndiannessCustomPacketLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
+					{ t.get_custom_data() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+
+			};
+
+
+			class CustomPacketLittleEndian
+			{
+			private:
+				std::vector<UByte> data_;
+
+			public:
+
+				CustomPacketLittleEndian(UByte* begin, UByte* end);
+				void parse_packet(UByte* begin, UByte* end);
+				std::pair<ubyte_const_iter, ubyte_const_iter> get_custom_data();
+
+			};
+
+			template <EndianessCustomPacket EndiannessCustomPacketLike>
+			class CustomPacket_ final : public EndiannessCustomPacketLike
+			{
+			public:
+
+				CustomPacket_(UByte* begin, UByte* end)
+					: EndiannessCustomPacketLike(begin, end) {}
+			};
+			
 			using Ipv4Packet = Ipv4Packet_<Ipv4PacketLittleEndian>;
+			using TcpPacket = TcpPacket_<TcpPacketLittleEndian>;
+			using UdpPacket = UdpPacket_<UdpPacketLittleEndian>;
+			using CustomPacket = CustomPacket_<CustomPacketLittleEndian>;
 }
 	}
 }
