@@ -80,8 +80,10 @@ file(GLOB_RECURSE os_lib_src "${QVPN_LIBRARY_PATH}/${CMAKE_SYSTEM_NAME}/*.cpp")
 file(GLOB_RECURSE os_lib_incl "${QVPN_LIBRARY_PATH}/${CMAKE_SYSTEM_NAME}/*.hpp")
 
 
+# Concat default lib files + os files
 set(lib_src "${_lib_src};${os_lib_src}")
 set(lib_incl "${_lib_incl};${os_lib_incl}")
+
 
 # External libs
 
@@ -109,8 +111,6 @@ link_directories(${WINDIVERT_PATH}/x64)
 
 # Libs
 add_library(${QVPN_LIBRARY_NAME} STATIC ${lib_incl} ${lib_src})
-#target_link_libraries(${QVPN_LIBRARY_NAME} PRIVATE ${PCAP_LIBRARY})
-#target_link_libraries(${QVPN_CLIENT_APP} PRIVATE ${})
 
 # Executables
 if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)

@@ -5,6 +5,15 @@ QVPN::Core::IPv4Address::IPv4Address()
 {
 }
 
+QVPN::Core::IPv4Address::IPv4Address(BaseTypes::UInt data)
+{
+    UByte first = data >> 24 & 0xFF;
+    UByte second = data >> 16 & 0xFF;
+    UByte third = data >> 8 & 0xFF;
+    UByte four = data & 0xFF;
+    ip_ = { first, second, third, four };
+}
+
 QVPN::Core::IPv4Address::IPv4Address(UByte first, UByte second, UByte third, UByte four)
     : ip_{first, second, third, four}
 {

@@ -37,8 +37,7 @@ int main()
     std::cout << ip4.to_string() << std::endl;
 
 
-    QVPN::VPNDriver vpn;
-    vpn.create_adapter_ipv4();
+    
 
     HANDLE hDivert = WinDivertOpen("true", WINDIVERT_LAYER_NETWORK, 0, 0);
     if (hDivert != INVALID_HANDLE_VALUE)
@@ -51,6 +50,13 @@ int main()
         printf("Error opening driver.\n");
         return 0;
     }
+
+    QVPN::VPNDriver vpn;
+    vpn.create_adapter_ipv4();
+    vpn.capture_adapter();
+    vpn.add_traffic_filter(filter.tcp());
+    vpn.start_capture_traffic();
+
     /*
     PcapDriver driver;
     auto d_list = driver.get_adapters_list();

@@ -304,6 +304,7 @@ namespace QVPN {
 					{ t.get_dest() } -> std::same_as<UInt>;
 					{ t.get_additional_header() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
 					{ t.get_data() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+					{ t.to_friendly_view() } -> std::same_as<std::string>;
 			};
 
 
@@ -346,6 +347,8 @@ namespace QVPN {
 				std::pair<ubyte_const_iter, ubyte_const_iter> get_additional_header() const;
 
 				std::pair<ubyte_const_iter, ubyte_const_iter> get_data() const;
+
+				std::string to_friendly_view() const;
 			};
 
 

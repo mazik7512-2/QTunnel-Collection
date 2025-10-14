@@ -32,6 +32,7 @@ namespace QVPN
 		public:
 
 			IPv4Address();
+			IPv4Address(BaseTypes::UInt data);
 			IPv4Address(UByte first, UByte second, UByte third, UByte four);
 			IPv4Address(const IPv4Address& other);
 			IPv4Address(IPv4Address&& other);
@@ -71,7 +72,8 @@ namespace QVPN
 			requires (T t) {
 
 			typename T::Filter_t;
-
+			
+			{ t.init_driver(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
 			{ t.add_traffic_filter(std::declval<typename T::Filter_t>()) } -> std::same_as<void>;
 			{ t.start_capture_traffic() } -> std::same_as<void>;
 			{ t.stop_capture_traffic() } -> std::same_as<void>;

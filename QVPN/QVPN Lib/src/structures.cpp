@@ -1,4 +1,5 @@
 #include "structures.hpp"
+#include <sstream>
 
 using Byte = QVPN::Core::DataStructures::Byte;
 using UByte = QVPN::Core::DataStructures::UByte;
@@ -120,4 +121,26 @@ std::pair<ubyte_const_iter, ubyte_const_iter> QVPN::Core::DataStructures::Ipv4Pa
 std::pair<ubyte_const_iter, ubyte_const_iter> QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_data() const
 {
 	return std::make_pair<>(data_.cbegin(), data_.cend());
+}
+
+
+std::string QVPN::Core::DataStructures::Ipv4PacketLittleEndian::to_friendly_view() const
+{
+	std::stringstream ss;
+	QVPN::Core::IPv4Address source(get_source());
+	QVPN::Core::IPv4Address dest(get_dest());
+
+	ss << "IPv4 Package: " << std::endl;
+	ss << "Version : " << std::to_string(get_version()) << " Header Length: " << std::to_string(get_header_length()) << " DSCP: " << std::to_string(get_dscp()) << " ECN: " << std::to_string(get_ecn());
+	ss << " Total length: " << std::to_string(get_total_length()) << std::endl;
+	
+	ss << "ID: " << std::to_string(get_id()) << " Flags: " << std::to_string(get_flags()) << " Fragment Offset: " << std::to_string(get_offset()) << std::endl;
+
+	ss << "TTL: " << std::to_string(get_ttl()) << " Protocol: " << std::to_string(get_protocol()) << " Checksum: " << std::to_string(get_checksum()) << std::endl;
+
+	ss << "Source IP: " << source.to_string() << std::endl;
+
+	ss << "Dest IP:" << dest.to_string() << std::endl;
+
+	return ss.str();
 }
