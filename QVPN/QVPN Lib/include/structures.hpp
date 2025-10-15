@@ -257,9 +257,9 @@ namespace QVPN {
 			};
 
 
-			template<class EndianessPacketLike, class AdapterHandle>
+			template<class Ip4PacketLike, class AdapterHandle>
 			concept is_adapter_criteria =
-				requires (EndianessPacketLike t) {
+				requires (Ip4PacketLike t) {
 					{ true };
 					{ t.check_criteria(std::declval<const Adapter<AdapterHandle>&>()) } -> std::same_as<bool>;
 			};
@@ -286,10 +286,10 @@ namespace QVPN {
 			};
 
 
-			template <class EndianessPacketLike>
-			concept EndianessPacket =
-				requires (EndianessPacketLike t) {
-					{ EndianessPacketLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+			template <class Ip4PacketLike>
+			concept Ip4PacketImpl =
+				requires (Ip4PacketLike t) {
+					{ Ip4PacketLike(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_ip_version() } -> std::same_as<UByte>;
 					{ t.get_ip_header_length() } -> std::same_as<UByte>;
@@ -348,22 +348,22 @@ namespace QVPN {
 			};
 
 
-			template <EndianessPacket EndianessPacketLike>
-			class Ipv4Packet_ final : public EndianessPacketLike {
+			template <Ip4PacketImpl Ip4PacketLike>
+			class Ipv4Packet_ final : public Ip4PacketLike {
 
 			public:
 
 				Ipv4Packet_(UByte* begin, UByte* end)
-					: EndianessPacketLike(begin, end) {}
+					: Ip4PacketLike(begin, end) {}
 
 			};
-			
 
-			template <class EndianessTcpLike>
-			concept EndianessTcp =
-				requires (EndianessTcpLike t) {
 
-					{ EndianessTcpLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+			template <class TcpImplLike>
+			concept TcpPacketImpl =
+				requires (TcpImplLike t) {
+
+					{ TcpImplLike(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_tcp_src_port() } -> std::same_as<UShort>;
 					{ t.get_tcp_dst_port() } -> std::same_as<UShort>;
@@ -404,21 +404,21 @@ namespace QVPN {
 
 			};
 
-			template <EndianessTcp EndianessTcpLike>
-			class TcpPacket_ final : public EndianessTcpLike {
+			template <TcpPacketImpl TcpImplLike>
+			class TcpPacket_ final : public TcpImplLike {
 			public:
 				TcpPacket_(UByte* begin, UByte* end)
-					: EndianessTcpLike(begin, end) {}
+					: TcpImplLike(begin, end) {}
 
 
 			};
 
-			
-			template <class EndianessUdpLike>
-			concept EndianessUdp =
-				requires (EndianessUdpLike t){
-					
-					{ EndianessUdpLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+
+			template <class UdpImplLike>
+			concept UdpPacketImpl =
+				requires (UdpImplLike t) {
+
+					{ UdpImplLike(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_udp_src_port() } -> std::same_as<UShort>;
 					{ t.get_udp_dst_port() } -> std::same_as<UShort>;
@@ -444,8 +444,8 @@ namespace QVPN {
 				UShort get_udp_checksum();
 			};
 
-			template <EndianessUdp EndianessUdpLike>
-			class UdpPacket_ final : public EndianessUdpLike {
+			template <UdpPacketImpl UdpImplLike>
+			class UdpPacket_ final : public UdpImplLike {
 
 			public:
 
@@ -456,11 +456,11 @@ namespace QVPN {
 			};
 
 
-			template <class EndiannessCustomPacketLike>
-			concept EndianessCustomPacket =
-				requires (EndiannessCustomPacketLike t) {
-					
-					{ EndiannessCustomPacketLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+			template <class CustomPacketImplLike>
+			concept CustomPacketImpl =
+				requires (CustomPacketImplLike t) {
+
+					{ CustomPacketImplLike(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_custom_data() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
 
@@ -480,20 +480,54 @@ namespace QVPN {
 
 			};
 
-			template <EndianessCustomPacket EndiannessCustomPacketLike>
-			class CustomPacket_ final : public EndiannessCustomPacketLike
+			template <CustomPacketImpl CustomPacketImplLike>
+			class CustomPacket_ final : public CustomPacketImplLike
 			{
 			public:
 
 				CustomPacket_(UByte* begin, UByte* end)
-					: EndiannessCustomPacketLike(begin, end) {}
+					: CustomPacketImplLike(begin, end) {}
 			};
-			
+
+
+
+
+			template <class NetLayer>
+			concept is_net_layer = Ip4PacketImpl<NetLayer>;
+
+			template <class TransportLayer>
+			concept is_transport_layer = TcpPacketImpl<TransportLayer> || UdpPacketImpl<TransportLayer> || CustomPacketImpl<TransportLayer>;
+
+
+
+			template <is_net_layer NetLayer, is_transport_layer TransportLayer>
+			class FullPacket : public NetLayer, public TransportLayer
+			{
+			private:
+				std::vector<UByte> data_;
+
+			public:
+
+				FullPacket(UByte* begin, UByte* end)
+					: NetLayer(begin, end), TransportLayer(begin, end)
+				{
+
+				}
+
+			};
+
+
 			using Ipv4Packet = Ipv4Packet_<Ipv4PacketLittleEndian>;
 			using TcpPacket = TcpPacket_<TcpPacketLittleEndian>;
 			using UdpPacket = UdpPacket_<UdpPacketLittleEndian>;
 			using CustomPacket = CustomPacket_<CustomPacketLittleEndian>;
-}
+
+			using Ipv4TcpPacket = FullPacket<Ipv4Packet, TcpPacket>;
+			using Ipv4UdpPacket = FullPacket<Ipv4Packet, UdpPacket>;
+			using Ipv4CustomPacket = FullPacket<Ipv4Packet, CustomPacket>;
+
+
+		}
 	}
 }
 
