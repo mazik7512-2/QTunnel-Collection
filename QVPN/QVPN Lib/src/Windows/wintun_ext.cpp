@@ -159,7 +159,6 @@ void QVPN::WinTunExt::WinTunDriver::init_wintun()
 void QVPN::WinTunExt::WinTunDriver::capture_adapter()
 {
     session_ = WintunStartSession(adapter_.get_handle(), 0x400000);
-    //main_adapter_loop_handler();
 }
 
 void QVPN::WinTunExt::WinTunDriver::capture_adapter(std::string_view adapter)
@@ -169,6 +168,11 @@ void QVPN::WinTunExt::WinTunDriver::capture_adapter(std::string_view adapter)
 
 void QVPN::WinTunExt::WinTunDriver::capture_adapter(Adapter_t& adapter)
 {
+}
+
+std::shared_ptr<const QVPN::WinTunExt::WinTunDriver::Adapter_t> QVPN::WinTunExt::WinTunDriver::get_ipv4_adapter() const
+{
+    return std::make_shared<const decltype(adapter_)>(adapter_);
 }
 
 void QVPN::WinTunExt::WinTunDriver::close_adapter()

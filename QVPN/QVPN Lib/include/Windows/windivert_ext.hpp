@@ -35,7 +35,6 @@ namespace QVPN {
 			WinDivertTrafficFilterType(WinDivertTrafficFilterType&& filter) noexcept;
 
 			WinDivertTrafficFilterType& operator=(const WinDivertTrafficFilterType& filter);
-			WinDivertTrafficFilterType& operator=(WinDivertTrafficFilterType filter) noexcept;
 			WinDivertTrafficFilterType& operator=(WinDivertTrafficFilterType&& filter) noexcept;
 			
 			WinDivertTrafficFilterType& operator&&(const WinDivertTrafficFilterType& t);
@@ -43,6 +42,7 @@ namespace QVPN {
 			operator Convertable_to() const;
 
 		};
+
 
 		template <class FilterType>
 			requires QVPN::Core::is_filter_type<FilterType>
@@ -139,6 +139,7 @@ namespace QVPN {
 
 		private:
 
+			std::string default_filter_;
 			std::vector<Filter_t> filters_;
 			std::string filters_data;
 			std::thread worker_;
@@ -146,21 +147,23 @@ namespace QVPN {
 
 			void calculate_filters()
 			{
+				Filter_t temp(default_filter_);
 				for (auto& filter : filters_)
 				{
-					filters_data.append(filter);
+					temp = temp && filter;
 				}
+				filters_data = temp;
+			}
+
+			void appy_default_filter(const QVPN::Core::IPv4Address& addr)
+			{
+				default_filter_ = Filter::no_source(addr);
+				calculate_filters();
 			}
 
 			void recalculate_filters()
 			{
 				filters_data.clear();
-				calculate_filters();
-			}
-
-			void appy_default_filter(const QVPN::Core::IPv4Address& addr)
-			{
-				filters_.push_back(addr.to_string());
 				calculate_filters();
 			}
 
@@ -227,21 +230,22 @@ namespace QVPN {
 
 		public:
 
+			
 			void init_driver(const QVPN::Core::IPv4Address& addr)
 			{
 				appy_default_filter(addr);
 			}
-
+			
 			void add_traffic_filter(Filter_t filter)
 			{
 				filters_.push_back(filter);
-				filters_data.append(filter);
+				calculate_filters();
 			}
 
 			void start_capture_traffic()
 			{
-				//worker_ = std::thread([this]() { start_capture_traffic_(); });
-				start_capture_traffic_();
+				worker_ = std::thread([this]() { start_capture_traffic_(); });
+				//start_capture_traffic_();
 			}
 
 			void stop_capture_traffic()

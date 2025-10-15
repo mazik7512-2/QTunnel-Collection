@@ -19,7 +19,7 @@ namespace QVPN
 			using AdapterList_t = QVPN::Core::DataStructures::AdapterList<AdapterHandle_t>;
 
 		private:
-			QVPN::Core::DataStructures::Adapter<AdapterHandle_t> adapter_;
+			Adapter_t adapter_;
 			
 
 		private:
@@ -44,6 +44,7 @@ namespace QVPN
 			void capture_adapter();
 			void capture_adapter(std::string_view adapter);
 			void capture_adapter(Adapter_t& adapter);
+			std::shared_ptr<const Adapter_t> get_ipv4_adapter() const;
 			void close_adapter();
 			void close_adapter(Adapter_t& adapter);
 			void close_all_adapters();

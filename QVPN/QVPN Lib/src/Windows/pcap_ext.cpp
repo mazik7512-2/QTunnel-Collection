@@ -20,7 +20,7 @@ QVPN::Core::DataStructures::Adapter QVPN::PcapExt::PcapNetDriver::convert_from_p
 // RVO 
 QVPN::PcapExt::PcapNetDriver::Adapter_t QVPN::PcapExt::PcapNetDriver::convert_from_pcap_adapter(const pcap_if_t* adapter)
 {
-	return Adapter_t(adapter->name, adapter->description, adapter->name, adapter->flags, 0, std::begin(adapter->addresses->addr->sa_data), std::end(adapter->addresses->addr->sa_data));
+	return Adapter_t(adapter->name, adapter->description, adapter->name);
 }
 
 std::unique_ptr<QVPN::PcapExt::PcapNetDriver::AdapterList_t> QVPN::PcapExt::PcapNetDriver::get_adapters_list() const
@@ -51,8 +51,7 @@ std::unique_ptr<QVPN::PcapExt::PcapNetDriver::AdapterList_t> QVPN::PcapExt::Pcap
 			{
 				auto addr = d->addresses->addr->sa_data;
 				auto adapter = convert_from_pcap_adapter(d);
-				auto [b, e] = adapter.get_phys_addr();
-				adapters.emplace_back(adapter.get_name(), adapter.get_desc(), adapter.get_friendly_name(), adapter.get_ip_flags(), adapter.get_mtu(), b, e);
+				adapters.emplace_back(adapter.get_name(), adapter.get_desc(), adapter.get_friendly_name());
 			}
 
 		}
@@ -106,7 +105,7 @@ bool is_physical_adapter(const QVPN::PcapExt::PcapNetDriver::Adapter_t& adapter)
 
 bool QVPN::PcapExt::AdapterCriteria<QVPN::PcapExt::PcapNetDriver::AdapterHandle_t>::check_criteria(const QVPN::PcapExt::PcapNetDriver::Adapter_t& adapter)
 {
-	if (adapter.get_ip_flags() & (PCAP_IF_UP | PCAP_IF_RUNNING) && is_physical_adapter(adapter))
+	if (is_physical_adapter(adapter))
 		return true;
 	return false;
 }

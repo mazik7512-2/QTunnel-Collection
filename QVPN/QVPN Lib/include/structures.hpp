@@ -18,7 +18,13 @@ namespace QVPN {
 			using UShort = unsigned short;
 			using UInt = unsigned int;
 			using ULong = unsigned long long;
-			using ubyte_const_iter = std::vector<unsigned char>::const_iterator;
+			using ubyte_const_iter = std::vector<UByte>::const_iterator;
+
+			enum Protocols
+			{
+				TCP = 6,
+				UDP = 17
+			};
 
 			enum AdapterFlags : ULong {
 				DdnsEnabled = 0x1,
@@ -39,24 +45,20 @@ namespace QVPN {
 				std::string adapter_name;
 				std::string adapter_desc;
 				std::string friendly_name;
-				std::vector<Byte> PhysAdress;
 				QVPN::Core::IPv4Address address;
-				ULong Flags = 0;
-				ULong Mtu = 0;
 				AdapterHandle handle;
 
 			public:
 
 				Adapter()
 				{
-					PhysAdress.reserve(10);
 					handle = nullptr;
 				}
 
 				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname)
 					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname)
 				{
-					PhysAdress.reserve(10);
+					
 				}
 
 				Adapter(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& addr)
@@ -74,89 +76,19 @@ namespace QVPN {
 				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handle)
 					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), handle(a_handle)
 				{
-					PhysAdress.reserve(10);
-				}
 
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu)
-					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
-				{
-					PhysAdress.reserve(10);
 				}
-
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handle, ULong flags, ULong mtu)
-					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu), handle(a_handle)
-				{
-					PhysAdress.reserve(10);
-				}
-
-				Adapter(const Byte* begin, const Byte* end)
-					: QVPN::Core::DataStructures::Adapter::Adapter()
-				{
-					PhysAdress.insert(PhysAdress.cend(), begin, end);
-				}
-
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, const Byte* begin, const Byte* end)
-					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname)
-				{
-					PhysAdress.reserve(10);
-					PhysAdress.insert(PhysAdress.cend(), begin, end);
-				}
-
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu, const Byte* begin, const Byte* end)
-					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
-				{
-					PhysAdress.reserve(10);
-					PhysAdress.insert(PhysAdress.cend(), begin, end);
-				}
-
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handle, const Byte* begin, const Byte* end)
-					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), handle(a_handle)
-				{
-					PhysAdress.reserve(10);
-					PhysAdress.insert(PhysAdress.cend(), begin, end);
-				}
-
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, AdapterHandle a_handle, ULong mtu, const Byte* begin, const Byte* end)
-					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu), handle(a_handle)
-				{
-					PhysAdress.reserve(10);
-					PhysAdress.insert(PhysAdress.cend(), begin, end);
-				}
-
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu, std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end)
-					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu)
-				{
-					PhysAdress.reserve(10);
-					PhysAdress.insert(PhysAdress.cend(), begin, end);
-				}
-
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handler, ULong flags, ULong mtu, const Byte* begin, const Byte* end)
-					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu), handle(a_handler)
-				{
-					PhysAdress.reserve(10);
-					PhysAdress.insert(PhysAdress.cend(), begin, end);
-				}
-
-				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handler, ULong flags, ULong mtu, std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end)
-					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), Flags(flags), Mtu(mtu), handle(a_handler)
-				{
-					PhysAdress.reserve(10);
-					PhysAdress.insert(PhysAdress.cend(), begin, end);
-				}
-
 
 				void set_handle(const AdapterHandle a_handle)
 				{
 					handle = a_handle;
 				}
 
-				void set_data(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong flags, ULong mtu)
+				void set_data(std::string_view a_name, std::string_view a_desc, std::string_view a_fname)
 				{
 					adapter_name = a_name;
 					adapter_desc = a_desc;
 					friendly_name = a_fname;
-					Flags = flags;
-					Mtu = mtu;
 				}
 
 				void set_name(std::string_view a_name)
@@ -174,35 +106,6 @@ namespace QVPN {
 					friendly_name = a_fname;
 				}
 
-				void set_phys_addr(std::vector<Byte>::const_iterator begin, std::vector<Byte>::const_iterator end)
-				{
-					PhysAdress.clear();
-					PhysAdress.insert(PhysAdress.end(), begin, end);
-				}
-
-				void set_phys_addr(const Byte* begin, const Byte* end)
-				{
-					PhysAdress.clear();
-					PhysAdress.insert(PhysAdress.end(), begin, end);
-				}
-
-				void set_phys_addr(std::unique_ptr<Byte> begin, std::unique_ptr<Byte> end)
-				{
-					PhysAdress.clear();
-					PhysAdress.insert(PhysAdress.end(), begin.get(), end.get());
-				}
-
-				void set_flags(ULong flags)
-				{
-					Flags = flags;
-				}
-
-				void set_mtu(ULong mtu)
-				{
-					Mtu = mtu;
-				}
-
-
 				std::string_view get_name() const
 				{
 					return adapter_name;
@@ -218,25 +121,6 @@ namespace QVPN {
 					return friendly_name;
 				}
 
-				std::pair<std::vector<Byte>::const_iterator, std::vector<Byte>::const_iterator> get_phys_addr() const
-				{
-					return std::make_pair<>(PhysAdress.cbegin(), PhysAdress.cend());
-				}
-
-				ULong get_ip_flags() const
-				{
-					return Flags;
-				}
-
-				ULong get_mtu() const
-				{
-					return Mtu;
-				}
-
-				ULong get_flag(AdapterFlags flag) const
-				{
-					return Flags & flag;
-				}
 
 				const AdapterHandle get_handle() const
 				{
@@ -270,13 +154,13 @@ namespace QVPN {
 			public:
 
 				template<class U, class AdapterHandle> requires is_adapter_criteria<U, AdapterHandle>
-				std::unique_ptr<Adapter<AdapterHandle>> get_default_adapter()
+				std::shared_ptr<Adapter<AdapterHandle>> get_default_adapter()
 				{
 					for (const auto& it : *this)
 					{
 						if (U::check_criteria(it))
 						{
-							return std::make_unique<Adapter<AdapterHandle>>(it);
+							return std::make_shared<Adapter<AdapterHandle>>(it);
 						}
 					}
 					return nullptr;
@@ -286,10 +170,21 @@ namespace QVPN {
 			};
 
 
-			template <class Ip4PacketLike>
-			concept Ip4PacketImpl =
-				requires (Ip4PacketLike t) {
-					{ Ip4PacketLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+			template <class IpPacketImpl>
+			concept UnifiedIpPacketLike =
+				requires (IpPacketImpl t) {
+
+					{ t.get_src() } -> std::same_as<std::pair<const UByte*, const UByte*>>;
+					{ t.get_dst() } -> std::same_as<std::pair<const UByte*, const UByte*>>;
+
+			};
+
+			template <class Ip4PacketImpl>
+			concept Ip4PacketLike =
+				requires (Ip4PacketImpl t) {
+
+					{ Ip4PacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_ip_version() } -> std::same_as<UByte>;
 					{ t.get_ip_header_length() } -> std::same_as<UByte>;
@@ -305,7 +200,8 @@ namespace QVPN {
 					{ t.get_ip_dest() } -> std::same_as<UInt>;
 					{ t.get_ip_additional_header() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
 					{ t.ip_to_friendly_view() } -> std::same_as<std::string>;
-			};
+
+			} && UnifiedIpPacketLike<Ip4PacketImpl>;
 
 
 
@@ -313,6 +209,7 @@ namespace QVPN {
 
 			private:
 				UByte header_[20];
+				UByte* next_protocol_;
 				std::vector<UByte> additional_header_;
 
 			public:
@@ -320,6 +217,8 @@ namespace QVPN {
 				Ipv4PacketLittleEndian(UByte* begin, UByte* end);
 
 				void parse_packet(UByte* begin, UByte* end);
+
+				UByte* get_next_protocol_byte();
 
 				UByte get_ip_version() const;
 				UByte get_ip_header_length() const;
@@ -343,27 +242,42 @@ namespace QVPN {
 				UInt get_ip_dest() const;
 
 				std::pair<ubyte_const_iter, ubyte_const_iter> get_ip_additional_header() const;
-
 				std::string ip_to_friendly_view() const;
+
+				/* Unified Ip Packet implementaion */
+				std::pair<const UByte*, const UByte*> get_src() const;
+				std::pair<const UByte*, const UByte*> get_dst() const;
+
+				
 			};
 
 
-			template <Ip4PacketImpl Ip4PacketLike>
-			class Ipv4Packet_ final : public Ip4PacketLike {
+			template <Ip4PacketLike Ip4PacketImpl>
+			class Ipv4Packet_ final : public Ip4PacketImpl {
 
 			public:
 
 				Ipv4Packet_(UByte* begin, UByte* end)
-					: Ip4PacketLike(begin, end) {}
+					: Ip4PacketImpl(begin, end) {}
 
 			};
 
 
-			template <class TcpImplLike>
-			concept TcpPacketImpl =
-				requires (TcpImplLike t) {
+			template <class TransportImpl>
+			concept UnifiedTransportLike =
+				requires (TransportImpl t) {
 
-					{ TcpImplLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ t.get_src_port() } -> std::same_as<UShort>;
+					{ t.get_dst_port() } -> std::same_as<UShort>;
+
+			};
+
+			template <class TcpImpl>
+			concept TcpPacketLike =
+				requires (TcpImpl t) {
+
+					{ TcpImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_tcp_src_port() } -> std::same_as<UShort>;
 					{ t.get_tcp_dst_port() } -> std::same_as<UShort>;
@@ -376,19 +290,24 @@ namespace QVPN {
 					{ t.get_tcp_checksum() } -> std::same_as<UShort>;
 					{ t.get_tcp_urgent_pointer() } -> std::same_as<UShort>;
 					{ t.get_tcp_options() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
-			};
+					{ t.protocol_criteria(std::declval<UByte>()) } -> std::same_as<bool>;
+
+			} && UnifiedTransportLike<TcpImpl>;
 
 			class TcpPacketLittleEndian
 			{
 			private:
 				UByte header_[20];
 				std::vector<UByte> options_;
+				UByte* next_protocol_;
 
 			public:
 
 				TcpPacketLittleEndian(UByte* begin, UByte* end);
 
 				void parse_packet(UByte* begin, UByte* end);
+
+				UByte* get_next_protocol_byte();
 
 				UShort get_tcp_src_port();
 				UShort get_tcp_dst_port();
@@ -401,36 +320,44 @@ namespace QVPN {
 				UShort get_tcp_checksum();
 				UShort get_tcp_urgent_pointer();
 				std::pair<ubyte_const_iter, ubyte_const_iter> get_tcp_options();
+				bool protocol_criteria(UByte protocol);
+
+				UShort get_src_port();
+				UShort get_dst_port();
 
 			};
 
-			template <TcpPacketImpl TcpImplLike>
-			class TcpPacket_ final : public TcpImplLike {
+			template <TcpPacketLike TcpImpl>
+			class TcpPacket_ final : public TcpImpl {
 			public:
+
 				TcpPacket_(UByte* begin, UByte* end)
-					: TcpImplLike(begin, end) {}
+					: TcpImpl(begin, end) {}
 
 
 			};
 
 
-			template <class UdpImplLike>
-			concept UdpPacketImpl =
-				requires (UdpImplLike t) {
+			template <class UdpImpl>
+			concept UdpPacketLike =
+				requires (UdpImpl t) {
 
-					{ UdpImplLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ UdpImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_udp_src_port() } -> std::same_as<UShort>;
 					{ t.get_udp_dst_port() } -> std::same_as<UShort>;
 					{ t.get_udp_length() } -> std::same_as<UShort>;
 					{ t.get_udp_checksum() } -> std::same_as<UShort>;
+					{ t.protocol_criteria(std::declval<UByte>()) } -> std::same_as<bool>;
 
-			};
+			} && UnifiedTransportLike<UdpImpl>;
 
 			class UdpPacketLittleEndian
 			{
 			private:
 				UByte header_[8];
+				UByte* next_protocol_;
 
 			public:
 
@@ -438,14 +365,20 @@ namespace QVPN {
 
 				void parse_packet(UByte* begin, UByte* end);
 
+				UByte* get_next_protocol_byte();
+
 				UShort get_udp_src_port();
 				UShort get_udp_dst_port();
 				UShort get_udp_length();
 				UShort get_udp_checksum();
+				bool protocol_criteria(UByte protocol);
+
+				UShort get_src_port();
+				UShort get_dst_port();
 			};
 
-			template <UdpPacketImpl UdpImplLike>
-			class UdpPacket_ final : public UdpImplLike {
+			template <UdpPacketLike UdpImpl>
+			class UdpPacket_ final : public UdpImpl {
 
 			public:
 
@@ -456,47 +389,54 @@ namespace QVPN {
 			};
 
 
-			template <class CustomPacketImplLike>
-			concept CustomPacketImpl =
-				requires (CustomPacketImplLike t) {
+			template <class CustomPacketImpl>
+			concept CustomPacketLike =
+				requires (CustomPacketImpl t) {
 
-					{ CustomPacketImplLike(std::declval<UByte*>(), std::declval<UByte*>()) };
+					{ CustomPacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_custom_data() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+					{ t.protocol_criteria(std::declval<UByte>()) } -> std::same_as<bool>;
 
-			};
+			} && UnifiedTransportLike<CustomPacketImpl>;
 
 
 			class CustomPacketLittleEndian
 			{
 			private:
 				std::vector<UByte> data_;
+				UByte* next_protocol_;
 
 			public:
 
 				CustomPacketLittleEndian(UByte* begin, UByte* end);
 				void parse_packet(UByte* begin, UByte* end);
+				UByte* get_next_protocol_byte();
 				std::pair<ubyte_const_iter, ubyte_const_iter> get_custom_data();
+				bool protocol_criteria(UByte protocol);
+
+				UShort get_src_port();
+				UShort get_dst_port();
 
 			};
 
-			template <CustomPacketImpl CustomPacketImplLike>
-			class CustomPacket_ final : public CustomPacketImplLike
+			template <CustomPacketLike CustomPacketImpl>
+			class CustomPacket_ final : public CustomPacketImpl
 			{
 			public:
 
 				CustomPacket_(UByte* begin, UByte* end)
-					: CustomPacketImplLike(begin, end) {}
+					: CustomPacketImpl(begin, end) {}
 			};
 
 
 
 
 			template <class NetLayer>
-			concept is_net_layer = Ip4PacketImpl<NetLayer>;
+			concept is_net_layer = Ip4PacketLike<NetLayer>;
 
 			template <class TransportLayer>
-			concept is_transport_layer = TcpPacketImpl<TransportLayer> || UdpPacketImpl<TransportLayer> || CustomPacketImpl<TransportLayer>;
+			concept is_transport_layer = TcpPacketLike<TransportLayer> || UdpPacketLike<TransportLayer> || CustomPacketLike<TransportLayer>;
 
 
 

@@ -23,9 +23,6 @@ void test(std::string_view t) {
 
 int main()
 {
-    
-    
-
     QVPN::WinDivertExt::WinDivertTrafficFilter filter;
 
     test(filter.ipv4() && filter.tcp() && filter.udp());
@@ -37,8 +34,7 @@ int main()
     std::cout << ip4.to_string() << std::endl;
 
 
-    
-
+    /*
     HANDLE hDivert = WinDivertOpen("true", WINDIVERT_LAYER_NETWORK, 0, 0);
     if (hDivert != INVALID_HANDLE_VALUE)
     {
@@ -50,10 +46,11 @@ int main()
         printf("Error opening driver.\n");
         return 0;
     }
-
+    */
     QVPN::VPNDriver vpn;
     vpn.create_adapter_ipv4();
     vpn.capture_adapter();
+    vpn.init_vpn();
     vpn.add_traffic_filter(filter.tcp());
     vpn.start_capture_traffic();
 

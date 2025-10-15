@@ -62,6 +62,7 @@ namespace QVPN
 
 			{ t.create_adapter_ipv4() } -> std::same_as<void>;
 			{ t.create_adapter_ipv4(std::declval<std::string_view>(), std::declval<std::string_view>(), std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
+			{ t.get_ipv4_adapter() } -> std::same_as<std::shared_ptr<const typename T::Adapter_t>>;
 			{ t.capture_adapter() } -> std::same_as<void>;
 			{ t.close_adapter() } -> std::same_as<void>;
 		};
@@ -146,6 +147,17 @@ namespace QVPN
 		template <is_adapter_driver AdapterDriver, is_net_driver NetDriver>
 		class VPNDriver_ : public AdapterDriver, public NetDriver
 		{
+		public:
+
+			VPNDriver_()
+				: AdapterDriver(), NetDriver() {}
+
+			void init_vpn()
+			{
+				auto adapter_ = AdapterDriver::get_ipv4_adapter();
+				auto addr = adapter_->get_addr();
+				NetDriver::init_driver(addr);
+			}
 
 		};
 
