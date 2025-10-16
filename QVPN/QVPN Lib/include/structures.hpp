@@ -20,7 +20,13 @@ namespace QVPN {
 			using ULong = unsigned long long;
 			using ubyte_const_iter = std::vector<UByte>::const_iterator;
 
-			enum Protocols
+			enum NetProtocols
+			{
+				IPv4 = 4,
+				IPv6 = 6
+			};
+
+			enum TransportProtocols
 			{
 				TCP = 6,
 				UDP = 17
@@ -253,7 +259,7 @@ namespace QVPN {
 
 
 			template <Ip4PacketLike Ip4PacketImpl>
-			class Ipv4Packet_ final : public Ip4PacketImpl {
+			class Ipv4Packet_ : public Ip4PacketImpl {
 
 			public:
 
@@ -328,7 +334,7 @@ namespace QVPN {
 			};
 
 			template <TcpPacketLike TcpImpl>
-			class TcpPacket_ final : public TcpImpl {
+			class TcpPacket_ : public TcpImpl {
 			public:
 
 				TcpPacket_(UByte* begin, UByte* end)
@@ -378,7 +384,7 @@ namespace QVPN {
 			};
 
 			template <UdpPacketLike UdpImpl>
-			class UdpPacket_ final : public UdpImpl {
+			class UdpPacket_ : public UdpImpl {
 
 			public:
 
@@ -421,7 +427,7 @@ namespace QVPN {
 			};
 
 			template <CustomPacketLike CustomPacketImpl>
-			class CustomPacket_ final : public CustomPacketImpl
+			class CustomPacket_ : public CustomPacketImpl
 			{
 			public:
 
@@ -430,6 +436,35 @@ namespace QVPN {
 			};
 
 
+			template <class DataLayer>
+			concept DataPacketLike = requires (DataLayer t) {
+
+				{ DataLayer(std::declval<UByte*>(), std::declval<UByte*>()) };
+				{ t.get_data() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+			};
+
+
+
+
+			class DataPacketLittleEndian
+			{
+			private:
+				std::vector<UByte> data_;
+
+			public:
+
+				DataPacketLittleEndian(UByte* begin, UByte* end);
+				std::pair<ubyte_const_iter, ubyte_const_iter> get_data() const;
+			};
+
+
+			template <DataPacketLike DataPacketImpl>
+			class DataPacket_ : public DataPacketImpl
+			{
+			public:
+				DataPacket_(UByte* begin, UByte* end)
+					: DataPacketImpl(begin, end) {}
+			};
 
 
 			template <class NetLayer>
@@ -438,33 +473,37 @@ namespace QVPN {
 			template <class TransportLayer>
 			concept is_transport_layer = TcpPacketLike<TransportLayer> || UdpPacketLike<TransportLayer> || CustomPacketLike<TransportLayer>;
 
+			template <class DataLayer>
+			concept is_data_layer = DataPacketLike<DataLayer>;
 
 
-			template <is_net_layer NetLayer, is_transport_layer TransportLayer>
-			class FullPacket : public NetLayer, public TransportLayer
+			template <class FullPacketImpl>
+			concept FullPacketLike = is_net_layer<FullPacketImpl> && is_transport_layer<FullPacketImpl> && is_data_layer<FullPacketImpl>;
+
+			template <is_net_layer NetLayer, is_transport_layer TransportLayer, is_data_layer DataLayer>
+			class FullPacket : public NetLayer, public TransportLayer, public DataLayer
 			{
 			private:
-				std::vector<UByte> data_;
 
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: NetLayer(begin, end), TransportLayer(begin, end)
-				{
-
-				}
+					: NetLayer(begin, end), TransportLayer(NetLayer::get_next_protocol_byte(), end), DataLayer(TransportLayer::get_next_protocol_byte(), end) {}
 
 			};
+
 
 
 			using Ipv4Packet = Ipv4Packet_<Ipv4PacketLittleEndian>;
 			using TcpPacket = TcpPacket_<TcpPacketLittleEndian>;
 			using UdpPacket = UdpPacket_<UdpPacketLittleEndian>;
 			using CustomPacket = CustomPacket_<CustomPacketLittleEndian>;
+			using DataPacket = DataPacket_<DataPacketLittleEndian>;
 
-			using Ipv4TcpPacket = FullPacket<Ipv4Packet, TcpPacket>;
-			using Ipv4UdpPacket = FullPacket<Ipv4Packet, UdpPacket>;
-			using Ipv4CustomPacket = FullPacket<Ipv4Packet, CustomPacket>;
+
+			using Ipv4TcpPacket = FullPacket<Ipv4Packet, TcpPacket, DataPacket>;
+			using Ipv4UdpPacket = FullPacket<Ipv4Packet, UdpPacket, DataPacket>;
+			using Ipv4CustomPacket = FullPacket<Ipv4Packet, CustomPacket, DataPacket>;
 
 
 		}

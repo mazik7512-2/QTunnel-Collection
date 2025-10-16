@@ -236,7 +236,7 @@ std::pair<ubyte_const_iter, ubyte_const_iter> QVPN::Core::DataStructures::TcpPac
 
 bool QVPN::Core::DataStructures::TcpPacketLittleEndian::protocol_criteria(UByte protocol)
 {
-	return (protocol == QVPN::Core::DataStructures::Protocols::TCP) ? true : false;
+	return (protocol == QVPN::Core::DataStructures::TransportProtocols::TCP) ? true : false;
 }
 
 UShort QVPN::Core::DataStructures::TcpPacketLittleEndian::get_src_port()
@@ -289,7 +289,7 @@ UShort QVPN::Core::DataStructures::UdpPacketLittleEndian::get_udp_checksum()
 
 bool QVPN::Core::DataStructures::UdpPacketLittleEndian::protocol_criteria(UByte protocol)
 {
-	return (protocol == QVPN::Core::DataStructures::Protocols::UDP) ? true : false;
+	return (protocol == QVPN::Core::DataStructures::TransportProtocols::UDP) ? true : false;
 }
 
 UShort QVPN::Core::DataStructures::UdpPacketLittleEndian::get_src_port()
@@ -325,7 +325,7 @@ std::pair<ubyte_const_iter, ubyte_const_iter> QVPN::Core::DataStructures::Custom
 
 bool QVPN::Core::DataStructures::CustomPacketLittleEndian::protocol_criteria(UByte protocol)
 {
-	return (protocol == QVPN::Core::DataStructures::Protocols::TCP) ? false : (protocol == QVPN::Core::DataStructures::Protocols::UDP) ? false : true;
+	return (protocol == QVPN::Core::DataStructures::TransportProtocols::TCP) ? false : (protocol == QVPN::Core::DataStructures::TransportProtocols::UDP) ? false : true;
 }
 
 UShort QVPN::Core::DataStructures::CustomPacketLittleEndian::get_src_port()
@@ -336,4 +336,14 @@ UShort QVPN::Core::DataStructures::CustomPacketLittleEndian::get_src_port()
 UShort QVPN::Core::DataStructures::CustomPacketLittleEndian::get_dst_port()
 {
 	return data_[2] << 8 | data_[3];
+}
+
+QVPN::Core::DataStructures::DataPacketLittleEndian::DataPacketLittleEndian(UByte* begin, UByte* end)
+{
+	std::copy(begin, end, data_.begin());
+}
+
+std::pair<ubyte_const_iter, ubyte_const_iter> QVPN::Core::DataStructures::DataPacketLittleEndian::get_data() const
+{
+	return std::make_pair<>(data_.cbegin(), data_.cend());
 }
