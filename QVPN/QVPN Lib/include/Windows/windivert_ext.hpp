@@ -167,7 +167,7 @@ namespace QVPN {
 				calculate_filters();
 			}
 
-			void start_capture_traffic_()
+			void start_capture_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
 			{
 				hDivert_ = WinDivertOpen(filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
 				if (hDivert_ != INVALID_HANDLE_VALUE)
@@ -180,10 +180,10 @@ namespace QVPN {
 					printf("Error opening driver.\n");
 					return;
 				}
-				capture_loop();
+				capture_loop(adapter_addr);
 			}
 
-			void capture_loop()
+			void capture_loop(const QVPN::Core::IPv4Address& adapter_addr)
 			{
 				WINDIVERT_ADDRESS addr;
 				UINT8 packet[MAXBUF];
@@ -193,8 +193,6 @@ namespace QVPN {
 				PVOID payload;
 				UINT payload_len;
 
-				auto timer = std::chrono::steady_clock::now();
-				auto iter_dur = std::chrono::milliseconds(10);
 				while (true)
 				{
 					if (!WinDivertRecv(hDivert_, packet, sizeof(packet), &packet_len, &addr))
@@ -205,26 +203,18 @@ namespace QVPN {
 					}
 
 					
-					WinDivertHelperParsePacket(packet, packet_len, &ip_header, NULL,
-						NULL, NULL, NULL, &tcp_header, NULL, &payload, &payload_len,
-						NULL, NULL);
 					
-
-					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(std::begin(packet), std::end(packet));
+					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet, packet + packet_len);
+					package.set_ip_source(adapter_addr); // добавить пересчет чек-суммы, иначе не отправл€ютс€
 					std::cout << package.ip_to_friendly_view() << std::endl;
-					/*
-					if (ip_header == NULL || tcp_header == NULL || payload == NULL ||
-						!BlackListPayloadMatch(blacklist, payload, (UINT16)payload_len))
+
+					auto [b, e] = package.bytes();
+					if (!WinDivertSend(hDivert_, b, e - b, NULL, &addr))
 					{
-						// Packet does not match the blacklist; simply reinject it.
-						if (!WinDivertSend(handle, packet, packet_len, NULL, &addr))
-						{
-							fprintf(stderr, "warning: failed to reinject packet (%d)\n",
-								GetLastError());
-						}
-						continue;
+						fprintf(stderr, "warning: failed to reinject packet (%d)\n",
+							GetLastError());
 					}
-					*/
+
 				}
 			}
 
@@ -242,9 +232,9 @@ namespace QVPN {
 				calculate_filters();
 			}
 
-			void start_capture_traffic()
+			void start_capture_traffic(const QVPN::Core::IPv4Address& adapter_addr)
 			{
-				worker_ = std::thread([this]() { start_capture_traffic_(); });
+				worker_ = std::thread([this, &adapter_addr]() { start_capture_traffic_(adapter_addr); });
 				//start_capture_traffic_();
 			}
 

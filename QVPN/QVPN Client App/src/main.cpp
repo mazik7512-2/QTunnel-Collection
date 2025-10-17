@@ -52,7 +52,7 @@ int main()
     vpn.capture_adapter();
     vpn.init_vpn();
     vpn.add_traffic_filter(filter.tcp());
-    vpn.start_capture_traffic();
+    vpn.start_vpn_client();
 
     /*
     PcapDriver driver;

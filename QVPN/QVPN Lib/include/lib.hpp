@@ -76,7 +76,7 @@ namespace QVPN
 			
 			{ t.init_driver(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
 			{ t.add_traffic_filter(std::declval<typename T::Filter_t>()) } -> std::same_as<void>;
-			{ t.start_capture_traffic() } -> std::same_as<void>;
+			{ t.start_capture_traffic(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
 			{ t.stop_capture_traffic() } -> std::same_as<void>;
 		};
 
@@ -157,6 +157,13 @@ namespace QVPN
 				auto adapter_ = AdapterDriver::get_ipv4_adapter();
 				auto addr = adapter_->get_addr();
 				NetDriver::init_driver(addr);
+			}
+
+			void start_vpn_client()
+			{
+				auto adapter_ = AdapterDriver::get_ipv4_adapter();
+				auto addr = adapter_->get_addr();
+				NetDriver::start_capture_traffic(addr);
 			}
 
 		};
