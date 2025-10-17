@@ -210,7 +210,7 @@ namespace QVPN {
 						NULL, NULL);
 					
 
-					QVPN::Core::DataStructures::Ipv4Packet package(std::begin(packet), std::end(packet));
+					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(std::begin(packet), std::end(packet));
 					std::cout << package.ip_to_friendly_view() << std::endl;
 					/*
 					if (ip_header == NULL || tcp_header == NULL || payload == NULL ||

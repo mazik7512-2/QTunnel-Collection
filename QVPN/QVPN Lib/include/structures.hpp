@@ -188,6 +188,9 @@ namespace QVPN {
 			template <class Ip4PacketImpl>
 			concept Ip4PacketLike =
 				requires (Ip4PacketImpl t) {
+					
+				typename Ip4PacketImpl::AdditionalHeaderIterator_t;
+				typename Ip4PacketImpl::ConstAdditionalHeaderIterator_t;
 
 					{ Ip4PacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
@@ -204,7 +207,7 @@ namespace QVPN {
 					{ t.get_ip_checksum() } -> std::same_as<UShort>;
 					{ t.get_ip_source() } -> std::same_as<UInt>;
 					{ t.get_ip_dest() } -> std::same_as<UInt>;
-					{ t.get_ip_additional_header() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+					{ t.get_ip_additional_header() } -> std::same_as<std::pair<typename Ip4PacketImpl::ConstAdditionalHeaderIterator_t, typename Ip4PacketImpl::ConstAdditionalHeaderIterator_t>>;
 					{ t.ip_to_friendly_view() } -> std::same_as<std::string>;
 
 			} && UnifiedIpPacketLike<Ip4PacketImpl>;
@@ -219,6 +222,9 @@ namespace QVPN {
 				std::vector<UByte> additional_header_;
 
 			public:
+
+				using AdditionalHeaderIterator_t = std::vector<UByte>::iterator;
+				using ConstAdditionalHeaderIterator_t = std::vector<UByte>::const_iterator;
 
 				Ipv4PacketLittleEndian(UByte* begin, UByte* end);
 
@@ -247,7 +253,7 @@ namespace QVPN {
 				UInt get_ip_source() const;
 				UInt get_ip_dest() const;
 
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_ip_additional_header() const;
+				std::pair<ConstAdditionalHeaderIterator_t, ConstAdditionalHeaderIterator_t> get_ip_additional_header() const;
 				std::string ip_to_friendly_view() const;
 
 				/* Unified Ip Packet implementaion */
@@ -257,6 +263,60 @@ namespace QVPN {
 				
 			};
 
+
+			class Ipv4PacketView {
+
+			private:
+
+				UByte* header_;
+				const int ip4_header_size_ = 20;
+				
+				UByte* next_protocol_;
+
+				UByte* additional_header_;
+				int add_header_size_ = 0;
+
+			public:
+
+				using AdditionalHeaderIterator_t = UByte*;
+				using ConstAdditionalHeaderIterator_t = const UByte*;
+
+				Ipv4PacketView(UByte* begin, UByte* end);
+
+				void parse_packet(UByte* begin, UByte* end);
+
+				UByte* get_next_protocol_byte();
+
+				UByte get_ip_version() const;
+				UByte get_ip_header_length() const;
+
+				UByte get_ip_dscp() const;
+				UByte get_ip_ecn() const;
+
+				UShort get_ip_total_length() const;
+
+				UShort get_ip_id() const;
+
+				UByte  get_ip_flags() const;
+				UShort get_ip_offset() const;
+
+				UByte get_ip_ttl() const;
+				UByte get_ip_protocol() const;
+
+				UShort get_ip_checksum() const;
+
+				UInt get_ip_source() const;
+				UInt get_ip_dest() const;
+
+				std::pair<ConstAdditionalHeaderIterator_t, ConstAdditionalHeaderIterator_t> get_ip_additional_header() const;
+				std::string ip_to_friendly_view() const;
+
+				/* Unified Ip Packet implementaion */
+				std::pair<const UByte*, const UByte*> get_src() const;
+				std::pair<const UByte*, const UByte*> get_dst() const;
+
+
+			};
 
 			template <Ip4PacketLike Ip4PacketImpl>
 			class Ipv4Packet_ : public Ip4PacketImpl {
@@ -281,6 +341,9 @@ namespace QVPN {
 			template <class TcpImpl>
 			concept TcpPacketLike =
 				requires (TcpImpl t) {
+					
+				typename TcpImpl::AdditionalHeaderIterator_t;
+				typename TcpImpl::ConstAdditionalHeaderIterator_t;
 
 					{ TcpImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
@@ -295,10 +358,12 @@ namespace QVPN {
 					{ t.get_tcp_window_size() } -> std::same_as<UShort>;
 					{ t.get_tcp_checksum() } -> std::same_as<UShort>;
 					{ t.get_tcp_urgent_pointer() } -> std::same_as<UShort>;
-					{ t.get_tcp_options() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+					{ t.get_tcp_options() } -> std::same_as<std::pair<typename TcpImpl::ConstAdditionalHeaderIterator_t, typename TcpImpl::ConstAdditionalHeaderIterator_t>>;
 					{ t.protocol_criteria(std::declval<UByte>()) } -> std::same_as<bool>;
 
 			} && UnifiedTransportLike<TcpImpl>;
+
+
 
 			class TcpPacketLittleEndian
 			{
@@ -308,6 +373,9 @@ namespace QVPN {
 				UByte* next_protocol_;
 
 			public:
+
+				using AdditionalHeaderIterator_t = std::vector<UByte>::iterator;
+				using ConstAdditionalHeaderIterator_t = std::vector<UByte>::const_iterator;
 
 				TcpPacketLittleEndian(UByte* begin, UByte* end);
 
@@ -325,13 +393,55 @@ namespace QVPN {
 				UShort get_tcp_window_size();
 				UShort get_tcp_checksum();
 				UShort get_tcp_urgent_pointer();
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_tcp_options();
+				std::pair<ConstAdditionalHeaderIterator_t, ConstAdditionalHeaderIterator_t> get_tcp_options();
 				bool protocol_criteria(UByte protocol);
 
 				UShort get_src_port();
 				UShort get_dst_port();
 
 			};
+
+
+			class TcpPacketView
+			{
+			private:
+				UByte* header_;
+				const int tcp_header_size = 20;
+
+				UByte* options_;
+				int tcp_options_size = 0;
+
+				UByte* next_protocol_;
+
+			public:
+
+				using AdditionalHeaderIterator_t = UByte*;
+				using ConstAdditionalHeaderIterator_t = const UByte*;
+
+				TcpPacketView(UByte* begin, UByte* end);
+
+				void parse_packet(UByte* begin, UByte* end);
+
+				UByte* get_next_protocol_byte();
+
+				UShort get_tcp_src_port();
+				UShort get_tcp_dst_port();
+				UInt get_tcp_seq_number();
+				UInt get_tcp_ack_number();
+				UByte get_tcp_header_length();
+				UByte get_tcp_reserved();
+				UByte get_tcp_flags();
+				UShort get_tcp_window_size();
+				UShort get_tcp_checksum();
+				UShort get_tcp_urgent_pointer();
+				std::pair<ConstAdditionalHeaderIterator_t, ConstAdditionalHeaderIterator_t> get_tcp_options();
+				bool protocol_criteria(UByte protocol);
+
+				UShort get_src_port();
+				UShort get_dst_port();
+
+			};
+
 
 			template <TcpPacketLike TcpImpl>
 			class TcpPacket_ : public TcpImpl {
@@ -359,6 +469,8 @@ namespace QVPN {
 
 			} && UnifiedTransportLike<UdpImpl>;
 
+
+
 			class UdpPacketLittleEndian
 			{
 			private:
@@ -366,6 +478,7 @@ namespace QVPN {
 				UByte* next_protocol_;
 
 			public:
+
 
 				UdpPacketLittleEndian(UByte* begin, UByte* end);
 
@@ -383,6 +496,34 @@ namespace QVPN {
 				UShort get_dst_port();
 			};
 
+
+			class UdpPacketView
+			{
+			private:
+				UByte* header_;
+				const int udp_header_size = 8;
+
+				UByte* next_protocol_;
+
+			public:
+
+				UdpPacketView(UByte* begin, UByte* end);
+
+				void parse_packet(UByte* begin, UByte* end);
+
+				UByte* get_next_protocol_byte();
+
+				UShort get_udp_src_port();
+				UShort get_udp_dst_port();
+				UShort get_udp_length();
+				UShort get_udp_checksum();
+				bool protocol_criteria(UByte protocol);
+
+				UShort get_src_port();
+				UShort get_dst_port();
+			};
+
+
 			template <UdpPacketLike UdpImpl>
 			class UdpPacket_ : public UdpImpl {
 
@@ -398,10 +539,13 @@ namespace QVPN {
 			template <class CustomPacketImpl>
 			concept CustomPacketLike =
 				requires (CustomPacketImpl t) {
+					
+				typename CustomPacketImpl::DataIterator_t;
+				typename CustomPacketImpl::ConstDataIterator_t;
 
 					{ CustomPacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
-					{ t.get_custom_data() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+					{ t.get_custom_data() } -> std::same_as<std::pair<typename CustomPacketImpl::ConstDataIterator_t, typename CustomPacketImpl::ConstDataIterator_t>>;
 					{ t.protocol_criteria(std::declval<UByte>()) } -> std::same_as<bool>;
 
 			} && UnifiedTransportLike<CustomPacketImpl>;
@@ -415,16 +559,45 @@ namespace QVPN {
 
 			public:
 
+				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
 				CustomPacketLittleEndian(UByte* begin, UByte* end);
 				void parse_packet(UByte* begin, UByte* end);
 				UByte* get_next_protocol_byte();
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_custom_data();
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_custom_data();
 				bool protocol_criteria(UByte protocol);
 
 				UShort get_src_port();
 				UShort get_dst_port();
 
 			};
+
+
+			class CustomPacketView
+			{
+			private:
+				UByte* data_;
+				int data_size = 0;
+
+				UByte* next_protocol_;
+
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+				CustomPacketView(UByte* begin, UByte* end);
+				void parse_packet(UByte* begin, UByte* end);
+				UByte* get_next_protocol_byte();
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_custom_data();
+				bool protocol_criteria(UByte protocol);
+
+				UShort get_src_port();
+				UShort get_dst_port();
+
+			};
+
 
 			template <CustomPacketLike CustomPacketImpl>
 			class CustomPacket_ : public CustomPacketImpl
@@ -436,11 +609,14 @@ namespace QVPN {
 			};
 
 
-			template <class DataLayer>
-			concept DataPacketLike = requires (DataLayer t) {
+			template <class DataPacketImpl>
+			concept DataPacketLike = requires (DataPacketImpl t) {
 
-				{ DataLayer(std::declval<UByte*>(), std::declval<UByte*>()) };
-				{ t.get_data() } -> std::same_as<std::pair<ubyte_const_iter, ubyte_const_iter>>;
+				typename DataPacketImpl::DataIterator_t;
+				typename DataPacketImpl::ConstDataIterator_t;
+
+				{ DataPacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
+				{ t.get_data() } -> std::same_as<std::pair<typename DataPacketImpl::ConstDataIterator_t, typename DataPacketImpl::ConstDataIterator_t>>;
 			};
 
 
@@ -453,8 +629,30 @@ namespace QVPN {
 
 			public:
 
+				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
 				DataPacketLittleEndian(UByte* begin, UByte* end);
-				std::pair<ubyte_const_iter, ubyte_const_iter> get_data() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_data() const;
+			};
+
+
+
+			class DataPacketView
+			{
+			private:
+				UByte* data_;
+
+				int data_size = 0;
+
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+				DataPacketView(UByte* begin, UByte* end);
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_data() const;
+
 			};
 
 
@@ -465,6 +663,7 @@ namespace QVPN {
 				DataPacket_(UByte* begin, UByte* end)
 					: DataPacketImpl(begin, end) {}
 			};
+
 
 
 			template <class NetLayer>
@@ -493,19 +692,35 @@ namespace QVPN {
 			};
 
 
-
+			/* Default packets */
 			using Ipv4Packet = Ipv4Packet_<Ipv4PacketLittleEndian>;
+
 			using TcpPacket = TcpPacket_<TcpPacketLittleEndian>;
 			using UdpPacket = UdpPacket_<UdpPacketLittleEndian>;
 			using CustomPacket = CustomPacket_<CustomPacketLittleEndian>;
+
 			using DataPacket = DataPacket_<DataPacketLittleEndian>;
+			/////////////////////////////////////////////////////////////////
+			/* Packets views */
+			using Ipv4Packet_View = Ipv4Packet_<Ipv4PacketView>;
 
+			using TcpPacket_View = TcpPacket_<TcpPacketView>;
+			using UdpPacket_View = UdpPacket_<UdpPacketView>;
+			using CustomPacket_View = CustomPacket_<CustomPacketView>;
 
+			using DataPacket_View = DataPacket_<DataPacketView>;
+			/////////////////////////////////////////////////////////////////
+			/* Full default packets */
 			using Ipv4TcpPacket = FullPacket<Ipv4Packet, TcpPacket, DataPacket>;
 			using Ipv4UdpPacket = FullPacket<Ipv4Packet, UdpPacket, DataPacket>;
 			using Ipv4CustomPacket = FullPacket<Ipv4Packet, CustomPacket, DataPacket>;
+			/////////////////////////////////////////////////////////////////
 
-
+			/* Full packets views */
+			using Ipv4TcpPacket_View = FullPacket<Ipv4Packet_View, TcpPacket_View, DataPacket_View>;
+			using Ipv4UdpPacket_View = FullPacket<Ipv4Packet_View, UdpPacket_View, DataPacket_View>;
+			using Ipv4CustomPacket_View = FullPacket<Ipv4Packet_View, CustomPacket_View, DataPacket_View>;
+			/////////////////////////////////////////////////////////////////
 		}
 	}
 }
