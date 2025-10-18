@@ -6,6 +6,6 @@
 
 namespace QVPN
 {
-	using VPNDriver = QVPN::Core::VPNDriver_<QVPN::WinTunExt::WinTunDriver, QVPN::WinDivertExt::WinDivertNetDriver>;
+	using VPNClientDriver = QVPN::Core::VPNClientDriver_<QVPN::WinTunExt::WinTunDriver, QVPN::WinDivertExt::WinDivertClientNetDriver>;
 	
 }

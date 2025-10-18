@@ -28,7 +28,7 @@ namespace QVPN {
 			using Convertable_to = std::string_view;
 			using Convertable_from = std::string_view;
 
-			WinDivertTrafficFilterType() = delete;
+			WinDivertTrafficFilterType();
 			WinDivertTrafficFilterType(Convertable_from filter);
 			
 			WinDivertTrafficFilterType(const WinDivertTrafficFilterType& filter);
@@ -125,12 +125,27 @@ namespace QVPN {
 			{
 				return Filter_t("protocol == " + std::to_string(protocol));
 			}
+
+			Filter_t outgoing_traffic() const noexcept
+			{
+				return Filter_t("outbound");
+			}
+
+			Filter_t incoming_traffic() const noexcept
+			{
+				return Filter_t("inbound");
+			}
+
+			Filter_t local_traffic() const noexcept
+			{
+				return Filter_t("loopback");
+			}
 			
 		};
 
 
 		template <QVPN::Core::is_filter Filter>
-		class WinDivertNetDriver_ : public Filter
+		class WinDivertClientNetDriver_ : public Filter
 		{
 
 		public:
@@ -139,38 +154,38 @@ namespace QVPN {
 
 		private:
 
-			std::string default_filter_;
+			std::string outgoing_default_filter_;
+			std::string incoming_default_filter_;
 			std::vector<Filter_t> filters_;
-			std::string filters_data;
-			std::thread worker_;
-			HANDLE hDivert_;
+			std::string outgoing_filters_data;
+			std::string incoming_filters_data;
+			std::thread out_worker_;
+			std::thread in_worker_;
+			HANDLE out_hDivert_;
+			HANDLE in_hDivert_;
+			QVPN::Core::BaseTypes::ULong old_adapter_id;
+			QVPN::Core::BaseTypes::ULong new_adapter_id;
 
-			void calculate_filters()
+			void calculate_outgoing_filters()
 			{
-				Filter_t temp(default_filter_);
+				Filter_t temp(outgoing_default_filter_);
 				for (auto& filter : filters_)
 				{
 					temp = temp && filter;
 				}
-				filters_data = temp;
+				outgoing_filters_data = temp;
 			}
 
-			void appy_default_filter(const QVPN::Core::IPv4Address& addr)
+			void apply_default_outgoing_filter(const QVPN::Core::IPv4Address& addr)
 			{
-				default_filter_ = Filter::no_source(addr);
-				calculate_filters();
+				outgoing_default_filter_ = Filter::no_source(addr) && Filter::outgoing_traffic();
+				calculate_outgoing_filters();
 			}
 
-			void recalculate_filters()
+			void start_capture_outgoing_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
 			{
-				filters_data.clear();
-				calculate_filters();
-			}
-
-			void start_capture_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
-			{
-				hDivert_ = WinDivertOpen(filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
-				if (hDivert_ != INVALID_HANDLE_VALUE)
+				out_hDivert_ = WinDivertOpen(outgoing_filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
+				if (out_hDivert_ != INVALID_HANDLE_VALUE)
 				{
 					printf("Driver is working.\n");
 					
@@ -180,10 +195,10 @@ namespace QVPN {
 					printf("Error opening driver.\n");
 					return;
 				}
-				capture_loop(adapter_addr);
+				outgoing_capture_loop(adapter_addr);
 			}
 
-			void capture_loop(const QVPN::Core::IPv4Address& adapter_addr)
+			void outgoing_capture_loop(const QVPN::Core::IPv4Address& adapter_addr)
 			{
 				WINDIVERT_ADDRESS addr;
 				UINT8 packet[MAXBUF];
@@ -195,23 +210,99 @@ namespace QVPN {
 
 				while (true)
 				{
-					if (!WinDivertRecv(hDivert_, packet, sizeof(packet), &packet_len, &addr))
+					if (!WinDivertRecv(out_hDivert_, packet, sizeof(packet), &packet_len, &addr))
 					{
 						fprintf(stderr, "warning: failed to read packet (%d)\n",
 							GetLastError());
 						continue;
 					}
+					
+					old_adapter_id = addr.Network.IfIdx;
 
-					
-					
 					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet, packet + packet_len);
 					package.set_ip_source(adapter_addr); // добавить пересчет чек-суммы, иначе не отправл€ютс€
-					std::cout << package.ip_to_friendly_view() << std::endl;
+					package.recalculate_ip_checksum();
+					std::cout << "Out " << package.ip_to_friendly_view() << std::endl;
+					
+					addr.Network.IfIdx = new_adapter_id;
 
 					auto [b, e] = package.bytes();
-					if (!WinDivertSend(hDivert_, b, e - b, NULL, &addr))
+					if (!WinDivertSend(out_hDivert_, b, e - b, NULL, &addr)) // <------ addr структура WinDivert которую надо измен€ть??
 					{
 						fprintf(stderr, "warning: failed to reinject packet (%d)\n",
+							GetLastError());
+					}
+
+				}
+			}
+
+
+			void calculate_incoming_filters()
+			{
+				Filter_t temp(incoming_default_filter_);
+				for (auto& filter : filters_)
+				{
+					temp = temp && filter;
+				}
+				incoming_filters_data = temp;
+			}
+
+			void apply_default_incoming_filter(const QVPN::Core::IPv4Address& addr)
+			{
+				incoming_default_filter_ = Filter::incoming_traffic();
+				calculate_outgoing_filters();
+			}
+
+			void start_capture_incoming_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
+			{
+				in_hDivert_ = WinDivertOpen(incoming_filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
+				printf(incoming_filters_data.c_str());
+				if (in_hDivert_ != INVALID_HANDLE_VALUE)
+				{
+					printf("Driver is working.\n");
+
+				}
+				else
+				{
+					printf("Error opening driver.\n");
+					return;
+				}
+				incoming_capture_loop(adapter_addr);
+			}
+
+			void incoming_capture_loop(const QVPN::Core::IPv4Address& adapter_addr)
+			{
+				WINDIVERT_ADDRESS addr;
+				UINT8 packet[MAXBUF];
+				UINT packet_len;
+				PWINDIVERT_IPHDR ip_header;
+				PWINDIVERT_TCPHDR tcp_header;
+				PVOID payload;
+				UINT payload_len;
+
+				
+
+				while (true)
+				{
+					if (!WinDivertRecv(in_hDivert_, packet, sizeof(packet), &packet_len, &addr))
+					{
+						printf("warning: failed to read packet (%d)\n",
+							GetLastError());
+						continue;
+					}
+
+					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet, packet + packet_len);
+					package.set_ip_dest(adapter_addr); 
+					package.recalculate_ip_checksum();
+					std::cout << "In " << package.ip_to_friendly_view() << std::endl;
+
+					auto [b, e] = package.bytes();
+					
+					addr.Network.IfIdx = old_adapter_id;
+
+					if (!WinDivertSend(in_hDivert_, b, e - b, NULL, &addr))
+					{
+						printf("warning: failed to reinject packet (%d)\n",
 							GetLastError());
 					}
 
@@ -223,27 +314,46 @@ namespace QVPN {
 			
 			void init_driver(const QVPN::Core::IPv4Address& addr)
 			{
-				appy_default_filter(addr);
+				apply_default_outgoing_filter(addr);
+				apply_default_incoming_filter(addr);
 			}
 			
-			void add_traffic_filter(Filter_t filter)
+			void add_outgoing_traffic_filter(Filter_t filter)
 			{
 				filters_.push_back(filter);
-				calculate_filters();
+				calculate_outgoing_filters();
 			}
 
-			void start_capture_traffic(const QVPN::Core::IPv4Address& adapter_addr)
+			void add_incoming_traffic_filter(Filter_t filter)
 			{
-				worker_ = std::thread([this, &adapter_addr]() { start_capture_traffic_(adapter_addr); });
-				//start_capture_traffic_();
+				filters_.push_back(filter);
+				calculate_incoming_filters();
+			}
+
+			void start_capture_outgoing_traffic(const QVPN::Core::IPv4Address& adapter_addr, QVPN::Core::BaseTypes::ULong adapter_id)
+			{
+				new_adapter_id = adapter_id;
+				out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
+				//start_capture_outgoing_traffic_(adapter_addr);
+			}
+
+			void start_capture_incoming_traffic(const QVPN::Core::IPv4Address& adapter_addr)
+			{
+				in_worker_ = std::thread([this, &adapter_addr]() { start_capture_incoming_traffic_(adapter_addr); });
+				//start_capture_incoming_traffic_(adapter_addr);
 			}
 
 			void stop_capture_traffic()
 			{
-				WinDivertClose(hDivert_);
-				if (worker_.joinable())
+				WinDivertClose(out_hDivert_);
+				WinDivertClose(in_hDivert_);
+				if (out_worker_.joinable())
 				{
-					worker_.join();
+					out_worker_.join();
+				}
+				if (in_worker_.joinable())
+				{
+					in_worker_.join();
 				}
 			}
 
@@ -251,7 +361,7 @@ namespace QVPN {
 		};
 
 		using WinDivertTrafficFilter = WinDivertTrafficFilter_<WinDivertTrafficFilterType>;
-		using WinDivertNetDriver = WinDivertNetDriver_<WinDivertTrafficFilter>;
+		using WinDivertClientNetDriver = WinDivertClientNetDriver_<WinDivertTrafficFilter>;
 	}
 
 

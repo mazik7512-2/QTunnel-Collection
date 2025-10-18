@@ -47,11 +47,12 @@ int main()
         return 0;
     }
     */
-    QVPN::VPNDriver vpn;
+    QVPN::VPNClientDriver vpn;
     vpn.create_adapter_ipv4();
     vpn.capture_adapter();
     vpn.init_vpn();
-    vpn.add_traffic_filter(filter.tcp());
+    vpn.add_incoming_traffic_filter(filter.ipv4() && filter.tcp());
+    vpn.add_outgoing_traffic_filter(filter.ipv4() && filter.tcp());
     vpn.start_vpn_client();
 
     /*

@@ -75,8 +75,10 @@ namespace QVPN
 			typename T::Filter_t;
 			
 			{ t.init_driver(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
-			{ t.add_traffic_filter(std::declval<typename T::Filter_t>()) } -> std::same_as<void>;
-			{ t.start_capture_traffic(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
+			{ t.add_incoming_traffic_filter(std::declval<typename T::Filter_t>()) } -> std::same_as<void>;
+			{ t.add_outgoing_traffic_filter(std::declval<typename T::Filter_t>()) } -> std::same_as<void>;
+			{ t.start_capture_outgoing_traffic(std::declval<const QVPN::Core::IPv4Address&>(), std::declval<QVPN::Core::BaseTypes::ULong>()) } -> std::same_as<void>;
+			{ t.start_capture_incoming_traffic(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
 			{ t.stop_capture_traffic() } -> std::same_as<void>;
 		};
 
@@ -115,6 +117,9 @@ namespace QVPN
 			{ f.src_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.dst_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.custom_protocol(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
+			{ f.outgoing_traffic() } -> std::same_as<typename Filter::Filter_t>;
+			{ f.incoming_traffic() } -> std::same_as<typename Filter::Filter_t>;
+			{ f.local_traffic() } -> std::same_as<typename Filter::Filter_t>;
 		};
 
 
@@ -145,12 +150,17 @@ namespace QVPN
 
 
 		template <is_adapter_driver AdapterDriver, is_net_driver NetDriver>
-		class VPNDriver_ : public AdapterDriver, public NetDriver
+		class VPNClientDriver_ : public AdapterDriver, public NetDriver
 		{
+		private:
+			QVPN::Core::IPv4Address default_addr;
 		public:
 
-			VPNDriver_()
-				: AdapterDriver(), NetDriver() {}
+			VPNClientDriver_()
+				: AdapterDriver(), NetDriver() 
+			{
+				default_addr = QVPN::Core::IPv4Address(192, 168, 50, 193);
+			}
 
 			void init_vpn()
 			{
@@ -163,7 +173,10 @@ namespace QVPN
 			{
 				auto adapter_ = AdapterDriver::get_ipv4_adapter();
 				auto addr = adapter_->get_addr();
-				NetDriver::start_capture_traffic(addr);
+				auto id = adapter_->get_id();
+				
+				NetDriver::start_capture_outgoing_traffic(addr, id);
+				NetDriver::start_capture_incoming_traffic(default_addr);
 			}
 
 		};

@@ -43,7 +43,7 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4()
 
 void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& address)
 {
-    
+    NET_LUID adapterLuid;
     QVPN::WinTunExt::WinTunDriver::AdapterHandle_t adapter;
     GUID ExampleGuid = { 0xdeadbabe, 0xcafe, 0xbeef, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef } };
     int try_numbers = 20;
@@ -75,7 +75,9 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name,
     {
         std::cout << "Error while creating unicast ip address. Error ¹" << LastError << std::endl;
     }
-    adapter_ = QVPN::WinTunExt::WinTunDriver::Adapter_t(a_name, a_desc, address, adapter); // ???
+
+    WintunGetAdapterLUID(adapter, &adapterLuid);
+    adapter_ = QVPN::WinTunExt::WinTunDriver::Adapter_t(a_name, a_desc, address, adapter, adapterLuid.Info.NetLuidIndex); // ???
 }
 
 

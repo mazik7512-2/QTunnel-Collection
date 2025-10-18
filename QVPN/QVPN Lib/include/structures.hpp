@@ -55,6 +55,7 @@ namespace QVPN {
 				std::string friendly_name;
 				QVPN::Core::IPv4Address address;
 				AdapterHandle handle;
+				ULong adapter_id;
 
 			public:
 
@@ -69,8 +70,20 @@ namespace QVPN {
 					
 				}
 
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, ULong a_id)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), adapter_id(a_id)
+				{
+
+				}
+
 				Adapter(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& addr)
 					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_name), address(addr)
+				{
+
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& addr, ULong a_id)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_name), address(addr), adapter_id(a_id)
 				{
 
 				}
@@ -81,8 +94,21 @@ namespace QVPN {
 					handle = hnd;
 				}
 
+				Adapter(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& addr, AdapterHandle hnd, ULong a_id)
+					: Adapter(a_name, a_desc, addr)
+				{
+					handle = hnd;
+					adapter_id = a_id;
+				}
+
 				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handle)
 					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), handle(a_handle)
+				{
+
+				}
+
+				Adapter(std::string_view a_name, std::string_view a_desc, std::string_view a_fname, AdapterHandle a_handle, ULong a_id)
+					: adapter_name(a_name), adapter_desc(a_desc), friendly_name(a_fname), handle(a_handle), adapter_id(a_id)
 				{
 
 				}
@@ -140,6 +166,11 @@ namespace QVPN {
 					return address;
 				}
 
+				const ULong get_id() const
+				{
+					return adapter_id;
+				}
+
 				~Adapter()
 				{
 
@@ -195,7 +226,7 @@ namespace QVPN {
 					{ t.get_src() } -> std::same_as<std::pair<const UByte*, const UByte*>>;
 					{ t.get_dst() } -> std::same_as<std::pair<const UByte*, const UByte*>>;
 
-					
+					{ t.recalculate_ip_checksum() } -> std::same_as<void>;
 
 			};
 
@@ -226,6 +257,9 @@ namespace QVPN {
 					
 
 					{ t.set_ip_source(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
+					{ t.set_ip_dest(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
+
+					{ t.set_ip_checksum(std::declval<const UShort>()) } -> std::same_as<void>;
 
 			} && UnifiedIpPacketLike<Ip4PacketImpl> && UnifiedPacketLike<Ip4PacketImpl>;
 
@@ -275,11 +309,14 @@ namespace QVPN {
 
 
 				void set_ip_source(const QVPN::Core::IPv4Address& src);
+				void set_ip_dest(const QVPN::Core::IPv4Address& dst);
 
+				void set_ip_checksum(const UShort checksum);
 
 				/* Unified Ip Packet implementaion */
 				std::pair<const UByte*, const UByte*> get_src() const;
 				std::pair<const UByte*, const UByte*> get_dst() const;
+				void recalculate_ip_checksum();
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -336,13 +373,15 @@ namespace QVPN {
 				std::string ip_to_friendly_view() const;
 
 				
-
 				void set_ip_source(const QVPN::Core::IPv4Address& src);
+				void set_ip_dest(const QVPN::Core::IPv4Address& dst);
 
+				void set_ip_checksum(const UShort checksum);
 
 				/* Unified Ip Packet implementaion */
 				std::pair<const UByte*, const UByte*> get_src() const;
 				std::pair<const UByte*, const UByte*> get_dst() const;
+				void recalculate_ip_checksum();
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;

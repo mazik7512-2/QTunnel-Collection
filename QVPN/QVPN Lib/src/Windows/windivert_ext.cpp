@@ -3,6 +3,11 @@
 
 using WinDivertTrafficFilterType = QVPN::WinDivertExt::WinDivertTrafficFilterType;
 
+QVPN::WinDivertExt::WinDivertTrafficFilterType::WinDivertTrafficFilterType()
+{
+    
+}
+
 QVPN::WinDivertExt::WinDivertTrafficFilterType::WinDivertTrafficFilterType(Convertable_from filter)
 {
     filter_ = filter;
@@ -42,7 +47,10 @@ QVPN::WinDivertExt::WinDivertTrafficFilterType::operator Convertable_to() const
 QVPN::WinDivertExt::WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTrafficFilterType::operator&&(const WinDivertTrafficFilterType& t)
 {
     std::stringstream f;
-    f << filter_ << " and " << t.filter_;
+    if (!filter_.empty())
+        f << filter_ << " and " << t.filter_;
+    else
+        f << " " << t.filter_;
     filter_ = f.str(); 
     return *this;
 }
