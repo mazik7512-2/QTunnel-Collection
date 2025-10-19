@@ -708,6 +708,7 @@ namespace QVPN {
 
 				{ DataPacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 				{ t.get_data() } -> std::same_as<std::pair<typename DataPacketImpl::ConstDataIterator_t, typename DataPacketImpl::ConstDataIterator_t>>;
+				{ t.set_data(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 
 			} && UnifiedPacketLike<DataPacketImpl>;
 
@@ -726,6 +727,8 @@ namespace QVPN {
 
 				DataPacketLittleEndian(UByte* begin, UByte* end);
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_data() const;
+
+				void set_data(UByte* begin, UByte* end);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -747,6 +750,8 @@ namespace QVPN {
 
 				DataPacketView(UByte* begin, UByte* end);
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_data() const;
+
+				void set_data(UByte* begin, UByte* end);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;

@@ -220,11 +220,12 @@ namespace QVPN {
 					old_adapter_id = addr.Network.IfIdx;
 
 					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet, packet + packet_len);
-					package.set_ip_source(adapter_addr); // добавить пересчет чек-суммы, иначе не отправл€ютс€
-					package.recalculate_ip_checksum();
+					//package.set_ip_source(adapter_addr); // добавить пересчет чек-суммы, иначе не отправл€ютс€
+					//package.recalculate_ip_checksum();
 					std::cout << "Out " << package.ip_to_friendly_view() << std::endl;
-					
-					addr.Network.IfIdx = new_adapter_id;
+					QVPN::Core::BaseTypes::UByte test[5] = { 't', 'e', 's', 't', '\0' };
+					package.set_data(std::begin(test), std::end(test));
+					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
 
 					auto [b, e] = package.bytes();
 					if (!WinDivertSend(out_hDivert_, b, e - b, NULL, &addr)) // <------ addr структура WinDivert которую надо измен€ть??
@@ -250,7 +251,7 @@ namespace QVPN {
 			void apply_default_incoming_filter(const QVPN::Core::IPv4Address& addr)
 			{
 				incoming_default_filter_ = Filter::incoming_traffic();
-				calculate_outgoing_filters();
+				calculate_incoming_filters();
 			}
 
 			void start_capture_incoming_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
@@ -292,13 +293,16 @@ namespace QVPN {
 					}
 
 					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet, packet + packet_len);
-					package.set_ip_dest(adapter_addr); 
-					package.recalculate_ip_checksum();
-					std::cout << "In " << package.ip_to_friendly_view() << std::endl;
 
+					auto ipHeader = (PWINDIVERT_IPHDR)packet;
+					//package.set_ip_dest(adapter_addr); 
+					//package.recalculate_ip_checksum();
+					std::cout << "In " << package.ip_to_friendly_view() << std::endl;
+					QVPN::Core::BaseTypes::UByte test[5] = { 't', 'e', 's', 't', '\0' };
+					package.set_data(std::begin(test), std::end(test)); // <-- добавить пересчет tcp\udp чек суммы
 					auto [b, e] = package.bytes();
 					
-					addr.Network.IfIdx = old_adapter_id;
+					//addr.Network.IfIdx = old_adapter_id;
 
 					if (!WinDivertSend(in_hDivert_, b, e - b, NULL, &addr))
 					{
@@ -333,14 +337,14 @@ namespace QVPN {
 			void start_capture_outgoing_traffic(const QVPN::Core::IPv4Address& adapter_addr, QVPN::Core::BaseTypes::ULong adapter_id)
 			{
 				new_adapter_id = adapter_id;
-				out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
+				//out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
 				//start_capture_outgoing_traffic_(adapter_addr);
 			}
 
 			void start_capture_incoming_traffic(const QVPN::Core::IPv4Address& adapter_addr)
 			{
-				in_worker_ = std::thread([this, &adapter_addr]() { start_capture_incoming_traffic_(adapter_addr); });
-				//start_capture_incoming_traffic_(adapter_addr);
+				//in_worker_ = std::thread([this, &adapter_addr]() { start_capture_incoming_traffic_(adapter_addr); });
+				start_capture_incoming_traffic_(adapter_addr);
 			}
 
 			void stop_capture_traffic()

@@ -24,6 +24,7 @@ static WINTUN_ALLOCATE_SEND_PACKET_FUNC* WintunAllocateSendPacket;
 static WINTUN_SEND_PACKET_FUNC* WintunSendPacket;
 
 
+
 QVPN::WinTunExt::WinTunDriver::WinTunDriver()
 {
     init_wintun();
@@ -43,7 +44,6 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4()
 
 void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& address)
 {
-    NET_LUID adapterLuid;
     QVPN::WinTunExt::WinTunDriver::AdapterHandle_t adapter;
     GUID ExampleGuid = { 0xdeadbabe, 0xcafe, 0xbeef, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef } };
     int try_numbers = 20;
@@ -76,8 +76,17 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name,
         std::cout << "Error while creating unicast ip address. Error ¹" << LastError << std::endl;
     }
 
-    WintunGetAdapterLUID(adapter, &adapterLuid);
-    adapter_ = QVPN::WinTunExt::WinTunDriver::Adapter_t(a_name, a_desc, address, adapter, adapterLuid.Info.NetLuidIndex); // ???
+    MIB_IPFORWARDROW row;
+    ZeroMemory(&row, sizeof(row));
+    row.dwForwardDest = inet_addr("0.0.0.0");     // Destination address
+    row.dwForwardMask = inet_addr("0.0.0.0");    // Netmask
+    row.dwForwardNextHop = inet_addr("192.168.50.1");// Gateway
+    row.dwForwardIfIndex = 0x10;    // Interface index
+    row.dwForwardType = MIB_IPROUTE_TYPE_DIRECT;// Route type
+    row.dwForwardProto = PROTO_IP_NETMGMT;       // Protocol source
+    CreateIpForwardEntry(&row);                  // Add the route
+
+    adapter_ = QVPN::WinTunExt::WinTunDriver::Adapter_t(a_name, a_desc, address, adapter, 0x10); // ???
 }
 
 
