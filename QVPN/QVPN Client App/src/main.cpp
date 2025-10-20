@@ -22,12 +22,13 @@ using TrafficFilter = QVPN::Core::TrafficFilter_<QVPN::WinDivertExt::WinDivertTr
 void test(std::string_view t) {
     std::cout << t << std::endl;
 }
-
+using UByte = unsigned char;
 
 
 
 int main()
 {
+
     QVPN::WinDivertExt::WinDivertTrafficFilter filter;
 
     test(filter.ipv4() && filter.tcp() && filter.udp());
@@ -110,7 +111,7 @@ int main()
     */
     vpn.init_vpn();
     vpn.add_incoming_traffic_filter(filter.ipv4() && filter.tcp());
-    vpn.add_outgoing_traffic_filter(filter.ipv4() && filter.udp());
+    vpn.add_outgoing_traffic_filter(filter.ipv4() && filter.tcp());
     vpn.start_vpn_client();
 
     /*
