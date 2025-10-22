@@ -27,7 +27,7 @@ void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::parse_packet(UByte* beg
 	std::copy(begin, begin + default_ip_bytes, std::back_inserter(header_));
 
 	auto start = begin + default_ip_bytes;
-	auto _end = start + (get_ip_header_length() - default_ip_quart_size);
+	auto _end = start + (get_ip_header_length() - default_ip_quart_size) * bytes_in_quartet;
 
 	std::copy(start, _end, std::back_inserter(header_));
 
@@ -307,7 +307,33 @@ std::pair<QVPN::Core::DataStructures::TcpPacketLittleEndian::ConstDataIterator_t
 
 void QVPN::Core::DataStructures::TcpPacketLittleEndian::recalculate_transport_checksum(const TransportIpv4PseudoHeader& pseudo_header, ConstDataIterator_t begin, ConstDataIterator_t end)
 {
-	
+	unsigned int sum = 0;
+	UShort res = 0;
+
+	auto [b, e] = pseudo_header.get_by_bytes();
+
+	// pseudo-header checksum
+	for (auto i = b; i < e; i += 2)
+	{
+		UShort temp = *b << 8 | *(b + 1);
+		sum += temp;
+	}
+
+	// tcp header checksum
+	for (int i = 0; i < header_.size(); i += 2) {
+		UShort temp = header_[i] << 8 | header_[i + 1];
+		sum += temp;
+	}
+	sum -= get_tcp_checksum();
+
+	// data checksum
+	for (auto i = begin; i < end; i += 2) {
+		UShort temp = *i << 8 | *(i + 1);
+		sum += temp;
+	}
+
+	res = ~((sum >> 16) + (sum & 0xFFFF));
+	set_tcp_checksum(res);
 }
 
 UShort QVPN::Core::DataStructures::TcpPacketLittleEndian::get_transport_length() const
@@ -414,7 +440,7 @@ void QVPN::Core::DataStructures::Ipv4PacketView::parse_packet(UByte* begin, UByt
 	auto start = begin + default_ip_bytes;
 	auto _end = start + (get_ip_header_length() - default_ip_quart_size);
 	additional_header_ = start;
-	add_header_size_ = _end - begin;
+	add_header_size_ = _end - start;
 	next_protocol_ = _end;
 }
 
@@ -602,7 +628,7 @@ void QVPN::Core::DataStructures::TcpPacketView::parse_packet(UByte* begin, UByte
 	header_ = begin;
 
 	auto start = default_end;
-	auto _end = start + (get_tcp_header_length() * bytes_in_quartet);
+	auto _end = start + (get_tcp_header_length() - default_tcp_quart_size) * bytes_in_quartet;
 	options_ = start;
 	tcp_options_size = _end - start;
 	next_protocol_ = _end;
@@ -697,7 +723,44 @@ std::pair< QVPN::Core::DataStructures::TcpPacketView::ConstDataIterator_t, QVPN:
 
 void QVPN::Core::DataStructures::TcpPacketView::recalculate_transport_checksum(const TransportIpv4PseudoHeader& pseudo_header, ConstDataIterator_t begin, ConstDataIterator_t end)
 {
+	unsigned int sum = 0;
+	UShort res = 0;
+	auto [b, e] = pseudo_header.get_by_bytes();
+	auto types = pseudo_header.get_by_types();
 	
+	
+	// pseudo-header checksum
+	for (auto i = 0; i < 12; i += 2)
+	{
+		UShort temp = *b << 8 | *(b + 1);
+		sum += temp;
+	}
+	
+
+
+	// tcp header checksum
+	for (int i = 0; i < tcp_header_size; i += 2) {
+		UShort temp = header_[i] << 8 | header_[i + 1];
+		sum += temp;
+	}
+	sum -= get_tcp_checksum();
+
+	// tcp header options checksum
+	for (int i = 0; i < tcp_options_size; i += 2) {
+		UShort temp = options_[i] << 8 | options_[i + 1];
+		sum += temp;
+	}
+
+
+	// data checksum
+	for (auto i = begin; i < end; i += 2) {
+		UShort temp = *i << 8 | *(i + 1);
+		sum += temp;
+	}
+
+	res = ~((sum >> 16) + (sum & 0xFFFF));
+	auto csum = get_tcp_checksum();
+	set_tcp_checksum(res);
 }
 
 UShort QVPN::Core::DataStructures::TcpPacketView::get_transport_length() const
@@ -800,9 +863,63 @@ QVPN::Core::DataStructures::TransportIpv4PseudoHeader::TransportIpv4PseudoHeader
 	constexpr auto addr_size = sizeof(src);
 	constexpr auto proto_size = sizeof(protocol);
 	constexpr auto length_size = sizeof(length);
+	
+	/*
+	ph_src = src;
+	ph_dst = dst;
+	ph_zero = 0;
+	ph_protocol = protocol;
+	ph_length = length;
+	*/
+	/*
+	// src
+	data[0] = src & 0xFF;
+	data[1] = src >> 8 & 0xFF;
+	data[2] = src >> 16 & 0xFF;
+	data[3] = src >> 24 & 0xFF;
+
+	//dst
+	data[4] = dst & 0xFF;
+	data[5] = dst >> 8 & 0xFF;
+	data[6] = dst >> 16 & 0xFF;
+	data[7] = dst >> 24 & 0xFF;
+
+	//zero
+	data[8] = 0;
+
+	// proto
+	data[9] = protocol;
+
+	//length
+	data[10] = length & 0xFF;
+	data[11] = length >> 8 & 0xFF;
+	*/
+	
 	std::memcpy(data, &src, addr_size);
 	std::memcpy(data + addr_size, &dst, addr_size);
 	data[8] = 0;
 	data[9] = protocol;
 	std::memcpy(&data[10], &length, length_size);
+	
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::DataStructures::TransportIpv4PseudoHeader::get_by_bytes() const
+{
+	return std::make_pair<>(std::begin(data), std::end(data));
+}
+
+QVPN::Core::DataStructures::TransportIpv4PseudoHeaderTypesBuffer QVPN::Core::DataStructures::TransportIpv4PseudoHeader::get_by_types() const
+{
+	UInt src, dst;
+	UByte protocol;
+	UShort length;
+	UByte zero = 0;
+	constexpr auto addr_size = sizeof(src);
+	constexpr auto proto_size = sizeof(protocol);
+	constexpr auto length_size = sizeof(length);
+	std::memcpy(&src, data, addr_size);
+	std::memcpy(&dst, data + addr_size, addr_size);
+	protocol = data[9];
+	std::memcpy(&length, &data[10], length_size);
+	return TransportIpv4PseudoHeaderTypesBuffer({src, dst, zero, protocol, length});
 }

@@ -6,6 +6,7 @@
 #include <memory>
 #include <lib.hpp>
 #include <iterator>
+#include <variant>
 
 
 
@@ -399,12 +400,38 @@ namespace QVPN {
 
 			};
 
+#pragma pack(push, 1)
+			struct TransportIpv4PseudoHeaderBytesBuffer
+			{
+				UByte data[12];
+			};
+
+
+			struct TransportIpv4PseudoHeaderTypesBuffer
+			{
+				UInt src;
+				UInt dst;
+				UByte zero;
+				UByte protocol;
+				UShort length;
+			};
+#pragma pack(pop)
 
 			struct TransportIpv4PseudoHeader
 			{
+				
 				UByte data[12];
-
+				/*
+				UInt ph_src;
+				UInt ph_dst;
+				UByte ph_zero;
+				UByte ph_protocol;
+				UShort ph_length;
+				*/
 				TransportIpv4PseudoHeader(UInt src, UInt dst, UByte protocol, UShort length);
+
+				std::pair<const UByte*, const UByte*> get_by_bytes() const;
+				TransportIpv4PseudoHeaderTypesBuffer get_by_types() const;
 
 				/*
 				UInt src;
