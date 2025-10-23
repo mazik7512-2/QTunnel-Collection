@@ -294,31 +294,27 @@ namespace QVPN {
 
 					auto packet_start = packet;
 					auto packet_end = packet + packet_len;
-					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet_start, packet_end);
+					
+
 
 					WinDivertHelperParsePacket(packet, packet_len, &ip_header, nullptr,
 						NULL, nullptr, nullptr, &tcp_header, nullptr, NULL,
 						&payload_len, NULL, NULL);
 
-					if (payload_len > 0)
-						continue;
+					std::cout << "payload len: " << payload_len << std::endl;
 
+					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet_start, packet_end);
 					auto ipHeader = (PWINDIVERT_IPHDR)packet; // проверить чек-сумму через парсер виндиверта и сравнить пакеты впринципе
 					//package.set_ip_dest(adapter_addr); 
-					auto t = package.get_ip_checksum();
-					auto o = ip_header->Checksum;
-					auto src_exp = ip_header->SrcAddr;
-					auto src_fact = package.get_ip_source();
 					auto c = package.get_tcp_checksum();
 					auto d = tcp_header->Checksum;
 					package.recalculate_checksums();
-					auto t1 = package.get_ip_checksum();
-					auto o1 = ip_header->Checksum;
 					auto c1 = package.get_tcp_checksum();
 					auto d1 = tcp_header->Checksum;
 					if (c == c1)
 						std::cout << c << std::endl;
 					std::cout << "In " << package.ip_to_friendly_view() << std::endl;
+					std::cout << "TCP header: " << package.tcp_to_friendly_view() << std::endl;
 					QVPN::Core::BaseTypes::UByte test[5] = { 't', 'e', 's', 't', '\0' };
 					//package.set_data(std::begin(test), std::end(test)); 
 					auto [b, e] = package.bytes();
@@ -358,7 +354,7 @@ namespace QVPN {
 			void start_capture_outgoing_traffic(const QVPN::Core::IPv4Address& adapter_addr, QVPN::Core::BaseTypes::ULong adapter_id)
 			{
 				new_adapter_id = adapter_id;
-				out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
+				//out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
 				//start_capture_outgoing_traffic_(adapter_addr);
 			}
 
