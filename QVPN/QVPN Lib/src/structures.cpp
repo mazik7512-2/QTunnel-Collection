@@ -192,12 +192,13 @@ void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::recalculate_ip_checksum
 {
 	unsigned int sum = 0;
 	UShort res = 0;
+	set_ip_checksum(0);
 
 	for (int i = 0; i < header_.size(); i += 2) {
 		UShort temp = header_[i] << 8 | header_[i + 1];
 		sum += temp;
 	}
-	sum -= get_ip_checksum();
+
 	res = ~((sum >> 16) + (sum & 0xFFFF));
 	set_ip_checksum(res);
 }
@@ -603,11 +604,19 @@ void QVPN::Core::DataStructures::Ipv4PacketView::recalculate_ip_checksum()
 	unsigned int sum = 0;
 	UShort res = 0;
 
+	set_ip_checksum(0);
+
 	for (int i = 0; i < ip4_header_size_; i+=2) {
 		UShort temp = header_[i] << 8 | header_[i + 1];
 		sum += temp;
 	}
-	sum -= get_ip_checksum();
+
+	for (int i = 0; i < add_header_size_; i++)
+	{
+		UShort temp = additional_header_[i] << 8 | additional_header_[i + 1];
+		sum += temp;
+	}
+
 	res = ~((sum >> 16) + (sum & 0xFFFF));
 	set_ip_checksum(res);
 }
@@ -682,7 +691,7 @@ UShort QVPN::Core::DataStructures::TcpPacketView::get_tcp_window_size() const
 
 UShort QVPN::Core::DataStructures::TcpPacketView::get_tcp_checksum() const
 {
-	return header_[16] << 8 | header_[17];
+	return header_[17] << 8 | header_[16];
 }
 
 UShort QVPN::Core::DataStructures::TcpPacketView::get_tcp_urgent_pointer() const
@@ -726,24 +735,21 @@ void QVPN::Core::DataStructures::TcpPacketView::recalculate_transport_checksum(c
 	unsigned int sum = 0;
 	UShort res = 0;
 	auto [b, e] = pseudo_header.get_by_bytes();
-	auto types = pseudo_header.get_by_types();
+
 	
-	
+	set_tcp_checksum(0);
 	// pseudo-header checksum
-	for (auto i = 0; i < 12; i += 2)
+	for (auto i = b; i < e; i += 2)
 	{
-		UShort temp = *b << 8 | *(b + 1);
+		UShort temp = *i << 8 | *(i + 1);
 		sum += temp;
 	}
-	
-
 
 	// tcp header checksum
 	for (int i = 0; i < tcp_header_size; i += 2) {
 		UShort temp = header_[i] << 8 | header_[i + 1];
 		sum += temp;
 	}
-	sum -= get_tcp_checksum();
 
 	// tcp header options checksum
 	for (int i = 0; i < tcp_options_size; i += 2) {
@@ -751,15 +757,16 @@ void QVPN::Core::DataStructures::TcpPacketView::recalculate_transport_checksum(c
 		sum += temp;
 	}
 
-
+	auto data_size = std::distance(begin, end);
 	// data checksum
 	for (auto i = begin; i < end; i += 2) {
 		UShort temp = *i << 8 | *(i + 1);
 		sum += temp;
 	}
 
-	res = ~((sum >> 16) + (sum & 0xFFFF));
-	auto csum = get_tcp_checksum();
+	while (sum >> 16) 
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	res = ~static_cast<UShort>(sum);
 	set_tcp_checksum(res);
 }
 
