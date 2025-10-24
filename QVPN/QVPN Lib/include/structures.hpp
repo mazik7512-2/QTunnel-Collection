@@ -565,6 +565,7 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tcp_options() const;
 				bool protocol_criteria(UByte protocol) const;
 				std::string tcp_to_friendly_view() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tcp_header() const;
 
 				void set_tcp_checksum(UShort checksum);
 
@@ -910,7 +911,7 @@ namespace QVPN {
 					auto [b, e] = DataPacket::get_data();
 					length = length + (e - b);
 					auto pseudo = TransportIpv4PseudoHeader(Ipv4Packet::get_ip_source(), Ipv4Packet::get_ip_dest(), Ipv4Packet::get_ip_protocol(), length);
-					UdpPacket::recalculate_transport_checksum(pseudo, b, e); // TODO: переделать либо все на вектора, либо на обычные массивы
+					UdpPacket::recalculate_transport_checksum(pseudo, b, e);
 				}
 
 			};
@@ -945,8 +946,6 @@ namespace QVPN {
 					auto [b, e] = DataPacket_View::get_data();
 					//length = length + (e - b);
 					auto pseudo = TransportIpv4PseudoHeader(Ipv4Packet_View::get_ip_source(), Ipv4Packet_View::get_ip_dest(), Ipv4Packet_View::get_ip_protocol(), length);
-					auto types = pseudo.get_by_types();
-					bool b1 = (types.src == Ipv4PacketView::get_ip_source()) ? true : false;
 					TcpPacket_View::recalculate_transport_checksum(pseudo, b, e);
 				}
 

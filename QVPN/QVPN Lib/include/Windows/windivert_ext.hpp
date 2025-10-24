@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <structures.hpp>
+#include <fstream>
 
 #pragma comment(lib, "windivert.lib")
 
@@ -281,6 +282,9 @@ namespace QVPN {
 				PVOID payload;
 				UINT payload_len;
 
+				using UShort = QVPN::Core::BaseTypes::UShort;
+				using UByte = QVPN::Core::BaseTypes::UByte;
+				using UInt = QVPN::Core::BaseTypes::UInt;
 				
 
 				while (true)
@@ -292,36 +296,32 @@ namespace QVPN {
 						continue;
 					}
 
-					auto packet_start = packet;
-					auto packet_end = packet + packet_len;
-					
-
 
 					WinDivertHelperParsePacket(packet, packet_len, &ip_header, nullptr,
 						NULL, nullptr, nullptr, &tcp_header, nullptr, NULL,
 						&payload_len, NULL, NULL);
 
-					std::cout << "payload len: " << payload_len << std::endl;
-
+					auto packet_start = packet;
+					auto packet_end = packet + packet_len;
 					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet_start, packet_end);
-					auto ipHeader = (PWINDIVERT_IPHDR)packet; // проверить чек-сумму через парсер виндиверта и сравнить пакеты впринципе
-					//package.set_ip_dest(adapter_addr); 
+					//std::cout << "In " << package.ip_to_friendly_view() << std::endl;
+					std::cout << "TCP header: " << package.tcp_to_friendly_view() << std::endl;
 					auto c = package.get_tcp_checksum();
 					auto d = tcp_header->Checksum;
+					//package.set_ip_dest(adapter_addr); 
 					package.recalculate_checksums();
 					auto c1 = package.get_tcp_checksum();
 					auto d1 = tcp_header->Checksum;
 					if (c == c1)
 						std::cout << c << std::endl;
-					std::cout << "In " << package.ip_to_friendly_view() << std::endl;
-					std::cout << "TCP header: " << package.tcp_to_friendly_view() << std::endl;
+
 					QVPN::Core::BaseTypes::UByte test[5] = { 't', 'e', 's', 't', '\0' };
 					//package.set_data(std::begin(test), std::end(test)); 
-					auto [b, e] = package.bytes();
+					auto [begin, end] = package.bytes();
 					
 					//addr.Network.IfIdx = old_adapter_id;
 
-					if (!WinDivertSend(in_hDivert_, b, e - b, NULL, &addr))
+					if (!WinDivertSend(in_hDivert_, begin, end - begin, NULL, &addr))
 					{
 						printf("warning: failed to reinject packet (%d)\n",
 							GetLastError());

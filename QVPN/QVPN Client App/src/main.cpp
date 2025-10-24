@@ -55,8 +55,8 @@ int main()
     }
     */
     QVPN::VPNClientDriver vpn;
-    vpn.create_adapter_ipv4();
-    vpn.capture_adapter();
+    //vpn.create_adapter_ipv4();
+    //vpn.capture_adapter();
 
     /*
     // Инициализация WinSock

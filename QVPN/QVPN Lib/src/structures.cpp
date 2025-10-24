@@ -1,6 +1,7 @@
 #include "structures.hpp"
 #include <sstream>
 #include <iostream>
+#include <winsock.h>
 
 using Byte = QVPN::Core::DataStructures::Byte;
 using UByte = QVPN::Core::DataStructures::UByte;
@@ -289,11 +290,11 @@ bool QVPN::Core::DataStructures::TcpPacketLittleEndian::protocol_criteria(UByte 
 std::string QVPN::Core::DataStructures::TcpPacketLittleEndian::tcp_to_friendly_view() const
 {
 	std::stringstream ss;
-	ss << "Source port: " << get_tcp_src_port() << " Dest port: " << get_tcp_dst_port() << std::endl;
-	ss << "Seq: " << get_tcp_seq_number() << std::endl;
-	ss << "Ack: " << get_tcp_ack_number() << std::endl;
-	ss << "Length: " << get_tcp_header_length() << " Reserverd: " << get_tcp_reserved() << " Flags: " << get_tcp_flags() << " Window size: " << get_tcp_window_size() << std::endl;
-	ss << "Checksum: " << get_tcp_checksum() << " Urgent: " << get_tcp_urgent_pointer() << std::endl;
+	ss << "Source port: " << std::to_string(get_tcp_src_port()) << " Dest port: " << std::to_string(get_tcp_dst_port()) << std::endl;
+	ss << "Seq: " << std::to_string(get_tcp_seq_number()) << std::endl;
+	ss << "Ack: " << std::to_string(get_tcp_ack_number()) << std::endl;
+	ss << "Length: " << std::to_string(get_tcp_header_length()) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << std::to_string(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
+	ss << "Checksum: " << std::to_string(get_tcp_checksum()) << " Urgent: " << std::to_string(get_tcp_urgent_pointer()) << std::endl;
 
 	return ss.str();
 }
@@ -704,7 +705,7 @@ UShort QVPN::Core::DataStructures::TcpPacketView::get_tcp_window_size() const
 
 UShort QVPN::Core::DataStructures::TcpPacketView::get_tcp_checksum() const
 {
-	return header_[17] << 8 | header_[16];
+	return header_[16] << 8 | header_[17];
 }
 
 UShort QVPN::Core::DataStructures::TcpPacketView::get_tcp_urgent_pointer() const
@@ -725,13 +726,18 @@ bool QVPN::Core::DataStructures::TcpPacketView::protocol_criteria(UByte protocol
 std::string QVPN::Core::DataStructures::TcpPacketView::tcp_to_friendly_view() const
 {
 	std::stringstream ss;
-	ss << "Source port: " << get_tcp_src_port() << " Dest port: " << get_tcp_dst_port() << std::endl;
-	ss << "Seq: " << get_tcp_seq_number() << std::endl;
-	ss << "Ack: " << get_tcp_ack_number() << std::endl;
-	ss << "Length: " << get_tcp_header_length() << " Reserverd: " << get_tcp_reserved() << " Flags: " << get_tcp_flags() << " Window size: " << get_tcp_window_size() << std::endl;
-	ss << "Checksum: " << get_tcp_checksum() << " Urgent: " << get_tcp_urgent_pointer() << std::endl;
+	ss << "Source port: " << std::to_string(get_tcp_src_port()) << " Dest port: " << std::to_string(get_tcp_dst_port()) << std::endl;
+	ss << "Seq: " << std::to_string(get_tcp_seq_number()) << std::endl;
+	ss << "Ack: " << std::to_string(get_tcp_ack_number()) << std::endl;
+	ss << "Length: " << std::to_string(get_tcp_header_length()) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << std::to_string(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
+	ss << "Checksum: " << std::to_string(get_tcp_checksum()) << " Urgent: " << std::to_string(get_tcp_urgent_pointer()) << std::endl;
 
 	return ss.str();
+}
+
+std::pair<QVPN::Core::DataStructures::TcpPacketView::ConstDataIterator_t, QVPN::Core::DataStructures::TcpPacketView::ConstDataIterator_t> QVPN::Core::DataStructures::TcpPacketView::get_tcp_header() const
+{
+	return std::make_pair<>(header_, header_ + tcp_header_size);
 }
 
 void QVPN::Core::DataStructures::TcpPacketView::set_tcp_checksum(UShort checksum)
@@ -766,26 +772,28 @@ void QVPN::Core::DataStructures::TcpPacketView::recalculate_transport_checksum(c
 	// pseudo-header checksum
 	for (auto i = b; i < e; i+=2)
 	{
-		UShort temp = *i << 8 | *(i + 1);
+		UShort temp = static_cast<UShort>(*i << 8 | *(i + 1));
 		sum += temp;
 	}
+
 
 	// tcp header checksum
 	for (int i = 0; i < tcp_header_size; i+=2) {
-		UShort temp = header_[i] << 8 | header_[i + 1];
+		UShort temp = static_cast<UShort>(header_[i] << 8 | header_[i + 1]);
 		sum += temp;
 	}
 
+
 	// tcp header options checksum
 	for (int i = 0; i < tcp_options_size; i+=2) {
-		UShort temp = options_[i] << 8 | options_[i + 1];
+		UShort temp = static_cast<UShort>(options_[i] << 8 | options_[i + 1]);
 		sum += temp;
 	}
 
 	auto data_size = std::distance(begin, end);
 	// data checksum
 	for (auto i = begin; i < end; i++) {
-		UShort temp = 0;
+		UShort temp;
 		if (i + 1 < end)
 		{
 			temp = *i << 8 | *(i + 1);
@@ -806,7 +814,7 @@ void QVPN::Core::DataStructures::TcpPacketView::recalculate_transport_checksum(c
 		
 	res = static_cast<UShort>(sum);
 	std::cout << "res: " << res << std::endl;
-	res = ~res;
+	res = htons(~res);
 	std::cout << "~res: " << res << std::endl;
 	set_tcp_checksum(res);
 }
