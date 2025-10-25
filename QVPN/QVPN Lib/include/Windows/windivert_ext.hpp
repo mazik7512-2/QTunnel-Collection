@@ -304,18 +304,16 @@ namespace QVPN {
 					auto packet_start = packet;
 					auto packet_end = packet + packet_len;
 					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet_start, packet_end);
-					//std::cout << "In " << package.ip_to_friendly_view() << std::endl;
-					std::cout << "TCP header: " << package.tcp_to_friendly_view() << std::endl;
+					std::cout << "In " << package.ip_to_friendly_view() << std::endl;
+					std::cout << package.tcp_to_friendly_view() << std::endl;
 					auto c = package.get_tcp_checksum();
 					auto d = tcp_header->Checksum;
 					//package.set_ip_dest(adapter_addr); 
 					package.recalculate_checksums();
 					auto c1 = package.get_tcp_checksum();
 					auto d1 = tcp_header->Checksum;
-					if (c == c1)
-						std::cout << c << std::endl;
 
-					QVPN::Core::BaseTypes::UByte test[5] = { 't', 'e', 's', 't', '\0' };
+
 					//package.set_data(std::begin(test), std::end(test)); 
 					auto [begin, end] = package.bytes();
 					

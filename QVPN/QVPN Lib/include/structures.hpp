@@ -7,7 +7,7 @@
 #include <lib.hpp>
 #include <iterator>
 #include <variant>
-
+#include <iostream>
 
 
 namespace QVPN {
@@ -533,7 +533,7 @@ namespace QVPN {
 			class TcpPacketView
 			{
 			private:
-				UByte* header_;
+				UByte* tcp_header_;
 				const int tcp_header_size = 20;
 
 				UByte* options_;
@@ -869,9 +869,9 @@ namespace QVPN {
 				void recalculate_checksums()
 				{
 					Ipv4Packet::recalculate_ip_checksum();
-					UShort length = TcpPacket::get_transport_length();
+					UShort length = Ipv4Packet::get_ip_total_length() - (Ipv4Packet::get_ip_header_length() * 4);
 					auto [b, e] = DataPacket::get_data();
-					length = length + (e - b);
+					//length = length + (e - b);
 					auto pseudo = TransportIpv4PseudoHeader(Ipv4Packet::get_ip_source(), Ipv4Packet::get_ip_dest(), Ipv4Packet::get_ip_protocol(), length);
 					TcpPacket::recalculate_transport_checksum(pseudo, b, e);
 				}
@@ -907,9 +907,9 @@ namespace QVPN {
 				void recalculate_checksums()
 				{
 					Ipv4Packet::recalculate_ip_checksum();
-					UShort length = UdpPacket::get_transport_length();
+					UShort length = Ipv4Packet::get_ip_total_length() - (Ipv4Packet::get_ip_header_length() * 4);
 					auto [b, e] = DataPacket::get_data();
-					length = length + (e - b);
+					//length = length + (e - b);
 					auto pseudo = TransportIpv4PseudoHeader(Ipv4Packet::get_ip_source(), Ipv4Packet::get_ip_dest(), Ipv4Packet::get_ip_protocol(), length);
 					UdpPacket::recalculate_transport_checksum(pseudo, b, e);
 				}
@@ -937,6 +937,47 @@ namespace QVPN {
 					auto [b2, e2] = TcpPacket_View::to_bytes();
 					auto [b3, e3] = DataPacket_View::to_bytes();
 					return std::make_pair<>(b1, e3);
+				}
+
+				std::pair<bool, std::string> compare_bytes(ConstDataIterator_t begin, ConstDataIterator_t end)
+				{
+					auto [b1, e1] = Ipv4Packet_View::to_bytes();
+					auto [b2, e2] = TcpPacket_View::to_bytes();
+					auto [b3, e3] = DataPacket_View::to_bytes();
+					
+					auto d1 = std::distance(begin, end);
+					auto d2 = std::distance(b1, e3);
+
+					if (d1 != d2)
+						return std::make_pair<>(false, "packet size doesnt equal");
+					
+					bool res = true;
+					auto ip_size = std::distance(b1, e1);
+					
+
+					for (auto i = 0; i < ip_size ; i++)
+					{
+						if (b1[i] != begin[i])
+							return std::make_pair<>(false, "ip headers error");
+					}
+
+					auto tcp_start = begin + ip_size;
+					auto tcp_size = std::distance(b2, e2);
+					for (auto i = 0; i < tcp_size; i++)
+					{
+						if (b2[i] != tcp_start[i])
+							return std::make_pair<>(false, "tcp header error");
+					}
+
+					auto data_start = tcp_start + tcp_size;
+					auto data_size = std::distance(b3, e3);
+					for (auto i = 0; i < data_size; i++)
+					{
+						if (b3[i] != data_start[i])
+							return std::make_pair<>(false, "data error");
+					}
+
+					return std::make_pair<>(true, "All data equal");
 				}
 
 				void recalculate_checksums()
