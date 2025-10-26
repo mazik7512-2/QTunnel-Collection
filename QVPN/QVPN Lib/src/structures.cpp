@@ -201,7 +201,9 @@ void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::recalculate_ip_checksum
 		sum += temp;
 	}
 
-	res = ~((sum >> 16) + (sum & 0xFFFF));
+	while (sum >> 16)
+		sum = ((sum >> 16) + (sum & 0xFFFF));
+	res = ~sum;
 	set_ip_checksum(res);
 }
 
@@ -324,32 +326,47 @@ void QVPN::Core::DataStructures::TcpPacketLittleEndian::recalculate_transport_ch
 {
 	unsigned int sum = 0;
 	UShort res = 0;
-
 	auto [b, e] = pseudo_header.get_by_bytes();
 
+
+	set_tcp_checksum(0);
 	// pseudo-header checksum
 	for (auto i = b; i < e; i += 2)
 	{
-		UShort temp = *i << 8 | *(i + 1);
+		UShort temp = (static_cast<UShort>(*i << 8 | *(i + 1)));
 		sum += temp;
 	}
 
-	// tcp header checksum
+
+	// tcp header + additional header checksum
 	for (int i = 0; i < header_.size(); i += 2) {
-		UShort temp = header_[i] << 8 | header_[i + 1];
+		UShort temp = (static_cast<UShort>(header_[i] << 8 | header_[i + 1]));
 		sum += temp;
 	}
-	sum -= get_tcp_checksum();
 
+	auto data_size = std::distance(begin, end);
 	// data checksum
-	for (auto i = begin; i < end; i += 2) {
-		UShort temp = *i << 8 | *(i + 1);
+	for (auto i = begin; i < end; i++) {
+		UShort temp;
+		if (i + 1 < end)
+		{
+			temp = (*i << 8 | *(i + 1));
+			i++;
+		}
+		else
+		{
+			temp = (*i << 8);
+		}
 		sum += temp;
 	}
 
 	while (sum >> 16)
-		sum = ((sum >> 16) + (sum & 0xFFFF));
-	res = ~sum;
+	{
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	}
+
+	res = static_cast<UShort>(sum);
+	res = (~res);
 	set_tcp_checksum(res);
 }
 
@@ -418,6 +435,50 @@ std::pair<QVPN::Core::DataStructures::UdpPacketLittleEndian::ConstDataIterator_t
 
 void QVPN::Core::DataStructures::UdpPacketLittleEndian::recalculate_transport_checksum(const TransportIpv4PseudoHeader& pseudo_header, ConstDataIterator_t begin, ConstDataIterator_t end)
 {
+	unsigned int sum = 0;
+	UShort res = 0;
+	auto [b, e] = pseudo_header.get_by_bytes();
+
+
+	//set_udp_checksum(0);
+	// pseudo-header checksum
+	for (auto i = b; i < e; i += 2)
+	{
+		UShort temp = (static_cast<UShort>(*i << 8 | *(i + 1)));
+		sum += temp;
+	}
+
+
+	// udp header checksum
+	for (int i = 0; i < header_.size(); i += 2) {
+		UShort temp = (static_cast<UShort>(header_[i] << 8 | header_[i + 1]));
+		sum += temp;
+	}
+
+	auto data_size = std::distance(begin, end);
+	// data checksum
+	for (auto i = begin; i < end; i++) {
+		UShort temp;
+		if (i + 1 < end)
+		{
+			temp = (*i << 8 | *(i + 1));
+			i++;
+		}
+		else
+		{
+			temp = (*i << 8);
+		}
+		sum += temp;
+	}
+
+	while (sum >> 16)
+	{
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	}
+
+	res = static_cast<UShort>(sum);
+	res = (~res);
+	//set_udp_checksum(res);
 }
 
 UShort QVPN::Core::DataStructures::UdpPacketLittleEndian::get_transport_length() const
@@ -634,7 +695,9 @@ void QVPN::Core::DataStructures::Ipv4PacketView::recalculate_ip_checksum()
 		sum += temp;
 	}
 
-	res = ~((sum >> 16) + (sum & 0xFFFF));
+	while (sum >> 16)
+		sum = ((sum >> 16) + (sum & 0xFFFF));
+	res = ~sum;
 	set_ip_checksum(res);
 }
 
@@ -885,6 +948,50 @@ std::pair<QVPN::Core::DataStructures::UdpPacketView::ConstDataIterator_t, QVPN::
 
 void QVPN::Core::DataStructures::UdpPacketView::recalculate_transport_checksum(const TransportIpv4PseudoHeader& pseudo_header, ConstDataIterator_t begin, ConstDataIterator_t end)
 {
+	unsigned int sum = 0;
+	UShort res = 0;
+	auto [b, e] = pseudo_header.get_by_bytes();
+
+
+	//set_udp_checksum(0);
+	// pseudo-header checksum
+	for (auto i = b; i < e; i += 2)
+	{
+		UShort temp = (static_cast<UShort>(*i << 8 | *(i + 1)));
+		sum += temp;
+	}
+
+
+	// udp header checksum
+	for (int i = 0; i < udp_header_size; i += 2) {
+		UShort temp = (static_cast<UShort>(header_[i] << 8 | header_[i + 1]));
+		sum += temp;
+	}
+
+	auto data_size = std::distance(begin, end);
+	// data checksum
+	for (auto i = begin; i < end; i++) {
+		UShort temp;
+		if (i + 1 < end)
+		{
+			temp = (*i << 8 | *(i + 1));
+			i++;
+		}
+		else
+		{
+			temp = (*i << 8);
+		}
+		sum += temp;
+	}
+
+	while (sum >> 16)
+	{
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	}
+
+	res = static_cast<UShort>(sum);
+	res = (~res);
+	//set_udp_checksum(res);
 }
 
 UShort QVPN::Core::DataStructures::UdpPacketView::get_transport_length() const
