@@ -62,9 +62,9 @@ QVPN::Core::IPv4Address::UByte QVPN::Core::IPv4Address::operator[](int elem) con
     return ip_[elem];
 }
 
-std::unique_ptr<std::array<QVPN::Core::IPv4Address::UByte, 4>> QVPN::Core::IPv4Address::to_bytes() const
+std::array<QVPN::Core::IPv4Address::UByte, 4> QVPN::Core::IPv4Address::to_bytes() const
 {
-    return std::make_unique<decltype(ip_)>(ip_);
+    return ip_;
 }
 
 std::string QVPN::Core::IPv4Address::to_string() const

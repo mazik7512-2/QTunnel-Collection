@@ -43,7 +43,7 @@ namespace QVPN
 
 			UByte operator[](int elem) const;
 
-			std::unique_ptr<std::array<UByte, 4>> to_bytes() const;
+			std::array<UByte, 4> to_bytes() const;
 			std::string to_string() const;
 			QVPN::Core::BaseTypes::UInt to_uint() const;
 
@@ -91,6 +91,8 @@ namespace QVPN
 			typename Filter::Convertable_from;
 
 			{ f.operator&&(std::declval<const Filter&>()) } -> std::same_as<Filter&>;
+			{ f.operator||(std::declval<const Filter&>()) } -> std::same_as<Filter&>;
+			{ f.operator!() } -> std::same_as<Filter&>;
 			{ Filter(c_f) };
 			{ f.operator Filter::Convertable_to() };
 		};
@@ -108,8 +110,6 @@ namespace QVPN
 			{ f.udp() } -> std::same_as<typename Filter::Filter_t>;
 			{ f.source(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.dest(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
-			{ f.no_source(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
-			{ f.no_dest(std::declval<const IPv4Address&>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.tcp_src_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.tcp_dst_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
 			{ f.udp_src_port(std::declval<unsigned int>()) } -> std::same_as<typename Filter::Filter_t>;
@@ -121,6 +121,8 @@ namespace QVPN
 			{ f.incoming_traffic() } -> std::same_as<typename Filter::Filter_t>;
 			{ f.local_traffic() } -> std::same_as<typename Filter::Filter_t>;
 		};
+
+
 
 
 		template <class AdapterDriverImpl>
@@ -140,6 +142,13 @@ namespace QVPN
 		};
 
 
+		template <class VpnDriverImpl>
+		class VpnDriver final : public VpnDriverImpl
+		{
+
+		};
+
+
 
 		template <class FilterImpl>
 			requires is_filter<FilterImpl>
@@ -150,13 +159,13 @@ namespace QVPN
 
 
 		template <is_adapter_driver AdapterDriver, is_net_driver NetDriver>
-		class VPNClientDriver_ : public AdapterDriver, public NetDriver
+		class VPNClient_ : public AdapterDriver, public NetDriver
 		{
 		private:
 			QVPN::Core::IPv4Address default_addr;
 		public:
 
-			VPNClientDriver_()
+			VPNClient_()
 				: AdapterDriver(), NetDriver() 
 			{
 				default_addr = QVPN::Core::IPv4Address(192, 168, 50, 193);

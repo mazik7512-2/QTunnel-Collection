@@ -54,3 +54,24 @@ QVPN::WinDivertExt::WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTra
     filter_ = f.str(); 
     return *this;
 }
+
+WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTrafficFilterType::operator||(const WinDivertTrafficFilterType& t)
+{
+    std::stringstream f;
+    if (!filter_.empty())
+        f << filter_ << " or " << t.filter_;
+    else
+        f << " " << t.filter_;
+    filter_ = f.str();
+    return *this;
+}
+
+WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTrafficFilterType::operator!()
+{
+    auto eq_pos = filter_.find('=');
+    if (eq_pos != std::string::npos)
+        filter_.insert(eq_pos, "!");
+    else
+        filter_.insert(filter_.cbegin(), '!');
+    return *this;
+}

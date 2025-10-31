@@ -251,8 +251,8 @@ namespace QVPN {
 					{ t.get_ip_offset() } -> std::same_as<UShort>;
 					{ t.get_ip_ttl() } -> std::same_as<UByte>;
 					{ t.get_ip_checksum() } -> std::same_as<UShort>;
-					{ t.get_ip_source() } -> std::same_as<UInt>;
-					{ t.get_ip_dest() } -> std::same_as<UInt>;
+					{ t.get_ip_source() } -> std::same_as<IPv4Address>;
+					{ t.get_ip_dest() } -> std::same_as<IPv4Address>;
 					{ t.get_ip_additional_header() } -> std::same_as<std::pair<typename Ip4PacketImpl::ConstDataIterator_t, typename Ip4PacketImpl::ConstDataIterator_t>>;
 					{ t.ip_to_friendly_view() } -> std::same_as<std::string>;
 					
@@ -302,8 +302,8 @@ namespace QVPN {
 
 				UShort get_ip_checksum() const;
 
-				UInt get_ip_source() const;
-				UInt get_ip_dest() const;
+				IPv4Address get_ip_source() const;
+				IPv4Address get_ip_dest() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_ip_additional_header() const;
 				std::string ip_to_friendly_view() const;
@@ -367,8 +367,8 @@ namespace QVPN {
 
 				UShort get_ip_checksum() const;
 
-				UInt get_ip_source() const;
-				UInt get_ip_dest() const;
+				IPv4Address get_ip_source() const;
+				IPv4Address get_ip_dest() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_ip_additional_header() const;
 				std::string ip_to_friendly_view() const;
@@ -420,7 +420,7 @@ namespace QVPN {
 			struct TransportIpv4PseudoHeader
 			{
 				
-				UByte data[12];
+				UByte data[12] = { 0 };
 				/*
 				UInt ph_src;
 				UInt ph_dst;
@@ -429,6 +429,7 @@ namespace QVPN {
 				UShort ph_length;
 				*/
 				TransportIpv4PseudoHeader(UInt src, UInt dst, UByte protocol, UShort length);
+				TransportIpv4PseudoHeader(IPv4Address& src, IPv4Address& dst, UByte protocol, UShort length);
 
 				std::pair<const UByte*, const UByte*> get_by_bytes() const;
 				TransportIpv4PseudoHeaderTypesBuffer get_by_types() const;
@@ -804,7 +805,9 @@ namespace QVPN {
 					UShort length = TransportLayer::get_transport_length();
 					auto [b, e] = DataLayer::get_data();
 					length = length + (e - b);
-					auto pseudo = TransportIpv4PseudoHeader(NetLayer::get_ip_source(), NetLayer::get_ip_dest(), NetLayer::get_ip_protocol(), length);
+					auto src = NetLayer::get_ip_source();
+					auto dst = NetLayer::get_ip_dest();
+					auto pseudo = TransportIpv4PseudoHeader(src, dst, NetLayer::get_ip_protocol(), length);
 					TransportLayer::recalculate_transport_checksum(pseudo, b, e);
 				}
 				
@@ -872,7 +875,9 @@ namespace QVPN {
 					UShort length = Ipv4Packet::get_ip_total_length() - (Ipv4Packet::get_ip_header_length() * 4);
 					auto [b, e] = DataPacket::get_data();
 					//length = length + (e - b);
-					auto pseudo = TransportIpv4PseudoHeader(Ipv4Packet::get_ip_source(), Ipv4Packet::get_ip_dest(), Ipv4Packet::get_ip_protocol(), length);
+					auto src = Ipv4Packet::get_ip_source();
+					auto dst = Ipv4Packet::get_ip_dest();
+					auto pseudo = TransportIpv4PseudoHeader(src, dst, Ipv4Packet::get_ip_protocol(), length);
 					TcpPacket::recalculate_transport_checksum(pseudo, b, e);
 				}
 
@@ -910,7 +915,9 @@ namespace QVPN {
 					UShort length = Ipv4Packet::get_ip_total_length() - (Ipv4Packet::get_ip_header_length() * 4);
 					auto [b, e] = DataPacket::get_data();
 					//length = length + (e - b);
-					auto pseudo = TransportIpv4PseudoHeader(Ipv4Packet::get_ip_source(), Ipv4Packet::get_ip_dest(), Ipv4Packet::get_ip_protocol(), length);
+					auto src = Ipv4Packet::get_ip_source();
+					auto dst = Ipv4Packet::get_ip_dest();
+					auto pseudo = TransportIpv4PseudoHeader(src, dst, Ipv4Packet::get_ip_protocol(), length);
 					UdpPacket::recalculate_transport_checksum(pseudo, b, e);
 				}
 
@@ -986,7 +993,9 @@ namespace QVPN {
 					UShort length = Ipv4Packet_View::get_ip_total_length() - (Ipv4Packet_View::get_ip_header_length() * 4);
 					auto [b, e] = DataPacket_View::get_data();
 					//length = length + (e - b);
-					auto pseudo = TransportIpv4PseudoHeader(Ipv4Packet_View::get_ip_source(), Ipv4Packet_View::get_ip_dest(), Ipv4Packet_View::get_ip_protocol(), length);
+					auto src = Ipv4Packet_View::get_ip_source();
+					auto dst = Ipv4Packet_View::get_ip_dest();
+					auto pseudo = TransportIpv4PseudoHeader(src, dst, Ipv4Packet_View::get_ip_protocol(), length);
 					TcpPacket_View::recalculate_transport_checksum(pseudo, b, e);
 				}
 
@@ -1018,7 +1027,9 @@ namespace QVPN {
 					UShort length = UdpPacketView::get_transport_length();
 					auto [b, e] = DataPacket_View::get_data();
 					length = length + (e - b);
-					auto pseudo = TransportIpv4PseudoHeader(Ipv4Packet_View::get_ip_source(), Ipv4Packet_View::get_ip_dest(), Ipv4Packet_View::get_ip_protocol(), length);
+					auto src = Ipv4Packet_View::get_ip_source();
+					auto dst = Ipv4Packet_View::get_ip_dest();
+					auto pseudo = TransportIpv4PseudoHeader(src, dst, Ipv4Packet_View::get_ip_protocol(), length);
 					UdpPacketView::recalculate_transport_checksum(pseudo, b, e);
 				}
 

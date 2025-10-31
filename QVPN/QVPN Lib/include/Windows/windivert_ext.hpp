@@ -39,6 +39,8 @@ namespace QVPN {
 			WinDivertTrafficFilterType& operator=(WinDivertTrafficFilterType&& filter) noexcept;
 			
 			WinDivertTrafficFilterType& operator&&(const WinDivertTrafficFilterType& t);
+			WinDivertTrafficFilterType& operator||(const WinDivertTrafficFilterType& t);
+			WinDivertTrafficFilterType& operator!();
 			
 			operator Convertable_to() const;
 
@@ -74,57 +76,47 @@ namespace QVPN {
 
 			Filter_t source(const QVPN::Core::IPv4Address& addr) const noexcept
 			{
-				return Filter_t("localAddr == " + addr.to_string());
+				return Filter_t("localAddr = " + addr.to_string());
 			}
 
 			Filter_t dest(const QVPN::Core::IPv4Address& addr) const noexcept
 			{
-				return Filter_t("remoteAddr == " + addr.to_string());
-			}
-
-			Filter_t no_source(const QVPN::Core::IPv4Address& addr) const noexcept
-			{
-				return Filter_t("localAddr != " + addr.to_string());
-			}
-
-			Filter_t no_dest(const QVPN::Core::IPv4Address& addr) const noexcept
-			{
-				return Filter_t("remoteAddr != " + addr.to_string());
+				return Filter_t("remoteAddr = " + addr.to_string());
 			}
 
 			Filter_t src_port(unsigned int port) const noexcept
 			{
-				return Filter_t("localPort == " + std::to_string(port));
+				return Filter_t("localPort = " + std::to_string(port));
 			}
 
 			Filter_t dst_port(unsigned int port) const noexcept
 			{
-				return Filter_t("remotePort == " + std::to_string(port));
+				return Filter_t("remotePort = " + std::to_string(port));
 			}
 
 			Filter_t tcp_src_port(unsigned int port) const noexcept
 			{
-				return Filter_t("tcp.SrcPort == " + std::to_string(port));
+				return Filter_t("tcp.SrcPort = " + std::to_string(port));
 			}
 
 			Filter_t tcp_dst_port(unsigned int port) const noexcept
 			{
-				return Filter_t("tcp.DstPort == " + std::to_string(port));
+				return Filter_t("tcp.DstPort = " + std::to_string(port));
 			}
 
 			Filter_t udp_src_port(unsigned int port) const noexcept
 			{
-				return Filter_t("udp.SrcPort == " + std::to_string(port));
+				return Filter_t("udp.SrcPort = " + std::to_string(port));
 			}
 
 			Filter_t udp_dst_port(unsigned int port) const noexcept
 			{
-				return Filter_t("udp.DstPort == " + std::to_string(port));
+				return Filter_t("udp.DstPort = " + std::to_string(port));
 			}
 
 			Filter_t custom_protocol(unsigned int protocol) const noexcept
 			{
-				return Filter_t("protocol == " + std::to_string(protocol));
+				return Filter_t("protocol = " + std::to_string(protocol));
 			}
 
 			Filter_t outgoing_traffic() const noexcept
@@ -179,7 +171,7 @@ namespace QVPN {
 
 			void apply_default_outgoing_filter(const QVPN::Core::IPv4Address& addr)
 			{
-				outgoing_default_filter_ = Filter::no_source(addr) && Filter::outgoing_traffic();
+				outgoing_default_filter_ = !Filter::source(addr) && Filter::outgoing_traffic();
 				calculate_outgoing_filters();
 			}
 

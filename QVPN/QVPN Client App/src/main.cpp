@@ -38,29 +38,15 @@ int main()
 
     QVPN::WinDivertExt::WinDivertTrafficFilter filter;
 
-    test(filter.ipv4() && filter.tcp() && filter.udp());
+    test(!filter.ipv4() && filter.tcp() && filter.udp());
 
     QVPN::Core::IPv4Address ip4(1, 2, 3, 4);
 
-    test(filter.source(ip4));
+    test(!filter.source(ip4));
 
     std::cout << ip4.to_string() << std::endl;
-
-
-    /*
-    HANDLE hDivert = WinDivertOpen("true", WINDIVERT_LAYER_NETWORK, 0, 0);
-    if (hDivert != INVALID_HANDLE_VALUE)
-    {
-        printf("Driver is working correctly.\n");
-        WinDivertClose(hDivert);
-    }
-    else
-    {
-        printf("Error opening driver.\n");
-        return 0;
-    }
-    */
-    QVPN::VPNClientDriver vpn;
+    
+    QVPN::VPNClient vpn;
     //vpn.create_adapter_ipv4();
     //vpn.capture_adapter();
 
