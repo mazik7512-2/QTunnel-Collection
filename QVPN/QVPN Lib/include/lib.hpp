@@ -52,6 +52,27 @@ namespace QVPN
 
 		};
 
+		template <class Layer>
+		concept is_layer =
+			requires (Layer l) {
+
+				{true};
+
+		};
+
+		class QVPNSettings final
+		{
+
+		};
+
+		class QVpnDriverImpl
+		{
+
+		public:
+
+
+		};
+
 		template <typename T>
 		concept is_adapter_driver =
 			requires(T t) {
@@ -123,7 +144,13 @@ namespace QVPN
 		};
 
 
+		template <class VpnDriverImpl>
+		concept is_vpn_driver =
+			requires (VpnDriverImpl v) {
 
+				{ true };
+
+		};
 
 		template <class AdapterDriverImpl>
 			requires is_adapter_driver<AdapterDriverImpl>
@@ -143,6 +170,7 @@ namespace QVPN
 
 
 		template <class VpnDriverImpl>
+			requires is_vpn_driver<VpnDriverImpl>
 		class VpnDriver final : public VpnDriverImpl
 		{
 

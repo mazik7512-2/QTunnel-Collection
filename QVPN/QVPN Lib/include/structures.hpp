@@ -400,7 +400,6 @@ namespace QVPN {
 
 			};
 
-#pragma pack(push, 1)
 			struct TransportIpv4PseudoHeaderBytesBuffer
 			{
 				UByte data[12];
@@ -415,7 +414,6 @@ namespace QVPN {
 				UByte protocol;
 				UShort length;
 			};
-#pragma pack(pop)
 
 			struct TransportIpv4PseudoHeader
 			{
