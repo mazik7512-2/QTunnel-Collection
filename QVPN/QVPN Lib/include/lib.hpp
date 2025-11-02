@@ -18,60 +18,57 @@ namespace QVPN
 			using ubyte_const_iter = std::vector<unsigned char>::const_iterator;
 		}
 
+
+		template <class AddrType>
+		concept is_addr =
+			requires (AddrType addr) {
+
+			typename AddrType::AddrBytes_t;
+			typename AddrType::AddrInt_t;
+
+			{ addr.to_bytes() } -> std::same_as<typename AddrType::AddrBytes_t>;
+			{ addr.to_string() } -> std::same_as<std::string>;
+			{ addr.to_uint() } -> std::same_as<typename AddrType::AddrInt_t>;
+
+		};
+
 		class IPv4Address final
 		{
 
 		public:
-
+			
 			using UByte = Core::BaseTypes::UByte;
+			using AddrBytes_t = std::array<UByte, 4>;
+			using AddrInt_t = BaseTypes::UInt;
 
 		private:
 
-			std::array<UByte, 4> ip_{};
+			AddrBytes_t ip_{};
 
 		public:
 
 			IPv4Address();
-			IPv4Address(BaseTypes::UInt data);
+			IPv4Address(AddrInt_t data);
 			IPv4Address(UByte first, UByte second, UByte third, UByte four);
 			IPv4Address(const IPv4Address& other);
 			IPv4Address(IPv4Address&& other);
 			IPv4Address& operator=(const IPv4Address& other);
 			IPv4Address& operator=(IPv4Address&& other);
-			IPv4Address& operator=(const std::array<UByte, 4>& other);
-			IPv4Address& operator=(std::array<UByte, 4>&& other);
+			IPv4Address& operator=(const AddrBytes_t& other);
+			IPv4Address& operator=(AddrBytes_t&& other);
 
 			UByte operator[](int elem) const;
 
-			std::array<UByte, 4> to_bytes() const;
+			AddrBytes_t to_bytes() const;
 			std::string to_string() const;
-			QVPN::Core::BaseTypes::UInt to_uint() const;
+			AddrInt_t to_uint() const;
 
 			~IPv4Address();
 
 
 		};
 
-		template <class Layer>
-		concept is_layer =
-			requires (Layer l) {
 
-				{true};
-
-		};
-
-		class QVPNSettings final
-		{
-
-		};
-
-		class QVpnDriverImpl
-		{
-
-		public:
-
-
-		};
 
 		template <typename T>
 		concept is_adapter_driver =
@@ -143,15 +140,6 @@ namespace QVPN
 			{ f.local_traffic() } -> std::same_as<typename Filter::Filter_t>;
 		};
 
-
-		template <class VpnDriverImpl>
-		concept is_vpn_driver =
-			requires (VpnDriverImpl v) {
-
-				{ true };
-
-		};
-
 		template <class AdapterDriverImpl>
 			requires is_adapter_driver<AdapterDriverImpl>
 		class AdapterDriver final : public AdapterDriverImpl
@@ -164,14 +152,6 @@ namespace QVPN
 		template <class NetDriverImpl>
 			requires is_net_driver<NetDriverImpl>
 		class NetDriver final : public NetDriverImpl
-		{
-
-		};
-
-
-		template <class VpnDriverImpl>
-			requires is_vpn_driver<VpnDriverImpl>
-		class VpnDriver final : public VpnDriverImpl
 		{
 
 		};

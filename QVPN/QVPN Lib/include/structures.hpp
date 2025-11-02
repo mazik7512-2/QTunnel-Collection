@@ -8,6 +8,7 @@
 #include <iterator>
 #include <variant>
 #include <iostream>
+#include "vpn_driver.h"
 
 
 namespace QVPN {

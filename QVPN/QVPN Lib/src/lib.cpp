@@ -5,7 +5,7 @@ QVPN::Core::IPv4Address::IPv4Address()
 {
 }
 
-QVPN::Core::IPv4Address::IPv4Address(BaseTypes::UInt data)
+QVPN::Core::IPv4Address::IPv4Address(AddrInt_t data)
 {
     UByte first = data >> 24 & 0xFF;
     UByte second = data >> 16 & 0xFF;
@@ -45,13 +45,13 @@ QVPN::Core::IPv4Address& QVPN::Core::IPv4Address::operator=(IPv4Address&& other)
     return *this;
 }
 
-QVPN::Core::IPv4Address& QVPN::Core::IPv4Address::operator=(const std::array<UByte, 4>& other)
+QVPN::Core::IPv4Address& QVPN::Core::IPv4Address::operator=(const AddrBytes_t& other)
 {
     std::copy(other.begin(), other.end(), ip_.begin());
     return *this;
 }
 
-QVPN::Core::IPv4Address& QVPN::Core::IPv4Address::operator=(std::array<UByte, 4>&& other)
+QVPN::Core::IPv4Address& QVPN::Core::IPv4Address::operator=(AddrBytes_t&& other)
 {
     ip_ = std::exchange(other, {});
     return *this;
