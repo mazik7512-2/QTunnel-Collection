@@ -8,6 +8,7 @@
 #include <iostream>
 #include <structures.hpp>
 #include <fstream>
+#include <vpn_driver.h>
 
 #pragma comment(lib, "windivert.lib")
 
@@ -158,6 +159,8 @@ namespace QVPN {
 			HANDLE in_hDivert_;
 			QVPN::Core::BaseTypes::ULong old_adapter_id;
 			QVPN::Core::BaseTypes::ULong new_adapter_id;
+			
+
 
 			void calculate_outgoing_filters()
 			{

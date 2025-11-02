@@ -2,6 +2,7 @@
 #include <lib.hpp>
 #include <type_traits>
 #include <variant>
+#include <memory>
 
 namespace QVPN
 {
@@ -19,9 +20,13 @@ namespace QVPN
 		class BaseLayer
 		{
 		public:
+
 			virtual LayerTypes get_layer_type() const;
 			virtual std::string_view get_layer_name() const;
-			virtual std::vector<BaseTypes::UByte> layer_transformation(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+			virtual std::vector<BaseTypes::UByte> layer_encode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+			virtual std::vector<BaseTypes::UByte> layer_decode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+
+			virtual ~BaseLayer() = default;
 		};
 
 
@@ -32,20 +37,28 @@ namespace QVPN
 			bool active_;
 
 		public:
-
-			LayerWrapper(BaseLayer* layer, bool active = true);
+			LayerWrapper(std::unique_ptr<BaseLayer> layer, bool active = true);
 
 			bool is_active() const;
 			void set_activity(bool status);
 
 			LayerTypes get_layer_type() const;
 			std::string_view get_layer_name() const;
-			std::vector<BaseTypes::UByte> layer_transformation(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+			std::vector<BaseTypes::UByte> layer_encode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+			std::vector<BaseTypes::UByte> layer_decode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
 
-		};
+		}; 
 
 		template <class Layer>
-		concept is_layer = std::is_base_of<BaseLayer, Layer>::value;
+		concept is_layer = 
+			requires (Layer l, const BaseTypes::UByte * begin, const BaseTypes::UByte * end) {
+			
+				{ l.get_layer_type() } -> std::same_as<LayerTypes>;
+				{ l.get_layer_name() } -> std::same_as <std::string_view> ;
+				{ l.layer_encode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+				{ l.layer_decode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+
+		} && std::is_base_of<BaseLayer, Layer>::value;
 
 
 		class QVPNLayersSettings
@@ -55,10 +68,10 @@ namespace QVPN
 
 		public:
 
-			void add_layer(BaseLayer* l);
-			void add_layer(LayerWrapper& l);
+			void add_layer(std::unique_ptr<BaseLayer> l, bool status = true);
 
-			std::vector<BaseTypes::UByte> apply_layers(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+			std::vector<BaseTypes::UByte> layers_encode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+			std::vector<BaseTypes::UByte> layers_decode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
 
 		};
 
@@ -96,34 +109,40 @@ namespace QVPN
 			std::string key_;
 
 		public:
-
 			QVPNAuthenticationSettings(std::string key);
 
 			std::string_view get_key() const;
 		};
 
-		class QVPNSettigns : public QVPNLayersSettings, public QVPNConnectionSettings, public QVPNAuthenticationSettings
+		class QVPNSettings : public QVPNLayersSettings, public QVPNConnectionSettings, public QVPNAuthenticationSettings
 		{
-		public:
+		private:
 
-			QVPNSettigns(QVPNLayersSettings layers, QVPNConnectionSettings connection, QVPNAuthenticationSettings settings);
+		public:
+			QVPNSettings(QVPNLayersSettings layers, QVPNConnectionSettings connection, QVPNAuthenticationSettings auth);
 
 		};
 
-		template <class VpnDriver>
+		template <class VPNDriver>
 		concept is_vpn_driver = 
-			requires (VpnDriver d, const BaseTypes::UByte* begin, const BaseTypes::UByte* end) {
+			requires (VPNDriver d, const BaseTypes::UByte* begin, const BaseTypes::UByte* end) {
 
 				{ d.encode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 				{ d.decode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
 		};
 
-		class QVpnDriverImpl
+		class QVPNDriver
 		{
+		private:
+
+			QVPNSettings settings_;
 
 		public:
 
+			QVPNDriver(QVPNSettings settings);
+			std::vector<BaseTypes::UByte> encode_data(const BaseTypes::UByte* begin, const BaseTypes::UByte* end);
+			std::vector<BaseTypes::UByte> decode_data(const BaseTypes::UByte* begin, const BaseTypes::UByte* end);
 
 		};
 	}
