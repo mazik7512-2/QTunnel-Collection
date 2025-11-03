@@ -854,16 +854,17 @@ namespace QVPN {
 				requires (HttpRequestImpl t, BaseTypes::UByte begin, BaseTypes::UByte end) {
 
 					{ t.get_http_request() } -> std::same_as<std::string>;
-					{ t.get_http_request_type() } -> std::same_as<HttpQueryType>;
 					{ t.get_http_request_header() } -> std::same_as<std::string>;
+					{ t.get_http_request_body() } -> std::same_as<std::string>;
+					{ t.get_http_request_type() } -> std::same_as<HttpQueryType>;
 					{ t.get_http_request_host() } -> std::same_as<std::string>;
 					{ t.get_http_request_connection_type() } -> std::same_as<HttpConnectionType>;
 					{ t.get_http_request_user_agent() } -> std::same_as<std::pair<HttpUserAgent, std::string>>;
-					{ t.get_http_request_body() } -> std::same_as<std::string>;
+					
 
 
-					{ t.get_http_request_header_bytes() } -> std::same_as<std::pair<BaseTypes::UByte, BaseTypes::UByte>>;
-					{ t.get_http_request_body_bytes() } -> std::same_as<std::pair<BaseTypes::UByte, BaseTypes::UByte>>;
+					{ t.get_http_request_header_bytes() } -> std::same_as<std::pair<typename HttpRequestImpl::ConstDataIterator_t, typename HttpRequestImpl::ConstDataIterator_t>>;
+					{ t.get_http_request_body_bytes() } -> std::same_as<std::pair<typename HttpRequestImpl::ConstDataIterator_t, typename HttpRequestImpl::ConstDataIterator_t>>;
 					
 			} && UnifiedHttpPacketLike<HttpRequestImpl> && UnifiedPacketLike<HttpRequestImpl>;
 
@@ -882,10 +883,79 @@ namespace QVPN {
 
 
 
-					{ t.get_http_response_header_bytes() } -> std::same_as<std::pair<BaseTypes::UByte, BaseTypes::UByte>>;
-					{ t.get_http_response_body_bytes() } -> std::same_as<std::pair<BaseTypes::UByte, BaseTypes::UByte>>;
+					{ t.get_http_response_header_bytes() } -> std::same_as<std::pair<typename HttpResponseImpl::ConstDataIterator_t, typename HttpResponseImpl::ConstDataIterator_t>>;
+					{ t.get_http_response_body_bytes() } -> std::same_as<std::pair<typename HttpResponseImpl::ConstDataIterator_t, typename HttpResponseImpl::ConstDataIterator_t>>;
 
 			} && UnifiedHttpPacketLike<HttpResponseImpl> && UnifiedPacketLike<HttpResponseImpl>;
+
+
+			class HttpPacketRequestLittleEndian
+			{
+			public:
+				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+			private:
+				std::vector<UByte> data_;
+
+			public:
+				/* Unified IP Packet implementaion */
+				std::pair<HttpVersion, std::string> get_http_version() const;
+
+				std::string get_http_request() const;
+				std::string get_http_request_header() const;
+				std::string get_http_request_body() const;
+				HttpQueryType get_http_request_type() const;
+				std::string get_http_request_host() const;
+				HttpConnectionType get_http_request_connection_type() const;
+				std::pair<HttpUserAgent, std::string> get_http_request_user_agent() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_http_request_header_bytes() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_http_request_body_bytes() const;
+
+				/* Unified Packet implementaion */
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
+
+
+			class HttpPacketRequestView
+			{
+			public:
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+			private:
+				UByte* data_;
+				UShort data_size_;
+
+			public:
+				/* Unified IP Packet implementaion */
+				std::pair<HttpVersion, std::string> get_http_version() const;
+
+				std::string get_http_request() const;
+				std::string get_http_request_header() const;
+				std::string get_http_request_body() const;
+				HttpQueryType get_http_request_type() const;
+				std::string get_http_request_host() const;
+				HttpConnectionType get_http_request_connection_type() const;
+				std::pair<HttpUserAgent, std::string> get_http_request_user_agent() const;
+				
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_http_request_header_bytes() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_http_request_body_bytes() const;
+
+				/* Unified Packet implementaion */
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
+
+
+
+			template <class HttpRequestImpl>
+			requires HttpRequestPacketLike<HttpRequestImpl>
+			class HttpRequestPacket : public HttpRequestImpl
+			{
+
+			};
+
 
 			template <class NetLayer>
 			concept is_net_layer = Ip4PacketLike<NetLayer>;
@@ -894,7 +964,7 @@ namespace QVPN {
 			concept is_transport_layer = TcpPacketLike<TransportLayer> || UdpPacketLike<TransportLayer>;
 
 			template <class DataLayer>
-			concept is_data_layer = DataPacketLike<DataLayer>;
+			concept is_data_layer = DataPacketLike<DataLayer> || HttpRequestPacketLike<DataLayer> || HttpResponsePacketLike<DataLayer>;
 
 
 			template <class FullPacketImpl>
