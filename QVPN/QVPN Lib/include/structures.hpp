@@ -24,16 +24,84 @@ namespace QVPN {
 			using ULong = unsigned long long;
 			using ubyte_const_iter = std::vector<UByte>::const_iterator;
 
+
+			enum Charsets
+			{
+				CP866 = 866,
+				CP1251 = 1251,
+				UTF8 = 65001
+			};
+
+			// only ip4 and ip6
 			enum NetProtocols
 			{
 				IPv4 = 4,
 				IPv6 = 6
 			};
 
+			// only tcp and udp
 			enum TransportProtocols
 			{
 				TCP = 6,
 				UDP = 17
+			};
+
+			// not all http methods
+			enum class HttpQueryType
+			{
+				HEAD = 0,
+				GET = 1,
+				POST = 2,
+				PUT = 3,
+				DELETE = 4,
+				CONNECT = 5,
+				OPTIONS,
+				TRACE
+			};
+
+			enum class HttpVersion
+			{
+				HTTP1 = 1,
+				HTTP1_1 = 2
+			};
+
+			enum class HttpResponseStatus
+			{
+				SWITCH_PROTOCOLS = 101,
+
+				OK = 200,
+				CREATED = 201,
+
+				MOVED_PERMANENTLY = 301,
+				FOUND = 302,
+				NOT_MODIFIED = 304,
+
+				BAD_REQUEST = 400,
+				FORBIDDEN = 403,
+				NOT_FOUND = 404,
+
+				INTERNAL_SERVER_ERROR = 500,
+				NOT_IMPLEMENTED = 501,
+				HTTP_VERSION_NOT_SUPPORTED = 505,
+
+			};
+
+			enum class HttpResponseType
+			{
+				TEXT_HTML = 0,
+			};
+
+			enum class HttpConnectionType
+			{
+				KEEP_ALIVE = 0,
+			};
+
+			enum class HttpUserAgent
+			{
+				MOZILLA = 0,
+				APPLE_WEB_KIT = 1,
+				CHROME = 2,
+				SAFARI = 3,
 			};
 
 			enum AdapterFlags : ULong {
@@ -774,6 +842,50 @@ namespace QVPN {
 			};
 
 
+			template <class HttpImpl>
+			concept UnifiedHttpPacketLike =
+				requires (HttpImpl t) {
+					{ t.get_http_version() } -> std::same_as<std::pair<HttpVersion, std::string>>;
+			};
+
+
+			template <class HttpRequestImpl>
+			concept HttpRequestPacketLike =
+				requires (HttpRequestImpl t, BaseTypes::UByte begin, BaseTypes::UByte end) {
+
+					{ t.get_http_request() } -> std::same_as<std::string>;
+					{ t.get_http_request_type() } -> std::same_as<HttpQueryType>;
+					{ t.get_http_request_header() } -> std::same_as<std::string>;
+					{ t.get_http_request_host() } -> std::same_as<std::string>;
+					{ t.get_http_request_connection_type() } -> std::same_as<HttpConnectionType>;
+					{ t.get_http_request_user_agent() } -> std::same_as<std::pair<HttpUserAgent, std::string>>;
+					{ t.get_http_request_body() } -> std::same_as<std::string>;
+
+
+					{ t.get_http_request_header_bytes() } -> std::same_as<std::pair<BaseTypes::UByte, BaseTypes::UByte>>;
+					{ t.get_http_request_body_bytes() } -> std::same_as<std::pair<BaseTypes::UByte, BaseTypes::UByte>>;
+					
+			} && UnifiedHttpPacketLike<HttpRequestImpl> && UnifiedPacketLike<HttpRequestImpl>;
+
+
+			template <class HttpResponseImpl>
+			concept HttpResponsePacketLike =
+				requires (HttpResponseImpl t, BaseTypes::UByte begin, BaseTypes::UByte end) {
+
+					{ t.get_http_response() } -> std::same_as<std::string>;
+					{ t.get_http_response_status() } -> std::same_as<HttpResponseStatus>;
+					{ t.get_http_response_type() } -> std::same_as<std::pair<HttpResponseType, std::string>>;
+					{ t.get_http_response_charset() } -> std::same_as<Charsets>;
+					{ t.get_http_response_length() } -> std::same_as<BaseTypes::UInt>;
+					{ t.get_http_response_body() } -> std::same_as<std::string>;
+					{ t.get_http_response_server() } -> std::same_as <std::string>;
+
+
+
+					{ t.get_http_response_header_bytes() } -> std::same_as<std::pair<BaseTypes::UByte, BaseTypes::UByte>>;
+					{ t.get_http_response_body_bytes() } -> std::same_as<std::pair<BaseTypes::UByte, BaseTypes::UByte>>;
+
+			} && UnifiedHttpPacketLike<HttpResponseImpl> && UnifiedPacketLike<HttpResponseImpl>;
 
 			template <class NetLayer>
 			concept is_net_layer = Ip4PacketLike<NetLayer>;
@@ -943,47 +1055,6 @@ namespace QVPN {
 					auto [b2, e2] = TcpPacket_View::to_bytes();
 					auto [b3, e3] = DataPacket_View::to_bytes();
 					return std::make_pair<>(b1, e3);
-				}
-
-				std::pair<bool, std::string> compare_bytes(ConstDataIterator_t begin, ConstDataIterator_t end)
-				{
-					auto [b1, e1] = Ipv4Packet_View::to_bytes();
-					auto [b2, e2] = TcpPacket_View::to_bytes();
-					auto [b3, e3] = DataPacket_View::to_bytes();
-					
-					auto d1 = std::distance(begin, end);
-					auto d2 = std::distance(b1, e3);
-
-					if (d1 != d2)
-						return std::make_pair<>(false, "packet size doesnt equal");
-					
-					bool res = true;
-					auto ip_size = std::distance(b1, e1);
-					
-
-					for (auto i = 0; i < ip_size ; i++)
-					{
-						if (b1[i] != begin[i])
-							return std::make_pair<>(false, "ip headers error");
-					}
-
-					auto tcp_start = begin + ip_size;
-					auto tcp_size = std::distance(b2, e2);
-					for (auto i = 0; i < tcp_size; i++)
-					{
-						if (b2[i] != tcp_start[i])
-							return std::make_pair<>(false, "tcp header error");
-					}
-
-					auto data_start = tcp_start + tcp_size;
-					auto data_size = std::distance(b3, e3);
-					for (auto i = 0; i < data_size; i++)
-					{
-						if (b3[i] != data_start[i])
-							return std::make_pair<>(false, "data error");
-					}
-
-					return std::make_pair<>(true, "All data equal");
 				}
 
 				void recalculate_checksums()
