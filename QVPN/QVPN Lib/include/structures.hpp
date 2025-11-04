@@ -25,7 +25,7 @@ namespace QVPN {
 			using ubyte_const_iter = std::vector<UByte>::const_iterator;
 
 
-			enum Charsets
+			enum QVPNCharset
 			{
 				CP866 = 866,
 				CP1251 = 1251,
@@ -874,13 +874,13 @@ namespace QVPN {
 				requires (HttpResponseImpl t, BaseTypes::UByte begin, BaseTypes::UByte end) {
 
 					{ t.get_http_response() } -> std::same_as<std::string>;
+					{ t.get_http_response_header() } -> std::same_as<std::string>;
+					{ t.get_http_response_body() } -> std::same_as<std::string>;
 					{ t.get_http_response_status() } -> std::same_as<HttpResponseStatus>;
 					{ t.get_http_response_type() } -> std::same_as<std::pair<HttpResponseType, std::string>>;
-					{ t.get_http_response_charset() } -> std::same_as<Charsets>;
+					{ t.get_http_response_charset() } -> std::same_as<QVPNCharset>;
 					{ t.get_http_response_length() } -> std::same_as<BaseTypes::UInt>;
-					{ t.get_http_response_body() } -> std::same_as<std::string>;
 					{ t.get_http_response_server() } -> std::same_as <std::string>;
-
 
 
 					{ t.get_http_response_header_bytes() } -> std::same_as<std::pair<typename HttpResponseImpl::ConstDataIterator_t, typename HttpResponseImpl::ConstDataIterator_t>>;
@@ -926,7 +926,7 @@ namespace QVPN {
 
 			private:
 				UByte* data_;
-				UShort data_size_;
+				UInt data_size_;
 
 			public:
 				/* Unified IP Packet implementaion */
@@ -948,6 +948,66 @@ namespace QVPN {
 			};
 
 
+			class HttpPacketResponseLittleEndian
+			{
+			public:
+				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+			private:
+				std::vector<UByte> data_;
+
+			public:
+				/* Unified IP Packet implementaion */
+				std::pair<HttpVersion, std::string> get_http_version() const;
+
+				std::string get_http_response() const;
+				std::string get_http_response_header() const;
+				std::string get_http_response_body() const;
+				HttpResponseStatus get_http_response_status() const;
+				std::pair<HttpResponseType, std::string> get_http_response_type() const;
+				QVPNCharset get_http_response_charset() const;
+				UInt get_http_response_length() const;
+				std::string get_http_response_server() const;
+
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_http_response_header_bytes() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_http_response_body_bytes() const;
+
+				/* Unified Packet implementaion */
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
+
+			class HttpPacketResponseView
+			{
+			public:
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+			private:
+				UByte* data_;
+				UInt data_size;
+
+			public:
+				/* Unified IP Packet implementaion */
+				std::pair<HttpVersion, std::string> get_http_version() const;
+
+				std::string get_http_response() const;
+				std::string get_http_response_header() const;
+				std::string get_http_response_body() const;
+				HttpResponseStatus get_http_response_status() const;
+				std::pair<HttpResponseType, std::string> get_http_response_type() const;
+				QVPNCharset get_http_response_charset() const;
+				UInt get_http_response_length() const;
+				std::string get_http_response_server() const;
+
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_http_response_header_bytes() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_http_response_body_bytes() const;
+
+				/* Unified Packet implementaion */
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
 
 			template <class HttpRequestImpl>
 			requires HttpRequestPacketLike<HttpRequestImpl>
@@ -956,6 +1016,12 @@ namespace QVPN {
 
 			};
 
+			template <class HttpResponseImpl>
+			requires HttpResponsePacketLike<HttpResponseImpl>
+			class HttpResponsePacket : public HttpResponseImpl
+			{
+
+			};
 
 			template <class NetLayer>
 			concept is_net_layer = Ip4PacketLike<NetLayer>;
