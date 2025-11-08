@@ -61,8 +61,11 @@ namespace QVPN {
 
 			enum class HttpVersion
 			{
-				HTTP1 = 1,
-				HTTP1_1 = 2
+				HTTP1 = 0,
+				HTTP1_1 = 1,
+				HTTP2 = 2,
+				HTTP3 = 3,
+				UNKNOWN = 9999
 			};
 
 			enum class HttpResponseStatus
@@ -889,7 +892,7 @@ namespace QVPN {
 			} && UnifiedHttpPacketLike<HttpResponseImpl> && UnifiedPacketLike<HttpResponseImpl>;
 
 
-			class HttpPacketRequestLittleEndian
+			class Http1PacketRequestLittleEndian
 			{
 			public:
 				using DataIterator_t = std::vector<UByte>::iterator;
@@ -918,7 +921,7 @@ namespace QVPN {
 			};
 
 
-			class HttpPacketRequestView
+			class Http1PacketRequestView
 			{
 			public:
 				using DataIterator_t = UByte*;
@@ -948,7 +951,7 @@ namespace QVPN {
 			};
 
 
-			class HttpPacketResponseLittleEndian
+			class Http1PacketResponseLittleEndian
 			{
 			public:
 				using DataIterator_t = std::vector<UByte>::iterator;
@@ -978,7 +981,7 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
 
-			class HttpPacketResponseView
+			class Http1PacketResponseView
 			{
 			public:
 				using DataIterator_t = UByte*;
