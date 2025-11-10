@@ -102,6 +102,11 @@ std::vector<QVPN::Core::BaseTypes::UByte> QVPN::Core::QVPNLayersSettings::layers
     return res_data;
 }
 
+std::vector<QVPN::Core::BaseTypes::UByte> QVPN::Core::QVPNLayersSettings::layers_decode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const
+{
+    return std::vector<BaseTypes::UByte>();
+}
+
 QVPN::Core::QVPNDriver::QVPNDriver(QVPNSettings settings)
     : settings_(std::move(settings))
 {

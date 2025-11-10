@@ -2,12 +2,14 @@
 #include <sstream>
 #include <iostream>
 #include <winsock.h>
+#include <algorithm>
 
 using Byte = QVPN::Core::DataStructures::Byte;
 using UByte = QVPN::Core::DataStructures::UByte;
 using UShort = QVPN::Core::DataStructures::UShort;
 using UInt = QVPN::Core::DataStructures::UInt;
 using ubyte_const_iter = QVPN::Core::DataStructures::ubyte_const_iter;
+using HttpRequestType = QVPN::Core::DataStructures::HttpRequestType;
 
 constexpr auto default_ip_quart_size = 5;
 constexpr auto bytes_in_quartet = 4;
@@ -18,9 +20,7 @@ constexpr int default_tcp_size = default_tcp_quart_size * bytes_in_quartet;
 
 constexpr int default_udp_size = 8;
 
-constexpr UInt header_delimiter_min_size = 2;
-constexpr const UInt htpp_header_count = 4;
-constexpr std::array<std::string_view, htpp_header_count> http_header_ends = { "\r\n\r\n", "\n\n", "\r\r", "\r\n\n" };
+
 
 
 QVPN::Core::DataStructures::Ipv4PacketLittleEndian::Ipv4PacketLittleEndian(UByte* begin, UByte* end)
@@ -1116,110 +1116,79 @@ QVPN::Core::DataStructures::TransportIpv4PseudoHeaderTypesBuffer QVPN::Core::Dat
 
 // Http Request LE
 
+
+std::string_view QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::to_string_view() const
+{
+	return std::string_view(reinterpret_cast<const char*>(data_.data()), data_.size());
+}
+
 std::pair<QVPN::Core::DataStructures::HttpVersion, std::string> QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_version() const
 {
 	constexpr std::string_view version_template = "HTTP/";
-	std::string_view str_data(reinterpret_cast<const char*>(data_.data()), data_.size());
-	auto ver_start = str_data.find(version_template);
-	auto ver_end = str_data.find("\r\n");
-	std::string ver(str_data.substr(ver_start, ver_end - ver_start));
-	if (ver == "1.0")
-		return std::make_pair<>(HttpVersion::HTTP1, ver);
-	else if (ver == "1.1")
-		return std::make_pair<>(HttpVersion::HTTP1_1, ver);
-	else if (ver == "2")
-		return std::make_pair<>(HttpVersion::HTTP2, ver);
-	else if (ver == "3")
-		return std::make_pair<>(HttpVersion::HTTP3, ver);
-	else
-		return std::make_pair<>(HttpVersion::UNKNOWN, ver);
+	std::string_view req = to_string_view();
+	auto ver = HttpTools::get_http_header(req, version_template);
+	return std::make_pair<>(HttpTools::get_http_version_by_string(ver), std::move(ver));
 }
 
 std::string QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request() const
 {
-	return std::string();
+	return std::string(reinterpret_cast<const char*>(data_.data()), data_.size());
 }
 
 std::string QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_header() const
 {
-	return std::string();
+	auto [b, e] = get_http_request_header_bytes();
+	auto size = std::distance(b, e);
+	return std::string(reinterpret_cast<const char*>(data_.data()), size);
 }
 
 std::string QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_body() const
 {
-	return std::string();
+	auto [b, e] = get_http_request_header_bytes();
+	auto start = std::distance(b, e);
+	auto size = std::distance(e, data_.end());
+	return std::string(reinterpret_cast<const char*>(data_.data() + start), size);
 }
 
-QVPN::Core::DataStructures::HttpQueryType QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_type() const
+std::pair<QVPN::Core::DataStructures::HttpRequestType, std::string> QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_type() const
 {
-	return HttpQueryType();
+	std::string_view req = to_string_view();
+	auto type_end = req.find(' ');
+	std::string req_type(req.substr(0, type_end));
+	return std::make_pair<>(HttpTools::get_request_type_by_string(req_type), std::move(req_type));
 }
 
 std::string QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_host() const
 {
-	return std::string();
+	std::string_view req = to_string_view();
+	constexpr std::string_view host = "Host:";
+	return HttpTools::get_http_header(req, host);
 }
 
-QVPN::Core::DataStructures::HttpConnectionType QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_connection_type() const
+std::pair<QVPN::Core::DataStructures::HttpConnectionType, std::string> QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_connection_type() const
 {
-	return HttpConnectionType();
+	std::string_view req = to_string_view();
+	std::string con_type = HttpTools::get_http_header(req, con_type);
+	return std::make_pair<>(HttpTools::get_http_connection_type_by_string(con_type), std::move(con_type));
 }
 
 std::pair<QVPN::Core::DataStructures::HttpUserAgent, std::string> QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_user_agent() const
 {
-	return std::pair<HttpUserAgent, std::string>();
+	std::string_view req = to_string_view();
+	constexpr std::string_view user_agent = "User-Agent:";
+	std::string val = HttpTools::get_http_header(req, user_agent);
+	return std::make_pair<>(HttpUserAgent::UKNOWN, std::move(val));
 }
 
 std::pair<QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_header_bytes() const
 {
-	bool accept = false;
-	int pos = 0;
-
-	for (size_t i = 0; i < data_.size() - header_delimiter_min_size; i++)
-	{
-		for (size_t j = 0; j < http_header_ends.size(); j++)
-		{
-			accept = true;
-			for (size_t k = 0; k < http_header_ends[j].size(); k++)
-			{
-				if (http_header_ends[j][k] != data_[i]) {
-					accept = false;
-					break;
-				}
-			}
-		}
-
-		if (accept) {
-			pos = i;
-			break;
-		}
-	}
+	auto pos = HttpTools::find_http_header_end(data_.begin(), data_.end());
 	return std::make_pair<ConstDataIterator_t, ConstDataIterator_t>(data_.begin(), data_.begin() + pos);
 }
 
 std::pair<QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::get_http_request_body_bytes() const
 {
-	bool accept = false;
-	int pos = 0;
-
-	for (size_t i = 0; i < data_.size() - header_delimiter_min_size; i++)
-	{
-		for (size_t j = 0; j < http_header_ends.size(); j++)
-		{
-			accept = true;
-			for (size_t k = 0; k < http_header_ends[j].size(); k++)
-			{
-				if (http_header_ends[j][k] != data_[i]) {
-					accept = false;
-					break;
-				}
-			}
-		}
-
-		if (accept) {
-			pos = i;
-		}
-	}
+	auto pos = HttpTools::find_http_header_end(data_.begin(), data_.end());
 	return std::make_pair<ConstDataIterator_t, ConstDataIterator_t>(data_.begin() + pos, data_.end());
 }
 
@@ -1230,96 +1199,78 @@ std::pair<QVPN::Core::DataStructures::Http1PacketRequestLittleEndian::ConstDataI
 
 /// Http Request View
 
+std::string_view QVPN::Core::DataStructures::Http1PacketRequestView::to_string_view() const
+{
+	return std::string_view(reinterpret_cast<const char*>(data_), data_size_);
+}
+
 std::pair<QVPN::Core::DataStructures::HttpVersion, std::string> QVPN::Core::DataStructures::Http1PacketRequestView::get_http_version() const
 {
-	return std::pair<HttpVersion, std::string>();
+	constexpr std::string_view version_template = "HTTP/";
+	std::string_view req = to_string_view();
+	auto ver = HttpTools::get_http_header(req, version_template);
+	return std::make_pair<>(HttpTools::get_http_version_by_string(ver), std::move(ver));
 }
 
 std::string QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request() const
 {
-	return std::string();
+	return std::string(reinterpret_cast<const char*>(data_), data_size_);
 }
 
 std::string QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_header() const
 {
-	return std::string();
+	auto [b, e] = get_http_request_header_bytes();
+	auto size = std::distance(b, e);
+	return std::string(reinterpret_cast<const char*>(data_), size);
 }
 
 std::string QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_body() const
 {
-	return std::string();
+	auto [b, e] = get_http_request_header_bytes();
+	auto start = std::distance(b, e);
+	auto size = data_ + data_size_ - e;
+	return std::string(reinterpret_cast<const char*>(data_ + start), size);
 }
 
-QVPN::Core::DataStructures::HttpQueryType QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_type() const
+std::pair<QVPN::Core::DataStructures::HttpRequestType, std::string> QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_type() const
 {
-	return HttpQueryType();
+	std::string_view req = to_string_view();
+	auto type_end = req.find(' ');
+	std::string req_type(req.substr(0, type_end));
+	return std::make_pair<>(HttpTools::get_request_type_by_string(req_type), std::move(req_type));
 }
 
 std::string QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_host() const
 {
-	return std::string();
+	std::string_view req = to_string_view();
+	constexpr std::string_view host = "Host:";
+	return HttpTools::get_http_header(req, host);
 }
 
-QVPN::Core::DataStructures::HttpConnectionType QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_connection_type() const
+std::pair<QVPN::Core::DataStructures::HttpConnectionType, std::string> QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_connection_type() const
 {
-	return HttpConnectionType();
+	std::string_view req = to_string_view();
+	std::string con_type = HttpTools::get_http_header(req, con_type);
+	return std::make_pair<>(HttpTools::get_http_connection_type_by_string(con_type), std::move(con_type));
 }
 
 std::pair<QVPN::Core::DataStructures::HttpUserAgent, std::string> QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_user_agent() const
 {
-	return std::pair<HttpUserAgent, std::string>();
+	std::string_view req = to_string_view();
+	constexpr std::string_view user_agent = "User-Agent:";
+	std::string val = HttpTools::get_http_header(req, user_agent);
+	return std::make_pair<>(HttpUserAgent::UKNOWN, std::move(val));
 }
 
 std::pair<QVPN::Core::DataStructures::Http1PacketRequestView::ConstDataIterator_t, QVPN::Core::DataStructures::Http1PacketRequestView::ConstDataIterator_t> QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_header_bytes() const
 {
-	bool accept = false;
-	int pos = 0;
-
-	for (size_t i = 0; i < data_size_ - header_delimiter_min_size; i++)
-	{
-		for (size_t j = 0; j < http_header_ends.size(); j++)
-		{
-			accept = true;
-			for (size_t k = 0; k < http_header_ends[j].size(); k++)
-			{
-				if (http_header_ends[j][k] != data_[i]) {
-					accept = false;
-					break;
-				}
-			}
-		}
-
-		if (accept) {
-			pos = i;
-			break;
-		}
-	}
+	auto pos = HttpTools::find_http_header_end(data_, data_ + data_size_);
 	return std::make_pair<>(data_, data_ + pos);
 }
 
 std::pair<QVPN::Core::DataStructures::Http1PacketRequestView::ConstDataIterator_t, QVPN::Core::DataStructures::Http1PacketRequestView::ConstDataIterator_t> QVPN::Core::DataStructures::Http1PacketRequestView::get_http_request_body_bytes() const
 {
-	bool accept = false;
-	int pos = 0;
-
-	for (size_t i = 0; i < data_size_ - header_delimiter_min_size; i++)
-	{
-		for (size_t j = 0; j < http_header_ends.size(); j++)
-		{
-			accept = true;
-			for (size_t k = 0; k < http_header_ends[j].size(); k++)
-			{
-				if (http_header_ends[j][k] != data_[i]) {
-					accept = false;
-					break;
-				}
-			}
-		}
-
-		if (accept) {
-			pos = i;
-		}
-	}
+	auto pos = HttpTools::find_http_header_end(data_, data_ + data_size_);
 	return std::make_pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + pos, data_ + data_size_);
 }
 
@@ -1455,3 +1406,70 @@ std::pair<QVPN::Core::DataStructures::Http1PacketResponseView::ConstDataIterator
 {
 	return std::make_pair<>(ConstDataIterator_t(), ConstDataIterator_t());
 }
+
+
+// Http tools
+
+
+QVPN::Core::DataStructures::HttpTools::HttpRequestType QVPN::Core::DataStructures::HttpTools::get_request_type_by_string(std::string_view request_type)
+{
+	try {
+		return request_types_.at(str_to_upper(request_type.begin(), request_type.end()));
+	}
+	catch (const std::out_of_range& e)
+	{
+		return HttpRequestType::UNKNOWN;
+	}
+}
+
+std::string QVPN::Core::DataStructures::HttpTools::str_to_upper(std::string_view::iterator begin, std::string_view::iterator end)
+{
+	std::string res;
+	std::transform(begin, end, std::back_inserter(res), [](char c) {return std::toupper(c); });
+	return res;
+}
+
+bool QVPN::Core::DataStructures::HttpTools::case_free_compare(char a, char b)
+{
+	return std::tolower(static_cast<unsigned char>(a)) ==
+		std::tolower(static_cast<unsigned char>(b));
+}
+
+int QVPN::Core::DataStructures::HttpTools::case_free_search(std::string_view source, std::string_view templ)
+{
+	auto it = std::search(source.begin(), source.end(),
+		templ.begin(), templ.end(),
+		case_free_compare);
+	return std::distance(source.begin(), it);
+}
+
+QVPN::Core::DataStructures::HttpTools::HttpConnectionType QVPN::Core::DataStructures::HttpTools::get_http_connection_type_by_string(std::string_view connection_type)
+{
+	try {
+		return con_types_.at(str_to_upper(connection_type.begin(), connection_type.end()));
+	}
+	catch (const std::out_of_range& e)
+	{
+		return HttpConnectionType::UNKNOWN;
+	}
+}
+
+std::string QVPN::Core::DataStructures::HttpTools::get_http_header(std::string_view http_data, std::string_view header_name)
+{
+	constexpr std::string_view endline = "\r\n";
+	auto start = HttpTools::case_free_search(http_data, header_name);
+	auto line_end = http_data.find(endline, start);
+	return std::string(http_data.substr(start + header_name.size(), line_end));
+}
+
+QVPN::Core::DataStructures::HttpTools::HttpVersion QVPN::Core::DataStructures::HttpTools::get_http_version_by_string(std::string_view version)
+{
+	try {
+		return versions_.at(version);
+	}
+	catch (const std::out_of_range& e)
+	{
+		return HttpVersion::UNKNOWN;
+	}
+}
+
