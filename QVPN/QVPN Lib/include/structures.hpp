@@ -30,7 +30,8 @@ namespace QVPN {
 			{
 				CP866 = 866,
 				CP1251 = 1251,
-				UTF8 = 65001
+				UTF8 = 65001,
+				UNKNOWN = 9999
 			};
 
 			// only ip4 and ip6
@@ -89,9 +90,11 @@ namespace QVPN {
 				NOT_IMPLEMENTED = 501,
 				HTTP_VERSION_NOT_SUPPORTED = 505,
 
+				UNKNOWN = 9999
+
 			};
 
-			enum class HttpResponseType
+			enum class HttpContentType
 			{
 				TEXT_HTML = 0,
 				UNKNOWN = 9999
@@ -885,10 +888,10 @@ namespace QVPN {
 					{ t.get_http_response() } -> std::same_as<std::string>;
 					{ t.get_http_response_header() } -> std::same_as<std::string>;
 					{ t.get_http_response_body() } -> std::same_as<std::string>;
-					{ t.get_http_response_status() } -> std::same_as<HttpResponseStatus>;
-					{ t.get_http_response_type() } -> std::same_as<std::pair<HttpResponseType, std::string>>;
-					{ t.get_http_response_charset() } -> std::same_as<QVPNCharset>;
-					{ t.get_http_response_length() } -> std::same_as<BaseTypes::UInt>;
+					{ t.get_http_response_status() } -> std::same_as<std::pair<HttpResponseStatus, std::string>>;
+					{ t.get_http_response_content_type() } -> std::same_as<std::pair<HttpContentType, std::string>>;
+					{ t.get_http_response_charset() } -> std::same_as<std::pair<QVPNCharset, std::string>>;
+					{ t.get_http_response_content_length() } -> std::same_as<BaseTypes::UInt>;
 					{ t.get_http_response_server() } -> std::same_as <std::string>;
 
 
@@ -905,6 +908,9 @@ namespace QVPN {
 				using HttpConnectionType = QVPN::Core::DataStructures::HttpConnectionType;
 				using HttpUserAgent = QVPN::Core::DataStructures::HttpUserAgent;
 				using HttpVersion = QVPN::Core::DataStructures::HttpVersion;
+				using HttpResponseStatus = QVPN::Core::DataStructures::HttpResponseStatus;
+				using HttpContentType = QVPN::Core::DataStructures::HttpContentType;
+				using QVPNCharset = QVPN::Core::DataStructures::QVPNCharset;
 
 
 				static std::unordered_map<std::string_view, HttpRequestType> request_types_ = { 
@@ -914,7 +920,7 @@ namespace QVPN {
 					{"OPTIONS", HttpRequestType::OPTIONS}, {"TRACE", HttpRequestType::TRACE}
 				};
 
-				static std::unordered_map <std::string_view, HttpConnectionType> con_types_ = {
+				static std::unordered_map<std::string_view, HttpConnectionType> con_types_ = {
 					{"keep-alive", HttpConnectionType::KEEP_ALIVE }, {"closed", HttpConnectionType::CLOSED }
 				};
 
@@ -923,13 +929,33 @@ namespace QVPN {
 					{"2.0", HttpVersion::HTTP2}, {"3.0", HttpVersion::HTTP3}
 				};
 
+				static std::unordered_map<std::string_view, HttpResponseStatus> statuses_ = {
+					{"101", HttpResponseStatus::SWITCH_PROTOCOLS }, {"200", HttpResponseStatus::OK },
+					{"201", HttpResponseStatus::CREATED }, {"301", HttpResponseStatus::MOVED_PERMANENTLY },
+					{"400", HttpResponseStatus::BAD_REQUEST }, {"403", HttpResponseStatus::NOT_MODIFIED },
+					{"404", HttpResponseStatus::NOT_FOUND }, {"500", HttpResponseStatus::INTERNAL_SERVER_ERROR },
+					{"501", HttpResponseStatus::NOT_IMPLEMENTED }, {"505", HttpResponseStatus::HTTP_VERSION_NOT_SUPPORTED }
+				};
+
+				static std::unordered_map<std::string_view, HttpContentType> content_types_ = {
+					{"text/html", HttpContentType::TEXT_HTML}
+				};
+
+				static std::unordered_map<std::string_view, QVPNCharset> charsets_ = {
+					{"utf-8", QVPNCharset::UTF8}
+				};
+
 				static HttpRequestType get_request_type_by_string(std::string_view request_type);
 				static std::string str_to_upper(std::string_view::iterator begin, std::string_view::iterator end);
 				static bool case_free_compare(char a, char b);
 				static int case_free_search(std::string_view source, std::string_view templ);
 				static HttpConnectionType get_http_connection_type_by_string(std::string_view connection_type);
-				static std::string get_http_header(std::string_view http_data, std::string_view header_name);
+				static std::string_view get_http_header_line(std::string_view http_data, std::string_view header_name);
+				static std::string_view get_http_header_block(std::string_view http_data, std::string_view header_name);
 				static HttpVersion get_http_version_by_string(std::string_view version);
+				static HttpResponseStatus get_http_status_by_string(std::string_view status);
+				static HttpContentType get_http_content_type_by_string(std::string_view content);
+				static QVPNCharset get_http_charset_by_string(std::string_view charset);
 
 
 				template <class Iter>
@@ -1040,6 +1066,7 @@ namespace QVPN {
 			private:
 				std::vector<UByte> data_;
 
+				std::string_view to_string_view() const;
 			public:
 				/* Unified IP Packet implementaion */
 				std::pair<HttpVersion, std::string> get_http_version() const;
@@ -1047,10 +1074,10 @@ namespace QVPN {
 				std::string get_http_response() const;
 				std::string get_http_response_header() const;
 				std::string get_http_response_body() const;
-				HttpResponseStatus get_http_response_status() const;
-				std::pair<HttpResponseType, std::string> get_http_response_type() const;
-				QVPNCharset get_http_response_charset() const;
-				UInt get_http_response_length() const;
+				std::pair<HttpResponseStatus, std::string> get_http_response_status() const;
+				std::pair<HttpContentType, std::string> get_http_response_content_type() const;
+				std::pair<QVPNCharset, std::string> get_http_response_charset() const;
+				UInt get_http_response_content_length() const;
 				std::string get_http_response_server() const;
 
 
@@ -1069,8 +1096,9 @@ namespace QVPN {
 
 			private:
 				UByte* data_;
-				UInt data_size;
+				UInt data_size_;
 
+				std::string_view to_string_view() const;
 			public:
 				/* Unified IP Packet implementaion */
 				std::pair<HttpVersion, std::string> get_http_version() const;
@@ -1078,10 +1106,10 @@ namespace QVPN {
 				std::string get_http_response() const;
 				std::string get_http_response_header() const;
 				std::string get_http_response_body() const;
-				HttpResponseStatus get_http_response_status() const;
-				std::pair<HttpResponseType, std::string> get_http_response_type() const;
-				QVPNCharset get_http_response_charset() const;
-				UInt get_http_response_length() const;
+				std::pair<HttpResponseStatus, std::string> get_http_response_status() const;
+				std::pair<HttpContentType, std::string> get_http_response_content_type() const;
+				std::pair<QVPNCharset, std::string> get_http_response_charset() const;
+				UInt get_http_response_content_length() const;
 				std::string get_http_response_server() const;
 
 
