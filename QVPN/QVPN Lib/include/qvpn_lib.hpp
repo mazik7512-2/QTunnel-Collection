@@ -1,6 +1,6 @@
 #pragma once
 
-#include <general.hpp>
+#include <qvpn_general.hpp>
 #include <array>
 
 namespace QVPN

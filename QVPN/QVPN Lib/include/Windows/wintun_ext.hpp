@@ -1,8 +1,8 @@
 #pragma once
-#include "general.hpp"
-#include "structures.hpp"
+#include "qvpn_general.hpp"
+#include "qvpn_structures.hpp"
 #include <wintun.h>
-#include <lib.hpp>
+#include <qvpn_lib.hpp>
 
 
 namespace QVPN

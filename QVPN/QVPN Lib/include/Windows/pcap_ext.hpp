@@ -1,10 +1,10 @@
 #pragma once
 #include <pcap.h>
-#include "general.hpp"
-#include <structures.hpp>
+#include "qvpn_general.hpp"
+#include <qvpn_structures.hpp>
 #include "Packet32.h"
 #include "iphlpapi.h"
-#include <lib.hpp>
+#include <qvpn_lib.hpp>
 
 #pragma comment(lib, "IPHLPAPI.lib")
 

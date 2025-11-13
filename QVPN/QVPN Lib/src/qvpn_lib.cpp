@@ -1,4 +1,4 @@
-#include "lib.hpp"
+#include "qvpn_lib.hpp"
 #include <sstream>
 
 QVPN::Core::IPv4Address::IPv4Address()

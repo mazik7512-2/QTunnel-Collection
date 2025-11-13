@@ -1,6 +1,6 @@
 #pragma once
 #include "pcap_ext.hpp"
-#include "structures.hpp"
+#include "qvpn_structures.hpp"
 #include <iostream>
 #include <stdlib.h>
 

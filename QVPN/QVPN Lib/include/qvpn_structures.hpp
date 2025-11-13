@@ -4,12 +4,12 @@
 #include <vector>
 #include <array>
 #include <memory>
-#include <lib.hpp>
+#include <qvpn_lib.hpp>
 #include <iterator>
 #include <variant>
 #include <iostream>
 #include <unordered_map>
-#include "vpn_driver.h"
+#include "qvpn_driver.hpp"
 
 
 namespace QVPN {
@@ -901,100 +901,6 @@ namespace QVPN {
 			} && UnifiedHttpPacketLike<HttpResponseImpl> && UnifiedPacketLike<HttpResponseImpl>;
 
 
-			namespace HttpTools
-			{
-				
-				using HttpRequestType = QVPN::Core::DataStructures::HttpRequestType;
-				using HttpConnectionType = QVPN::Core::DataStructures::HttpConnectionType;
-				using HttpUserAgent = QVPN::Core::DataStructures::HttpUserAgent;
-				using HttpVersion = QVPN::Core::DataStructures::HttpVersion;
-				using HttpResponseStatus = QVPN::Core::DataStructures::HttpResponseStatus;
-				using HttpContentType = QVPN::Core::DataStructures::HttpContentType;
-				using QVPNCharset = QVPN::Core::DataStructures::QVPNCharset;
-
-
-				static std::unordered_map<std::string_view, HttpRequestType> request_types_ = { 
-					{"HEAD", HttpRequestType::HEAD}, {"GET", HttpRequestType::GET},
-					{"POST", HttpRequestType::POST}, {"PUT", HttpRequestType::PUT},
-					{"DELETE", HttpRequestType::DELETE_REQUEST}, {"CONNECT", HttpRequestType::CONNECT},
-					{"OPTIONS", HttpRequestType::OPTIONS}, {"TRACE", HttpRequestType::TRACE}
-				};
-
-				static std::unordered_map<std::string_view, HttpConnectionType> con_types_ = {
-					{"keep-alive", HttpConnectionType::KEEP_ALIVE }, {"closed", HttpConnectionType::CLOSED }
-				};
-
-				static std::unordered_map <std::string_view, HttpVersion> versions_ = {
-					{"1.0", HttpVersion::HTTP1}, {"1.1", HttpVersion::HTTP1_1},
-					{"2.0", HttpVersion::HTTP2}, {"3.0", HttpVersion::HTTP3}
-				};
-
-				static std::unordered_map<std::string_view, HttpResponseStatus> statuses_ = {
-					{"101", HttpResponseStatus::SWITCH_PROTOCOLS }, {"200", HttpResponseStatus::OK },
-					{"201", HttpResponseStatus::CREATED }, {"301", HttpResponseStatus::MOVED_PERMANENTLY },
-					{"400", HttpResponseStatus::BAD_REQUEST }, {"403", HttpResponseStatus::NOT_MODIFIED },
-					{"404", HttpResponseStatus::NOT_FOUND }, {"500", HttpResponseStatus::INTERNAL_SERVER_ERROR },
-					{"501", HttpResponseStatus::NOT_IMPLEMENTED }, {"505", HttpResponseStatus::HTTP_VERSION_NOT_SUPPORTED }
-				};
-
-				static std::unordered_map<std::string_view, HttpContentType> content_types_ = {
-					{"text/html", HttpContentType::TEXT_HTML}
-				};
-
-				static std::unordered_map<std::string_view, QVPNCharset> charsets_ = {
-					{"utf-8", QVPNCharset::UTF8}
-				};
-
-				static HttpRequestType get_request_type_by_string(std::string_view request_type);
-				static std::string str_to_upper(std::string_view::iterator begin, std::string_view::iterator end);
-				static bool case_free_compare(char a, char b);
-				static int case_free_search(std::string_view source, std::string_view templ);
-				static HttpConnectionType get_http_connection_type_by_string(std::string_view connection_type);
-				static std::string_view get_http_header_line(std::string_view http_data, std::string_view header_name);
-				static std::string_view get_http_header_block(std::string_view http_data, std::string_view header_name);
-				static HttpVersion get_http_version_by_string(std::string_view version);
-				static HttpResponseStatus get_http_status_by_string(std::string_view status);
-				static HttpContentType get_http_content_type_by_string(std::string_view content);
-				static QVPNCharset get_http_charset_by_string(std::string_view charset);
-
-
-				template <class Iter>
-					requires std::random_access_iterator<Iter>
-				static int find_http_header_end(Iter begin, Iter end)
-				{
-					constexpr UInt header_delimiter_min_size = 2;
-					constexpr const UInt htpp_header_count = 4;
-					constexpr std::array<std::string_view, htpp_header_count> http_header_ends = { "\r\n\r\n", "\n\n", "\r\r", "\r\n\n" };
-
-					bool accept = false;
-					int pos = 0;
-					
-					auto size = std::distance(begin, end);
-
-					for (size_t i = 0; i < size - header_delimiter_min_size; i++)
-					{
-						for (size_t j = 0; j < http_header_ends.size(); j++)
-						{
-							accept = true;
-							for (size_t k = 0; k < http_header_ends[j].size(); k++)
-							{
-								if (http_header_ends[j][k] != begin[i]) {
-									accept = false;
-									break;
-								}
-							}
-						}
-
-						if (accept) {
-							pos = i;
-						}
-					}
-
-					return pos;
-				}
-				
-			};
-
 
 			class Http1PacketRequestLittleEndian
 			{
@@ -1119,6 +1025,7 @@ namespace QVPN {
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
+
 
 			template <class HttpRequestImpl>
 			requires HttpRequestPacketLike<HttpRequestImpl>

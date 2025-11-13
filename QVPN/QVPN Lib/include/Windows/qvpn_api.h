@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lib.hpp>
+#include <qvpn_lib.hpp>
 #include <windivert_ext.hpp>
 #include <wintun_ext.hpp>
 

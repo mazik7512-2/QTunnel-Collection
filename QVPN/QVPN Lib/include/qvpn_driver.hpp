@@ -1,5 +1,5 @@
 #pragma once
-#include <lib.hpp>
+#include <qvpn_lib.hpp>
 #include <type_traits>
 #include <variant>
 #include <memory>

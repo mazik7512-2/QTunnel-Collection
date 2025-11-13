@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include <structures.hpp>
+#include <qvpn_structures.hpp>
 #include <fstream>
-#include <vpn_driver.h>
+#include <qvpn_driver.hpp>
 
 #pragma comment(lib, "windivert.lib")
 

@@ -1,4 +1,4 @@
-#include <vpn_driver.h>
+#include <qvpn_driver.hpp>
 
 
 QVPN::Core::LayerTypes QVPN::Core::BaseLayer::get_layer_type() const
