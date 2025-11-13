@@ -10,6 +10,10 @@
 #include <iostream>
 #include <unordered_map>
 #include "qvpn_driver.hpp"
+#include <random>
+#include <ctime>
+#include <algorithm>
+
 
 
 namespace QVPN {
@@ -115,6 +119,41 @@ namespace QVPN {
 				SAFARI = 3,
 				UKNOWN = 9999
 			};
+
+
+			// TLS версии
+			enum class TLSProtocolVersion : UShort {
+				SSL_3_0 = 0x0300,
+				TLS_1_0 = 0x0301,
+				TLS_1_1 = 0x0302,
+				TLS_1_2 = 0x0303,
+				TLS_1_3 = 0x0304
+			};
+
+			// Cipher Suite
+			enum class TLSCipherSuite : UShort {
+				TLS_AES_128_GCM_SHA256 = 0x1301,
+				TLS_AES_256_GCM_SHA384 = 0x1302,
+				TLS_CHACHA20_POLY1305_SHA256 = 0x1303,
+				TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 = 0xC02F
+			};
+
+			// Compression Method
+			enum class TLSCompressionMethod : UByte {
+				NULL_COMPRESSION = 0x00
+			};
+
+			// Extension types
+			enum class TLSExtensionType : UShort {
+				SERVER_NAME = 0,
+				SUPPORTED_GROUPS = 10,
+				SIGNATURE_ALGORITHMS = 13,
+				ALPN = 16,
+				KEY_SHARE = 40,
+				SUPPORTED_VERSIONS = 43
+			};
+
+
 
 			enum AdapterFlags : ULong {
 				DdnsEnabled = 0x1,
@@ -1026,7 +1065,6 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
 
-
 			template <class HttpRequestImpl>
 			requires HttpRequestPacketLike<HttpRequestImpl>
 			class HttpRequestPacket : public HttpRequestImpl
@@ -1038,6 +1076,100 @@ namespace QVPN {
 			requires HttpResponsePacketLike<HttpResponseImpl>
 			class HttpResponsePacket : public HttpResponseImpl
 			{
+
+			};
+
+
+			// Структура Random (32 байта)
+			struct TLSRandom {
+				UInt gmt_unix_time;
+				std::array<UByte, 28> random_bytes;
+
+				TLSRandom() {
+					gmt_unix_time = static_cast<UInt>(time(nullptr));
+
+					// Инициализация генератора
+					std::random_device rd;
+					std::mt19937 gen(rd());
+					// Распределение для целых чисел
+					std::uniform_int_distribution<UByte> dist(0, 255);
+					std::generate(random_bytes.begin(), random_bytes.end(), [&dist, &gen]() {return dist(gen); });
+				}
+			};
+
+			// Session ID
+			struct TLSSessionID {
+				UInt length;
+				std::vector<UByte> id;
+
+				TLSSessionID() : length(0), id(0) {}
+			};
+
+
+			// Структура для расширений
+			struct TLSExtension {
+				TLSExtensionType type;
+				UShort length;
+				std::vector<UByte> data;
+			};
+
+			// Supported Versions Extension
+			struct TLSSupportedVersionsExtension {
+				UByte versions_length;
+				std::vector<TLSProtocolVersion> versions;
+			};
+
+			// Key Share Entry
+			struct TLSKeyShareEntry {
+				UShort group;
+				UShort key_exchange_length;
+				std::vector<UByte> key_exchange;
+			};
+
+			// Key Share Extension
+			struct TLSKeyShareClientHello {
+				UShort client_shares_length;
+				std::vector<TLSKeyShareEntry> client_shares;
+			};
+
+			template <class TLSRecordImpl>
+			concept TLSRecordPacketLike =
+				requires (TLSRecordImpl t) {
+					{ t.get_content_type() } -> std::same_as<UByte>;
+					
+			};
+
+			template <class TLSClientHelloImpl>
+			concept TLS_1_3_ClientHelloPacketLike =
+				requires (TLSClientHelloImpl t, UShort ver, TLSRandom &rand, TLSSessionID &sess, TLSCipherSuite &cipher, TLSCompressionMethod &compres, TLSExtension &ext) {
+					{ t.get_tls_version() } -> std::same_as<UShort>;
+					{ t.get_tls_random() } -> std::same_as<TLSRandom>;
+					{ t.get_tls_session() } -> std::same_as<TLSSessionID>;
+					{ t.get_tls_cipher_suites() } -> std::same_as<std::vector<TLSCipherSuite>>;
+					{ t.get_tls_compression_methods() } -> std::same_as<TLSCompressionMethod>;
+					{ t.get_tls_extensions_data() } -> std::same_as<std::vector<TLSExtension>>;
+
+					{ t.set_tls_version(ver) } -> std::same_as<void>;
+					{ t.set_tls_random(rand) } -> std::same_as<void>;
+					{ t.set_tls_session(sess) } -> std::same_as<void>;
+					{ t.set_tls_cipher_suites(cipher) } -> std::same_as<void>;
+					{ t.set_tls_compression_methods(compres) } -> std::same_as<void>;
+					{ t.add_tls_extensions_data(ext) } -> std::same_as<void>;
+			};
+
+
+			class TLS_1_3_ClientHelloPacketLittleEndian
+			{
+			public:
+				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+			private:
+				std::vector<UByte> data_;
+
+			public:
+				
+
 
 			};
 
