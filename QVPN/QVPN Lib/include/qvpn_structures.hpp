@@ -1081,55 +1081,231 @@ namespace QVPN {
 
 
 			// Структура Random (32 байта)
-			struct TLSRandom {
-				UInt gmt_unix_time;
-				std::array<UByte, 28> random_bytes;
+			class TLSRandomLittleEndian {
+				UInt gmt_unix_time_;
+				std::array<UByte, 28> random_bytes_;
 
-				TLSRandom() {
-					gmt_unix_time = static_cast<UInt>(time(nullptr));
+			public:
+				TLSRandomLittleEndian() {
+					gmt_unix_time_ = static_cast<UInt>(time(nullptr));
 
 					// Инициализация генератора
 					std::random_device rd;
 					std::mt19937 gen(rd());
 					// Распределение для целых чисел
-					std::uniform_int_distribution<UByte> dist(0, 255);
-					std::generate(random_bytes.begin(), random_bytes.end(), [&dist, &gen]() {return dist(gen); });
+					std::uniform_int_distribution<int> dist(0, 255);
+					std::generate(random_bytes_.begin(), random_bytes_.end(), [&dist, &gen]() {return static_cast<UByte>(dist(gen)); });
+				}
+
+				template<std::random_access_iterator Iter>
+				TLSRandomLittleEndian(Iter first, Iter last)
+				{
+					gmt_unix_time_ = first[0] << 24 | first[1] << 16 | first[2] << 8 | first[3];
+					std::copy(first + 4, last, std::back_inserter(random_bytes_));
+				}
+			};
+
+			class TLSRandomView {
+				UByte* random_bytes_;
+				UInt size_ = 32;
+
+			public:
+
+				// do not recommend to use
+				TLSRandomView() {
+					random_bytes_ = new UByte[size_];
+					auto unix_time = static_cast<UInt>(time(nullptr));
+					random_bytes_[0] = unix_time << 24 & 8;
+					random_bytes_[1] = unix_time << 16 & 8;
+					random_bytes_[2] = unix_time << 8 & 8;
+					random_bytes_[3] = unix_time & 8;
+					// Инициализация генератора
+					std::random_device rd;
+					std::mt19937 gen(rd());
+					// Распределение для целых чисел
+					std::uniform_int_distribution<int> dist(0, 255);
+					
+					std::generate(random_bytes_, random_bytes_ + size_, [&dist, &gen]() {return static_cast<UByte>(dist(gen)); });
+				}
+
+				template<std::random_access_iterator Iter>
+				TLSRandomView(Iter first, Iter last)
+				{
+					random_bytes_ = first;
+					size_ = std::distance(first, last);
+				}
+
+				~TLSRandomView() noexcept
+				{
+					delete[] random_bytes_;
 				}
 			};
 
 			// Session ID
-			struct TLSSessionID {
+			class TLSSessionIDLittleEndian {
 				UInt length;
 				std::vector<UByte> id;
 
-				TLSSessionID() : length(0), id(0) {}
+			public:
+
+				TLSSessionIDLittleEndian() : length(0), id(0) {}
+
+				template<std::random_access_iterator Iter>
+				TLSSessionIDLittleEndian(Iter first, Iter last)
+				{
+					length = first[0] << 24 | first[1] << 16 | first[2] << 8 | first[3];
+					std::copy(first + 4, last, std::back_inserter(id));
+				}
 			};
 
 
+			class TLSSessionIDView {
+				UByte* data_;
+				UInt size_;
+
+			public:
+
+				// do not recommended to use
+				TLSSessionIDView() : size_(4) 
+				{
+					data_ = new UByte[size_];
+					std::fill(data_, data_ + size_, 0);
+				}
+
+				template<std::random_access_iterator Iter>
+				TLSSessionIDView(Iter first, Iter last)
+				{
+					data_ = first;
+					size_ = std::distance(first, last);
+				}
+
+				~TLSSessionIDView() noexcept
+				{
+					delete[] data_;
+				}
+			};
+
 			// Структура для расширений
-			struct TLSExtension {
-				TLSExtensionType type;
-				UShort length;
-				std::vector<UByte> data;
+			class TLSExtensionLittleEndian {
+				TLSExtensionType type_;
+				UShort length_;
+				std::vector<UByte> data_;
+
+			public:
+
+				template<std::random_access_iterator Iter>
+				TLSExtensionLittleEndian(Iter first, Iter last)
+				{
+					type_ = first[0] << 8 | first[1];
+					length_ = first[2] << 8 | first[3];
+					std::copy(first + 4, last, std::back_inserter(data_));
+				}
+			};
+
+
+			class TLSExtensionView {
+				UByte data_;
+				UInt size_;
+
+			public:
+
+				template<std::random_access_iterator Iter>
+				TLSExtensionView(Iter first, Iter last)
+				{
+					data_ = first;
+					size_ = std::distance(first, last);
+				}
 			};
 
 			// Supported Versions Extension
-			struct TLSSupportedVersionsExtension {
-				UByte versions_length;
-				std::vector<TLSProtocolVersion> versions;
+			class TLSSupportedVersionsExtensionLittleEndian {
+				UByte versions_length_;
+				std::vector<TLSProtocolVersion> versions_;
+
+			public:
+				template<std::random_access_iterator Iter>
+				TLSSupportedVersionsExtensionLittleEndian(Iter first, Iter last)
+				{
+					versions_length_ = first;
+					std::copy(first + 1, last, std::back_inserter(versions_));
+				}
+
+			};
+
+
+			class TLSSupportedVersionsExtensionView {
+				UByte* data_;
+				UInt size_;
+
+			public:
+				template<std::random_access_iterator Iter>
+				TLSSupportedVersionsExtensionView(Iter first, Iter last)
+				{
+					data_ = first;
+					size_ = std::distance(first, last);
+				}
+
 			};
 
 			// Key Share Entry
-			struct TLSKeyShareEntry {
-				UShort group;
-				UShort key_exchange_length;
-				std::vector<UByte> key_exchange;
+			class TLSKeyShareEntryLittleEndian {
+				UShort group_;
+				UShort key_exchange_length_;
+				std::vector<UByte> key_exchange_;
+
+			public:
+
+				template<std::random_access_iterator Iter>
+				TLSKeyShareEntryLittleEndian(Iter first, Iter last)
+				{
+					group_ = first[0] << 8 | first[1];
+					key_exchange_length_ = first[2] << 8 | first[3];
+					std::copy(first + 4, last, std::back_inserter(key_exchange_));
+				}
 			};
 
+
+			class TLSKeyShareEntryView {
+				UByte* data_;
+				UInt size_;
+
+			public:
+
+				template<std::random_access_iterator Iter>
+				TLSKeyShareEntryView(Iter first, Iter last)
+				{
+					data_ = first;
+					size_ = std::distance(first, last);
+				}
+			};
+
+
 			// Key Share Extension
-			struct TLSKeyShareClientHello {
-				UShort client_shares_length;
-				std::vector<TLSKeyShareEntry> client_shares;
+			class TLSKeyShareClientHelloLittleEndian {
+				UShort client_shares_length_;
+				std::vector<TLSKeyShareEntryLittleEndian> client_shares_;
+
+			public:
+				template<std::random_access_iterator Iter>
+				TLSKeyShareClientHelloLittleEndian(Iter first, Iter last)
+				{
+					client_shares_length_ = first[0] << 8 | first[1];
+					std::copy(first + 2, last, std::back_inserter(client_shares_));
+				}
+			};
+
+
+			class TLSKeyShareClientHelloView {
+				UByte* data_;
+				UInt size_;
+
+			public:
+				template<std::random_access_iterator Iter>
+				TLSKeyShareClientHelloView(Iter first, Iter last)
+				{
+					data_ = first;
+					size_ = std::distance(first, last);
+				}
 			};
 
 			template <class TLSRecordImpl>
@@ -1141,13 +1317,13 @@ namespace QVPN {
 
 			template <class TLSClientHelloImpl>
 			concept TLS_1_3_ClientHelloPacketLike =
-				requires (TLSClientHelloImpl t, UShort ver, TLSRandom &rand, TLSSessionID &sess, TLSCipherSuite &cipher, TLSCompressionMethod &compres, TLSExtension &ext) {
+				requires (TLSClientHelloImpl t, UShort ver, TLSRandomLittleEndian &rand, TLSSessionIDLittleEndian &sess, TLSCipherSuite &cipher, TLSCompressionMethod &compres, TLSExtensionLittleEndian &ext) {
 					{ t.get_tls_version() } -> std::same_as<UShort>;
-					{ t.get_tls_random() } -> std::same_as<TLSRandom>;
-					{ t.get_tls_session() } -> std::same_as<TLSSessionID>;
+					{ t.get_tls_random() } -> std::same_as<TLSRandomLittleEndian>;
+					{ t.get_tls_session() } -> std::same_as<TLSSessionIDLittleEndian>;
 					{ t.get_tls_cipher_suites() } -> std::same_as<std::vector<TLSCipherSuite>>;
 					{ t.get_tls_compression_methods() } -> std::same_as<TLSCompressionMethod>;
-					{ t.get_tls_extensions_data() } -> std::same_as<std::vector<TLSExtension>>;
+					{ t.get_tls_extensions_data() } -> std::same_as<std::vector<TLSExtensionLittleEndian>>;
 
 					{ t.set_tls_version(ver) } -> std::same_as<void>;
 					{ t.set_tls_random(rand) } -> std::same_as<void>;
