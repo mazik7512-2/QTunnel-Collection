@@ -123,11 +123,11 @@ namespace QVPN {
 
 			// TLS версии
 			enum TLSProtocolVersion : UShort {
-				SSL_3_0 = 0x0300,
-				TLS_1_0 = 0x0301,
-				TLS_1_1 = 0x0302,
-				TLS_1_2 = 0x0303,
-				TLS_1_3 = 0x0304
+				SSL30 = 0x0300,
+				TLS10 = 0x0301,
+				TLS11 = 0x0302,
+				TLS12 = 0x0303,
+				TLS13 = 0x0304
 			};
 
 			// Cipher Suite
@@ -1577,7 +1577,7 @@ namespace QVPN {
 			};
 
 			template <class TLSClientHelloImpl>
-			concept TLS_1_3_ClientHelloPacketLike =
+			concept TLS13_ClientHelloPacketLike =
 				requires (TLSClientHelloImpl t) {
 					{ t.get_tls_version() } -> std::same_as<UShort>;
 					{ t.get_tls_random() } -> std::same_as<TLSRandomView>;
@@ -1588,17 +1588,18 @@ namespace QVPN {
 			};
 
 
-			template <std::integral Iter>
-			struct TLS_1_3_ClientHelloPacketScheme
+			template <std::integral Val>
+			struct TLS13_ClientHelloPacketScheme
 			{
-				std::pair<Iter, Iter> random;
-				std::pair<Iter, Iter> session;
-				std::pair<Iter, Iter> ciphers;
-				std::pair<Iter, Iter> compressions;
-				std::pair<Iter, Iter> extensions;
+				std::pair<Val, Val> random;
+				std::pair<Val, Val> session;
+				std::pair<Val, Val> ciphers;
+				std::pair<Val, Val> compressions;
+				std::pair<Val, Val> extensions;
 			};
 
-			class TLS_1_3_ClientHelloPacketLittleEndian
+
+			class TLS13_ClientHelloPacketLittleEndian
 			{
 
 			public:
@@ -1607,12 +1608,14 @@ namespace QVPN {
 
 			private:
 				std::vector<UByte> data_;
-				TLS_1_3_ClientHelloPacketScheme<size_t> scheme_;
+				TLS13_ClientHelloPacketScheme<size_t> scheme_;
 
-				void parse_scheme() const;
+				void parse_scheme();
 
 			public:
 				
+				TLS13_ClientHelloPacketLittleEndian(UByte* begin, UByte* end);
+
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;
 				TLSSessionIDView get_tls_session() const;
@@ -1624,7 +1627,7 @@ namespace QVPN {
 			};
 
 
-			class TLS_1_3_ClientHelloPacketView
+			class TLS13_ClientHelloPacketView
 			{
 
 			public:
@@ -1634,11 +1637,13 @@ namespace QVPN {
 			private:
 				UByte* data_;
 				UInt size_;
-				TLS_1_3_ClientHelloPacketScheme<size_t> scheme_;
+				TLS13_ClientHelloPacketScheme<size_t> scheme_;
 
-				void parse_scheme() const;
+				void parse_scheme();
 
 			public:
+
+				TLS13_ClientHelloPacketView(UByte* begin, UByte* end);
 
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;
