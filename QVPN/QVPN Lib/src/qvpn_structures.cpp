@@ -1487,10 +1487,15 @@ UShort QVPN::Core::DataStructures::TLSRandomLittleEndian::get_tls_random_full_le
 
 UInt QVPN::Core::DataStructures::TLSRandomLittleEndian::get_tls_unix_time() const
 {
-	return gmt_unix_time_;
+	return random_bytes_[0] << 24 | random_bytes_[1] << 16 | random_bytes_[2] << 8 | random_bytes_[3];
 }
 
 std::pair<QVPN::Core::DataStructures::TLSRandomLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSRandomLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSRandomLittleEndian::get_tls_random_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(random_bytes_.cbegin() + 4, random_bytes_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSRandomLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSRandomLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSRandomLittleEndian::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(random_bytes_.cbegin(), random_bytes_.cend());
 }
@@ -1510,34 +1515,49 @@ std::pair<QVPN::Core::DataStructures::TLSRandomView::ConstDataIterator_t, QVPN::
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(random_bytes_ + 4, random_bytes_ + size_);
 }
 
+std::pair<QVPN::Core::DataStructures::TLSRandomView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSRandomView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSRandomView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(random_bytes_, random_bytes_ + size_);
+}
+
 UShort QVPN::Core::DataStructures::TLSSessionIDLittleEndian::get_tls_id_full_length() const
 {
-	return get_tls_id_length() + 4;
+	return get_tls_id_length() + 1;
 }
 
 UByte QVPN::Core::DataStructures::TLSSessionIDLittleEndian::get_tls_id_length() const
 {
-	return length_;
+	return id_[0];
 }
 
 std::pair<QVPN::Core::DataStructures::TLSSessionIDLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSessionIDLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSessionIDLittleEndian::get_tls_id()
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(id_.cbegin() + 1, id_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSSessionIDLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSessionIDLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSessionIDLittleEndian::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(id_.cbegin(), id_.cend());
 }
 
 UInt QVPN::Core::DataStructures::TLSSessionIDView::get_tls_id_full_length() const
 {
-	return get_tls_id_length() + 4;
+	return get_tls_id_length() + 1;
 }
 
-UInt QVPN::Core::DataStructures::TLSSessionIDView::get_tls_id_length() const
+UByte QVPN::Core::DataStructures::TLSSessionIDView::get_tls_id_length() const
 {
-	return static_cast<UInt>(data_[0] << 24 | data_[1] << 16 | data_[2] << 8 | data_[3]);
+	return data_[0];
 }
 
 std::pair<QVPN::Core::DataStructures::TLSSessionIDView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSessionIDView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSessionIDView::get_tls_id()
 {
-	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 4, data_ + size_);
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 1, data_ + size_);
+}
+
+std::pair<QVPN::Core::DataStructures::TLSSessionIDView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSessionIDView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSessionIDView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
 
 UShort QVPN::Core::DataStructures::TLSExtensionLittleEndian::get_tls_ext_full_length() const
@@ -1547,15 +1567,20 @@ UShort QVPN::Core::DataStructures::TLSExtensionLittleEndian::get_tls_ext_full_le
 
 QVPN::Core::DataStructures::TLSExtensionType QVPN::Core::DataStructures::TLSExtensionLittleEndian::get_tls_ext_type() const
 {
-	return type_;
+	return static_cast<TLSExtensionType>(data_[0] << 8 | data_[1]);
 }
 
 UShort QVPN::Core::DataStructures::TLSExtensionLittleEndian::get_tls_ext_length() const
 {
-	return length_;
+	return static_cast<UShort>(data_[2] << 8 | data_[3]);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSExtensionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSExtensionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSExtensionLittleEndian::get_tls_ext_data() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin() + 4, data_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSExtensionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSExtensionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSExtensionLittleEndian::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
 }
@@ -1580,6 +1605,11 @@ std::pair<QVPN::Core::DataStructures::TLSExtensionView::ConstDataIterator_t, QVP
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 4, data_ + size_);
 }
 
+std::pair<QVPN::Core::DataStructures::TLSExtensionView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSExtensionView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSExtensionView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
+}
+
 UShort QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::get_tls_versions_full_length() const
 {
 	return get_tls_versions_length() + 1;
@@ -1587,10 +1617,15 @@ UShort QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::ge
 
 UByte QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::get_tls_versions_length() const
 {
-	return versions_length_;
+	return versions_[0];
 }
 
 std::pair<QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::get_tls_supported_versions() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(versions_.cbegin() + 1, versions_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(versions_.cbegin(), versions_.cend());
 }
@@ -1610,6 +1645,11 @@ std::pair<QVPN::Core::DataStructures::TLSSupportedVersionsExtensionView::ConstDa
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 1, data_ + size_);
 }
 
+std::pair<QVPN::Core::DataStructures::TLSSupportedVersionsExtensionView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSupportedVersionsExtensionView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSupportedVersionsExtensionView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
+}
+
 UShort QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::get_tls_key_share_group_full_length() const
 {
 	return get_tls_key_exchange_length() + 4;
@@ -1617,17 +1657,22 @@ UShort QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::get_tls_key_sha
 
 UShort QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::get_tls_keyshare_group() const
 {
-	return group_;
+	return static_cast<UShort>(key_exchange_[0] << 8 | key_exchange_[1]);
 }
 
 UShort QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::get_tls_key_exchange_length() const
 {
-	return key_exchange_length_;
+	return static_cast<UShort>(key_exchange_[2] << 8 | key_exchange_[3]);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::get_tls_key_exchange() const
 {
-	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(key_exchange_.cbegin(), key_exchange_.cend());
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(key_exchange_.cbegin() + 4, key_exchange_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(key_exchange_.cbegin() + 4, key_exchange_.cend());
 }
 
 UShort QVPN::Core::DataStructures::TLSKeyShareEntryView::get_tls_key_share_group_full_length() const
@@ -1650,6 +1695,11 @@ std::pair<QVPN::Core::DataStructures::TLSKeyShareEntryView::ConstDataIterator_t,
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 4, data_ + size_);
 }
 
+std::pair<QVPN::Core::DataStructures::TLSKeyShareEntryView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSKeyShareEntryView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSKeyShareEntryView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
+}
+
 UShort QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian::get_tls_key_share_full_length() const
 {
 	return get_tls_key_share_length() + 2;
@@ -1657,10 +1707,15 @@ UShort QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian::get_tls_k
 
 UShort QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian::get_tls_key_share_length() const
 {
-	return client_shares_length_;
+	return static_cast<UShort>(client_shares_[0] << 8 | client_shares_[1]);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian::get_tls_key_share() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(client_shares_.cbegin() + 2, client_shares_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(client_shares_.cbegin(), client_shares_.cend());
 }
@@ -1680,6 +1735,11 @@ std::pair<QVPN::Core::DataStructures::TLSKeyShareClientHelloView::ConstDataItera
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 2, data_ + size_);
 }
 
+std::pair<QVPN::Core::DataStructures::TLSKeyShareClientHelloView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSKeyShareClientHelloView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSKeyShareClientHelloView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
+}
+
 UShort QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::get_tls_ciphers_full_length() const
 {
 	return get_tls_ciphers_length() + 2;
@@ -1687,10 +1747,15 @@ UShort QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::get_tls_ciphers_fu
 
 UShort QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::get_tls_ciphers_length() const
 {
-	return length_;
+	return static_cast<UShort>(ciphers_[0] << 8 | ciphers_[1]);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::get_cipher_suites() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(ciphers_.cbegin() + 2, ciphers_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(ciphers_.cbegin(), ciphers_.cend());
 }
@@ -1702,10 +1767,15 @@ UShort QVPN::Core::DataStructures::TLSCipherSuitView::get_tls_ciphers_full_lengt
 
 UShort QVPN::Core::DataStructures::TLSCipherSuitView::get_tls_ciphers_length() const
 {
-	return length_;
+	return static_cast<UShort>(data_[0] << 8 | data_[1]);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSCipherSuitView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSCipherSuitView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSCipherSuitView::get_cipher_suites() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 2, data_ + size_);
+}
+
+std::pair<QVPN::Core::DataStructures::TLSCipherSuitView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSCipherSuitView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSCipherSuitView::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
@@ -1717,10 +1787,15 @@ UShort QVPN::Core::DataStructures::TLSCompressionLittleEndian::get_tls_compressi
 
 UByte QVPN::Core::DataStructures::TLSCompressionLittleEndian::get_tls_compressions_length() const
 {
-	return length_;
+	return compressions_[0];
 }
 
 std::pair<QVPN::Core::DataStructures::TLSCompressionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSCompressionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSCompressionLittleEndian::get_tls_compressions() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(compressions_.cbegin() + 1, compressions_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSCompressionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSCompressionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSCompressionLittleEndian::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(compressions_.cbegin(), compressions_.cend());
 }
@@ -1732,10 +1807,15 @@ UShort QVPN::Core::DataStructures::TLSCompressionView::get_tls_compressions_full
 
 UByte QVPN::Core::DataStructures::TLSCompressionView::get_tls_compressions_length() const
 {
-	return length_;
+	return data_[0];
 }
 
 std::pair<QVPN::Core::DataStructures::TLSCompressionView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSCompressionView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSCompressionView::get_tls_compressions() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 1, data_ + size_);
+}
+
+std::pair<QVPN::Core::DataStructures::TLSCompressionView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSCompressionView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSCompressionView::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
@@ -1747,10 +1827,15 @@ UShort QVPN::Core::DataStructures::TLSExtensionsLittleEndian::get_tls_extensions
 
 UShort QVPN::Core::DataStructures::TLSExtensionsLittleEndian::get_tls_extensions_length() const
 {
-	return length_;
+	return static_cast<UShort>(extensions_[0] << 8 | extensions_[1]);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSExtensionsLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSExtensionsLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSExtensionsLittleEndian::get_tls_extensions() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(extensions_.cbegin() + 2, extensions_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSExtensionsLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSExtensionsLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSExtensionsLittleEndian::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(extensions_.cbegin(), extensions_.cend());
 }
@@ -1762,54 +1847,56 @@ UShort QVPN::Core::DataStructures::TLSExtensionsView::get_tls_extensions_full_le
 
 UShort QVPN::Core::DataStructures::TLSExtensionsView::get_tls_extensions_length() const
 {
-	return length_;
+	return static_cast<UShort>(data_[0] << 8 | data_[1]);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSExtensionsView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSExtensionsView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSExtensionsView::get_tls_extensions() const
 {
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 2, data_ + size_);
+}
+
+std::pair<QVPN::Core::DataStructures::TLSExtensionsView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSExtensionsView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSExtensionsView::to_bytes() const
+{
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
 
+// TLS Client helper func
+
+template <std::integral scheme_type, std::random_access_iterator Iter >
+void unified_parse_scheme(QVPN::Core::DataStructures::TLS13_HelloPacketScheme<scheme_type>& scheme, Iter first, Iter last)
+{
+	QVPN::Core::DataStructures::TLSRandomView r(first, last);
+	size_t start = 2;
+	size_t end = r.get_tls_random_full_length();
+	scheme.random = std::make_pair<>(start, end);
+
+	QVPN::Core::DataStructures::TLSSessionIDView s(first + end, last);
+	start = end;
+	end = s.get_tls_id_full_length();
+	scheme.session = std::make_pair<>(start, end);
+
+	QVPN::Core::DataStructures::TLSCipherSuitView c(first + end, last);
+	start = end;
+	end = c.get_tls_ciphers_full_length();
+	scheme.ciphers = std::make_pair<>(start, end);
+
+	QVPN::Core::DataStructures::TLSCompressionView comp(first + end, last);
+	start = end;
+	end = comp.get_tls_compressions_full_length();
+	scheme.compressions = std::make_pair<>(start, end);
+
+	QVPN::Core::DataStructures::TLSExtensionsView ext(first + end, last);
+	start = end;
+	end = ext.get_tls_extensions_full_length();
+	scheme.extensions = std::make_pair<>(start, end);
+}
 
 // TLS Client Hello LE
 
 
 void QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::parse_scheme()
 {
-	TLSRandomView r(data_.data(), data_.data() + data_.size());
-	auto [b, e] = r.get_tls_random_bytes();
-	auto u_time = r.get_tls_unix_time();
-	size_t start = 2;
-	size_t end = std::distance(b, e) + sizeof(u_time);
-	scheme_.random = std::make_pair<>(start, end);
-
-	TLSSessionIDView s(data_.data() + end, data_.data() + data_.size());
-	auto [b1, e1] = s.get_tls_id();
-	auto length = s.get_tls_id_length();
-	start = end;
-	end = std::distance(b1, e1) + sizeof(length);
-	scheme_.session = std::make_pair<>(start, end);
-
-	TLSCipherSuitView c(data_.data() + end, data_.data() + data_.size());
-	auto [b2, e2] = c.get_cipher_suites();
-	auto l1 = c.get_tls_ciphers_length();
-	start = end;
-	end = std::distance(b2, e2) + sizeof(l1);
-	scheme_.ciphers = std::make_pair<>(start, end);
-
-	TLSCompressionView comp(data_.data() + end, data_.data() + data_.size());
-	auto [b3, e3] = comp.get_tls_compressions();
-	auto l2 = comp.get_tls_compressions_length();
-	start = end;
-	end = std::distance(b3, e3) + sizeof(l2);
-	scheme_.compressions = std::make_pair<>(start, end);
-
-	TLSExtensionsView ext(data_.data() + end, data_.data() + data_.size());
-	auto [b4, e4] = ext.get_tls_extensions();
-	auto l3 = ext.get_tls_extensions_length();
-	start = end;
-	end = std::distance(b4, e4) + sizeof(l3);
-	scheme_.extensions = std::make_pair<>(start, end);
+	unified_parse_scheme<size_t, UByte*>(scheme_, data_.data(), data_.data() + data_.size());
 }
 
 QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::TLS13_ClientHelloPacketLittleEndian(UByte* begin, UByte* end)
@@ -1825,31 +1912,31 @@ UShort QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_tls_
 
 QVPN::Core::DataStructures::TLSRandomView QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_tls_random() const
 {
-	TLSRandomView random(data_.data() + scheme_.random.first, data_.data() + scheme_.random.second);
+	TLSRandomView random(const_cast<UByte*>(data_.data()) + scheme_.random.first, const_cast<UByte*>(data_.data()) + scheme_.random.second);
 	return random;
 }
 
 QVPN::Core::DataStructures::TLSSessionIDView QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_tls_session() const
 {
-	TLSSessionIDView session(data_.data() + scheme_.session.first, data_.data() + scheme_.session.second);
+	TLSSessionIDView session(const_cast<UByte*>(data_.data()) + scheme_.session.first, const_cast<UByte*>(data_.data()) + scheme_.session.second);
 	return session;
 }
 
 QVPN::Core::DataStructures::TLSCipherSuitView QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_tls_cipher_suites() const
 {
-	TLSCipherSuitView ciphers_view(data_.data() + scheme_.ciphers.first, data_.data() + scheme_.ciphers.second);
+	TLSCipherSuitView ciphers_view(const_cast<UByte*>(data_.data()) + scheme_.ciphers.first, const_cast<UByte*>(data_.data()) + scheme_.ciphers.second);
 	return ciphers_view;
 }
 
 QVPN::Core::DataStructures::TLSCompressionView QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_tls_compression_methods() const
 {
-	TLSCompressionView compr_view(data_.data() + scheme_.compressions.first, data_.data() + scheme_.compressions.second);
+	TLSCompressionView compr_view(const_cast<UByte*>(data_.data()) + scheme_.compressions.first, const_cast<UByte*>(data_.data()) + scheme_.compressions.second);
 	return compr_view;
 }
 
 QVPN::Core::DataStructures::TLSExtensionsView QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_tls_extensions_data() const
 {
-	TLSExtensionsView exts_view(data_.data() + scheme_.extensions.first, data_.data() + scheme_.extensions.second);
+	TLSExtensionsView exts_view(const_cast<UByte*>(data_.data()) + scheme_.extensions.first, const_cast<UByte*>(data_.data()) + scheme_.extensions.second);
 	return exts_view;
 }
 
@@ -1857,12 +1944,14 @@ QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView QVPN::Core::Dat
 {
 	auto exts = get_tls_extensions_data();
 	auto [b, e] = exts.get_tls_extensions();
-	for (auto i = b; i < e; i++)
+	for (auto i = b; i < e;)
 	{
-		if (i->get_tls_ext_type() == TLSExtensionType::SERVER_NAME)
-			return TLSServerNameIndicationExtensionView(i, i);
+		TLSExtensionView ext(const_cast<UByte*>(i), const_cast<UByte*>(e));
+		if (ext.get_tls_ext_type() == TLSExtensionType::SERVER_NAME)
+			return TLSServerNameIndicationExtensionView(const_cast<UByte*>(i), const_cast<UByte*>(e));
+		i += ext.get_tls_ext_full_length();
 	}
-	return TLSServerNameIndicationExtensionView(b, b);
+	return TLSServerNameIndicationExtensionView(const_cast<UByte*>(b), const_cast<UByte*>(b));
 }
 
 
@@ -1871,40 +1960,7 @@ QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView QVPN::Core::Dat
 
 void QVPN::Core::DataStructures::TLS13_ClientHelloPacketView::parse_scheme()
 {
-	TLSRandomView r(data_, data_ + size_);
-	auto [b, e] = r.get_tls_random_bytes();
-	auto u_time = r.get_tls_unix_time();
-	size_t start = 2;
-	size_t end = std::distance(b, e) + sizeof(u_time);
-	scheme_.random = std::make_pair<>(start, end);
-
-	TLSSessionIDView s(data_ + end, data_ + size_);
-	auto [b1, e1] = s.get_tls_id();
-	auto length = s.get_tls_id_length();
-	start = end;
-	end = std::distance(b1, e1) + sizeof(length);
-	scheme_.session = std::make_pair<>(start, end);
-
-	TLSCipherSuitView c(data_ + end, data_ + size_);
-	auto [b2, e2] = c.get_cipher_suites();
-	auto l1 = c.get_tls_ciphers_length();
-	start = end;
-	end = std::distance(b2, e2) + sizeof(l1);
-	scheme_.ciphers = std::make_pair<>(start, end);
-
-	TLSCompressionView comp(data_ + end, data_ + size_);
-	auto [b3, e3] = comp.get_tls_compressions();
-	auto l2 = comp.get_tls_compressions_length();
-	start = end;
-	end = std::distance(b3, e3) + sizeof(l2);
-	scheme_.compressions = std::make_pair<>(start, end);
-
-	TLSExtensionsView ext(data_ + end, data_ + size_);
-	auto [b4, e4] = ext.get_tls_extensions();
-	auto l3 = ext.get_tls_extensions_length();
-	start = end;
-	end = std::distance(b4, e4) + sizeof(l3);
-	scheme_.extensions = std::make_pair<>(start, end);
+	unified_parse_scheme<size_t, UByte*>(scheme_, data_, data_ + size_);
 }
 
 QVPN::Core::DataStructures::TLS13_ClientHelloPacketView::TLS13_ClientHelloPacketView(UByte* begin, UByte* end)
@@ -1953,12 +2009,14 @@ QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView QVPN::Core::Dat
 {
 	auto exts = get_tls_extensions_data();
 	auto [b, e] = exts.get_tls_extensions();
-	for (auto i = b; i < e; i++)
+	for (auto i = b; i < e;)
 	{
-		if (i->get_tls_ext_type() == TLSExtensionType::SERVER_NAME)
-			return TLSServerNameIndicationExtensionView(i, i);
+		TLSExtensionView ext(const_cast<UByte*>(i), const_cast<UByte*>(e));
+		if (ext.get_tls_ext_type() == TLSExtensionType::SERVER_NAME)
+			return TLSServerNameIndicationExtensionView(const_cast<UByte*>(i), const_cast<UByte*>(e));
+		i += ext.get_tls_ext_full_length();
 	}
-	return TLSServerNameIndicationExtensionView(b, b);
+	return TLSServerNameIndicationExtensionView(const_cast<UByte*>(b), const_cast<UByte*>(b));
 }
 
 // TLS SNI EXT LE
@@ -1970,30 +2028,35 @@ UShort QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian:
 
 UShort QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::get_tls_sni_type() const
 {
-	return type_;
+	return static_cast<UShort>(data_[0] << 8 | data_[1]);
 }
 
 UShort QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::get_tls_sni_length() const
 {
-	return length_;
+	return static_cast<UShort>(data_[2] << 8 | data_[3]);
 }
 
 UShort QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::get_tls_sni_elem_length() const
 {
-	return elem_length_;
+	return static_cast<UShort>(data_[3] << 8 | data_[4]);
 }
 
 QVPN::Core::DataStructures::TLSSNIRecordType QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::get_tls_sni_record_type() const
 {
-	return record_type_;
+	return static_cast<TLSSNIRecordType>(data_[5]);
 }
 
 UShort QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::get_tls_sni_data_size() const
 {
-	return data_size_;
+	return static_cast<UShort>(data_[6] << 8 | data_[7]);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::get_tls_sni_data() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin() + 8, data_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
 }
@@ -2035,4 +2098,9 @@ UShort QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView::get_tls
 std::pair<QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView::get_tls_sni_data() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 8, data_ + size_);
+}
+
+std::pair<QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
