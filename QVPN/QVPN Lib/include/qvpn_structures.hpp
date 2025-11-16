@@ -153,7 +153,9 @@ namespace QVPN {
 				SUPPORTED_VERSIONS = 43
 			};
 
-
+			enum TLSSNIRecordType : UByte {
+				HOST_NAME = 0,
+			};
 
 			enum AdapterFlags : ULong {
 				DdnsEnabled = 0x1,
@@ -1110,6 +1112,7 @@ namespace QVPN {
 					std::copy(first + 4, first + 32, std::back_inserter(random_bytes_));
 				}
 
+				UShort get_tls_random_full_length() const;
 				UInt get_tls_unix_time() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_random_bytes() const;
 			};
@@ -1151,6 +1154,7 @@ namespace QVPN {
 					size_ = std::distance(first, first + 32);
 				}
 
+				UShort get_tls_random_full_length() const;
 				UInt get_tls_unix_time() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_random_bytes() const;
 
@@ -1168,7 +1172,7 @@ namespace QVPN {
 
 			private:
 
-				UInt length_;
+				UByte length_;
 				std::vector<UByte> id_;
 
 			public:
@@ -1182,7 +1186,8 @@ namespace QVPN {
 					std::copy(first + 4, first + length_, std::back_inserter(id_));
 				}
 
-				UInt get_tls_id_length() const;
+				UShort get_tls_id_full_length() const;
+				UByte get_tls_id_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_id();
 			};
 
@@ -1214,6 +1219,7 @@ namespace QVPN {
 					size_ = std::distance(first, first + length);
 				}
 
+				UInt get_tls_id_full_length() const;
 				UInt get_tls_id_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_id();
 
@@ -1226,12 +1232,12 @@ namespace QVPN {
 
 			class TLSCipherSuitLittleEndian {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = std::vector<TLSCipherSuite>::iterator;
+				using ConstDataIterator_t = std::vector<TLSCipherSuite>::const_iterator;
 
 			private:
 				UShort length_;
-				std::vector<UByte> ciphers_;
+				std::vector<TLSCipherSuite> ciphers_;
 
 			public:
 
@@ -1242,6 +1248,7 @@ namespace QVPN {
 					std::copy(first + 2, first + length_, std::back_inserter(ciphers_));
 				}
 
+				UShort get_tls_ciphers_full_length() const;
 				UShort get_tls_ciphers_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_cipher_suites() const;
 			};
@@ -1249,11 +1256,12 @@ namespace QVPN {
 
 			class TLSCipherSuitView {
 			public:
-				using DataIterator_t = UByte*;
-				using ConstDataIterator_t = const UByte*;
+				using DataIterator_t = TLSCipherSuite*;
+				using ConstDataIterator_t = const TLSCipherSuite*;
 
 			private:
-				UByte* data_;
+				UShort length_;
+				TLSCipherSuite* data_;
 				UInt size_;
 
 			public:
@@ -1261,11 +1269,12 @@ namespace QVPN {
 				template<std::random_access_iterator Iter>
 				TLSCipherSuitView(Iter first, Iter last)
 				{
-					data_ = first;
-					auto length = get_tls_ciphers_length();
-					size_ = std::distance(first, first + length);
+					data_ = first + 2;
+					length_ = static_cast<UShort>(first[0] << 8 | first[1]);
+					size_ = std::distance(first, first + get_tls_ciphers_full_length());
 				}
 
+				UShort get_tls_ciphers_full_length() const;
 				UShort get_tls_ciphers_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_cipher_suites() const;
 			};
@@ -1273,12 +1282,12 @@ namespace QVPN {
 
 			class TLSCompressionLittleEndian {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = std::vector<TLSCompressionMethod>::iterator;
+				using ConstDataIterator_t = std::vector<TLSCompressionMethod>::const_iterator;
 
 			private:
 				UByte length_;
-				std::vector<UByte> compressions_;
+				std::vector<TLSCompressionMethod> compressions_;
 
 			public:
 				template<std::random_access_iterator Iter>
@@ -1288,6 +1297,7 @@ namespace QVPN {
 					std::copy(first + 1, first + length_, std::back_inserter(compressions_));
 				}
 
+				UShort get_tls_compressions_full_length() const;
 				UByte get_tls_compressions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_compressions() const;
 			};
@@ -1295,22 +1305,24 @@ namespace QVPN {
 
 			class TLSCompressionView {
 			public:
-				using DataIterator_t = UByte*;
-				using ConstDataIterator_t = const UByte*;
+				using DataIterator_t = TLSCompressionMethod*;
+				using ConstDataIterator_t = const TLSCompressionMethod*;
 
 			private:
-				UByte* data_;
+				UByte length_;
+				TLSCompressionMethod* data_;
 				UInt size_;
 
 			public:
 				template<std::random_access_iterator Iter>
 				TLSCompressionView(Iter first, Iter last)
 				{
-					data_ = first;
-					length = get_tls_compressions_length();
-					size_ = std::distance(first, first + length);
+					data_ = first + 1;
+					length_ = first[0];
+					size_ = std::distance(first, first + get_tls_compressions_full_length());
 				}
 
+				UShort get_tls_compressions_full_length() const;
 				UByte get_tls_compressions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_compressions() const;
 			};
@@ -1337,6 +1349,7 @@ namespace QVPN {
 					std::copy(first + 4, first + length_, std::back_inserter(data_));
 				}
 
+				UShort get_tls_ext_full_length() const;
 				TLSExtensionType get_tls_ext_type() const;
 				UShort get_tls_ext_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_ext_data() const;
@@ -1349,7 +1362,6 @@ namespace QVPN {
 				using ConstDataIterator_t = const UByte*;
 
 			private:
-
 				UByte* data_;
 				UInt size_;
 
@@ -1359,11 +1371,10 @@ namespace QVPN {
 				TLSExtensionView(Iter first, Iter last)
 				{
 					data_ = first;
-					auto length = get_tls_ext_length();
-					size_ = std::distance(first, first + length);
+					size_ = std::distance(first, first + get_tls_ext_full_length());
 				}
 
-
+				UShort get_tls_ext_full_length() const;
 				TLSExtensionType get_tls_ext_type() const;
 				UShort get_tls_ext_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_ext_data() const;
@@ -1374,12 +1385,12 @@ namespace QVPN {
 			{
 			public:
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = std::vector<TLSExtensionLittleEndian>::iterator;
+				using ConstDataIterator_t = std::vector<TLSExtensionLittleEndian>::const_iterator;
 
 			private:
 				UShort length_;
-				std::vector<UByte> extensions_;
+				std::vector<TLSExtensionLittleEndian> extensions_;
 
 			public:
 
@@ -1390,6 +1401,7 @@ namespace QVPN {
 					std::copy(first + 2, first + length_, std::back_inserter(extensions_));
 				}
 
+				UShort get_tls_extensions_full_length() const;
 				UShort get_tls_extensions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_extensions() const;
 			};
@@ -1398,11 +1410,12 @@ namespace QVPN {
 			{
 			public:
 			public:
-				using DataIterator_t = UByte*;
-				using ConstDataIterator_t = const UByte*;
+				using DataIterator_t = TLSExtensionView*;
+				using ConstDataIterator_t = const TLSExtensionView*;
 
 			private:
-				UByte* data_;
+				UShort length_;
+				TLSExtensionView* data_;
 				UInt size_;
 
 			public:
@@ -1410,11 +1423,12 @@ namespace QVPN {
 				template<std::random_access_iterator Iter>
 				TLSExtensionsView(Iter first, Iter last)
 				{
-					data_ = first;
-					auto length = get_tls_extensions_length();
-					size_ = std::distance(first, first + length);
+					data_ = first + 2;
+					length_ = static_cast<UShort>(first[0] << 8 | first[1]);;
+					size_ = std::distance(first, first + get_tls_extensions_full_length());
 				}
 
+				UShort get_tls_extensions_full_length() const;
 				UShort get_tls_extensions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_extensions() const;
 			};
@@ -1438,6 +1452,7 @@ namespace QVPN {
 					std::copy(first + 1, first + versions_length_, std::back_inserter(versions_));
 				}
 
+				UShort get_tls_versions_full_length() const;
 				UByte get_tls_versions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_supported_versions() const;
 
@@ -1459,10 +1474,11 @@ namespace QVPN {
 				TLSSupportedVersionsExtensionView(Iter first, Iter last)
 				{
 					data_ = first;
-					auto length = get_tls_versions_length();
+					auto length = get_tls_versions_full_length();
 					size_ = std::distance(first, first + length);
 				}
 
+				UShort get_tls_versions_full_length() const;
 				UByte get_tls_versions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_supported_versions() const;
 
@@ -1490,6 +1506,7 @@ namespace QVPN {
 					std::copy(first + 4, first + get_tls_key_exchange_length(), std::back_inserter(key_exchange_));
 				}
 
+				UShort get_tls_key_share_group_full_length() const;
 				UShort get_tls_keyshare_group() const;
 				UShort get_tls_key_exchange_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_key_exchange() const;
@@ -1516,6 +1533,7 @@ namespace QVPN {
 					size_ = std::distance(first, first + length);
 				}
 
+				UShort get_tls_key_share_group_full_length() const;
 				UShort get_tls_keyshare_group() const;
 				UShort get_tls_key_exchange_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_key_exchange() const;
@@ -1541,6 +1559,7 @@ namespace QVPN {
 					std::copy(first + 2, first + client_shares_length_, std::back_inserter(client_shares_));
 				}
 
+				UShort get_tls_key_share_full_length() const;
 				UShort get_tls_key_share_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_key_share() const;
 			};
@@ -1565,9 +1584,78 @@ namespace QVPN {
 					size_ = std::distance(first, first + length);
 				}
 
+				UShort get_tls_key_share_full_length() const;
 				UShort get_tls_key_share_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_key_share() const;
 			};
+
+
+			class TLSServerNameIndicationExtensionLittleEndian {
+
+			public:
+				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+			private:
+				UShort type_;
+				UShort length_;
+				UShort elem_length_;
+				TLSSNIRecordType record_type_;
+				UShort data_size_;
+				std::vector<UByte> data_;
+
+			public:
+				
+				template <std::random_access_iterator Iter>
+				TLSServerNameIndicationExtensionLittleEndian(Iter begin, Iter end)
+				{
+					type_ = static_cast<UShort>(begin[0] << 8 | begin[1]);
+					length_ = static_cast<UShort>(begin[2] << 8 | begin[3]);
+					elem_length_ = static_cast<UShort>(begin[3] << 8 | begin[4]);
+					record_type_ = static_cast<TLSSNIRecordType>(begin[5]);
+					data_size_ = static_cast<UShort>(begin[6] << 8 | begin[7]);
+					std::copy(begin + 8, begin + get_tls_sni_full_length(), std::back_inserter(data_));
+				}
+
+				UShort get_tls_sni_full_length() const;
+				UShort get_tls_sni_type() const;
+				UShort get_tls_sni_length() const;
+				UShort get_tls_sni_elem_length() const;
+				TLSSNIRecordType get_tls_sni_record_type() const;
+				UShort get_tls_sni_data_size() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_sni_data() const;
+			};
+
+
+			class TLSServerNameIndicationExtensionView {
+
+			public:
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+			private:
+				UByte* data_;
+				UInt size_;
+				
+			public:
+
+				template <std::random_access_iterator Iter>
+				TLSServerNameIndicationExtensionView(Iter begin, Iter end)
+				{
+					data_ = begin;
+					auto length = get_tls_sni_full_length(); // length + type (2 bytes)
+					size_ = std::distance(begin, begin + length);
+				}
+
+				UShort get_tls_sni_full_length() const;
+				UShort get_tls_sni_type() const;
+				UShort get_tls_sni_length() const;
+				UShort get_tls_sni_elem_length() const;
+				TLSSNIRecordType get_tls_sni_record_type() const;
+				UShort get_tls_sni_data_size() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_sni_data() const;
+			};
+
 
 			template <class TLSRecordImpl>
 			concept TLSRecordPacketLike =
@@ -1582,14 +1670,27 @@ namespace QVPN {
 					{ t.get_tls_version() } -> std::same_as<UShort>;
 					{ t.get_tls_random() } -> std::same_as<TLSRandomView>;
 					{ t.get_tls_session() } -> std::same_as<TLSSessionIDView>;
-					{ t.get_tls_cipher_suites() } -> std::same_as<std::vector<TLSCipherSuite>>;
-					{ t.get_tls_compression_methods() } -> std::same_as<std::vector<TLSCompressionMethod>>;
-					{ t.get_tls_extensions_data() } -> std::same_as<std::vector<TLSExtensionView>>;
+					{ t.get_tls_cipher_suites() } -> std::same_as<TLSCipherSuitView>;
+					{ t.get_tls_compression_methods() } -> std::same_as<TLSCompressionView>;
+					{ t.get_tls_extensions_data() } -> std::same_as<TLSExtensionsView>;
+					{ t.get_tls_sni_data() } -> std::same_as<TLSServerNameIndicationExtensionView>;
+			};
+
+
+			template <class TLSServerHelloImpl>
+			concept TLS13_ServerHelloPacketLike =
+				requires (TLSServerHelloImpl t) {
+					{ t.get_tls_version() } -> std::same_as<UShort>;
+					{ t.get_tls_random() } -> std::same_as<TLSRandomView>;
+					{ t.get_tls_session() } -> std::same_as<TLSSessionIDView>;
+					{ t.get_tls_cipher_suites() } -> std::same_as<TLSCipherSuitView>;
+					{ t.get_tls_compression_methods() } -> std::same_as<TLSCompressionView>;
+					{ t.get_tls_extensions_data() } -> std::same_as<TLSExtensionsView>;
 			};
 
 
 			template <std::integral Val>
-			struct TLS13_ClientHelloPacketScheme
+			struct TLS13_HelloPacketScheme
 			{
 				std::pair<Val, Val> random;
 				std::pair<Val, Val> session;
@@ -1608,7 +1709,7 @@ namespace QVPN {
 
 			private:
 				std::vector<UByte> data_;
-				TLS13_ClientHelloPacketScheme<size_t> scheme_;
+				TLS13_HelloPacketScheme<size_t> scheme_;
 
 				void parse_scheme();
 
@@ -1619,11 +1720,10 @@ namespace QVPN {
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;
 				TLSSessionIDView get_tls_session() const;
-				std::vector<TLSCipherSuite> get_tls_cipher_suites() const;
-				std::vector<TLSCompressionMethod> get_tls_compression_methods() const;
-				std::vector<TLSExtensionView> get_tls_extensions_data() const;
-
-
+				TLSCipherSuitView get_tls_cipher_suites() const;
+				TLSCompressionView get_tls_compression_methods() const;
+				TLSExtensionsView get_tls_extensions_data() const;
+				TLSServerNameIndicationExtensionView get_tls_sni_data() const;
 			};
 
 
@@ -1637,7 +1737,7 @@ namespace QVPN {
 			private:
 				UByte* data_;
 				UInt size_;
-				TLS13_ClientHelloPacketScheme<size_t> scheme_;
+				TLS13_HelloPacketScheme<size_t> scheme_;
 
 				void parse_scheme();
 
@@ -1648,10 +1748,22 @@ namespace QVPN {
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;
 				TLSSessionIDView get_tls_session() const;
-				std::vector<TLSCipherSuite> get_tls_cipher_suites() const;
-				std::vector<TLSCompressionMethod> get_tls_compression_methods() const;
-				std::vector<TLSExtensionView> get_tls_extensions_data() const;
+				TLSCipherSuitView get_tls_cipher_suites() const;
+				TLSCompressionView get_tls_compression_methods() const;
+				TLSExtensionsView get_tls_extensions_data() const;
+				TLSServerNameIndicationExtensionView get_tls_sni_data() const;
 
+			};
+
+
+			class TLS13_ServerHelloPacketLittleEndian
+			{
+
+			};
+
+
+			class TLS13_ServerHelloPacketView
+			{
 
 			};
 
