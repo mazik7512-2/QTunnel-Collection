@@ -2172,12 +2172,12 @@ UShort QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::get_tls_
 
 QVPN::Core::DataStructures::TLSRandomView QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::get_tls_random() const
 {
-	return TLSRandomView(data_.data() + scheme_.random.first, data_.data() + scheme_.random.second);
+	return TLSRandomView(const_cast<UByte*>(data_.data()) + scheme_.random.first, const_cast<UByte*>(data_.data()) + scheme_.random.second);
 }
 
 QVPN::Core::DataStructures::TLSSessionIDView QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::get_tls_session() const
 {
-	return TLSSessionIDView(data_.data() + scheme_.session.first, data_.data() + scheme_.session.second);
+	return TLSSessionIDView(const_cast<UByte*>(data_.data() + scheme_.session.first), const_cast<UByte*>(data_.data()) + scheme_.session.second);
 }
 
 QVPN::Core::DataStructures::TLSCipherSuite QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::get_tls_cipher_suite() const
@@ -2192,7 +2192,7 @@ QVPN::Core::DataStructures::TLSCompressionMethod QVPN::Core::DataStructures::TLS
 
 QVPN::Core::DataStructures::TLSExtensionsView QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::get_tls_extensions_data() const
 {
-	return TLSExtensionsView(data_.data() + scheme_.extensions.first, data_.data() + scheme_.extensions.second);
+	return TLSExtensionsView(const_cast<UByte*>(data_.data()) + scheme_.extensions.first, const_cast<UByte*>(data_.data()) + scheme_.extensions.second);
 }
 
 std::pair<QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::to_bytes() const
