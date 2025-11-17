@@ -128,7 +128,7 @@ namespace QVPN {
 			};
 
 
-			enum TLSHandshakeType : UByte {
+			enum TLSMessageType : UByte {
 				CLIENT_HELLO = 1,
 				SERVER_HELLO = 2,
 				NEW_SESSION_TICKET = 4,
@@ -1665,6 +1665,7 @@ namespace QVPN {
 				requires (TLSRecordImpl t) {
 					{ t.get_tls_record_type() } -> std::same_as<TLSRecordType>;
 					{ t.get_tls_record_version() } -> std::same_as<TLSProtocolVersion>;
+					{ t.get_tls_record_full_length() } -> std::same_as<UShort>;
 					{ t.get_tls_record_length() } -> std::same_as<UShort>;
 					{ t.get_tls_record_data() } -> std::same_as<std::pair<typename TLSRecordImpl::ConstDataIterator_t, typename TLSRecordImpl::ConstDataIterator_t>>;
 
@@ -1687,6 +1688,7 @@ namespace QVPN {
 			template <class TLSServerHelloImpl>
 			concept TLS13_ServerHelloPacketLike =
 				requires (TLSServerHelloImpl t) {
+
 					{ t.get_tls_version() } -> std::same_as<UShort>;
 					{ t.get_tls_random() } -> std::same_as<TLSRandomView>;
 					{ t.get_tls_session() } -> std::same_as<TLSSessionIDView>;
@@ -1696,6 +1698,16 @@ namespace QVPN {
 
 			} && UnifiedPacketLike<TLSServerHelloImpl>;
 
+
+			template <class TLSMessageImpl>
+			concept TLS13_MessagePacketLike =
+				requires (TLSMessageImpl t) {
+					{ t.get_tls_msg_type() } -> std::same_as<TLSMessageType>;
+					{ t.get_tls_msg_length() } -> std::same_as<UInt>;
+					{ t.get_tls_msg_full_length() } -> std::same_as<UInt>;
+					{ t.get_tls_msg_data() } -> std::same_as<std::pair<typename TLSMessageImpl::ConstDataIterator_t, typename TLSMessageImpl::ConstDataIterator_t>>;
+
+			} && UnifiedPacketLike<TLSMessageImpl>;
 
 			template <std::integral Val>
 			struct TLS13_HelloPacketScheme
@@ -1707,6 +1719,51 @@ namespace QVPN {
 				std::pair<Val, Val> extensions;
 			};
 
+
+			class TLS13_MessageLittleEndian
+			{
+			public:
+
+				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+			private:
+				std::vector<UByte> data_;
+
+			public:
+
+				TLS13_MessageLittleEndian(UByte* begin, UByte* end);
+
+				TLSMessageType get_tls_msg_type() const;
+				UInt get_tls_msg_length() const;
+				UInt get_tls_msg_full_length() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_msg_data() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
+
+			class TLS13_MessageView
+			{
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+			private:
+				UByte* data_;
+				UInt size_;
+
+			public:
+
+				TLS13_MessageView(UByte* begin, UByte* end);
+
+				TLSMessageType get_tls_msg_type() const;
+				UInt get_tls_msg_length() const;
+				UInt get_tls_msg_full_length() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_msg_data() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
 
 			class TLS13_ClientHelloPacketLittleEndian
 			{
@@ -1724,6 +1781,7 @@ namespace QVPN {
 			public:
 
 				TLS13_ClientHelloPacketLittleEndian(UByte* begin, UByte* end);
+
 
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;

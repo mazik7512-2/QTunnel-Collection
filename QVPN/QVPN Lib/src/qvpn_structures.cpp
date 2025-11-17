@@ -1480,6 +1480,9 @@ std::pair<QVPN::Core::DataStructures::Http1PacketResponseView::ConstDataIterator
 // TLS
 
 
+// TLS Fields 
+
+
 UShort QVPN::Core::DataStructures::TLSRandomLittleEndian::get_tls_random_full_length() const
 {
 	return 32;
@@ -2244,6 +2247,75 @@ QVPN::Core::DataStructures::TLSExtensionsView QVPN::Core::DataStructures::TLS13_
 }
 
 std::pair<QVPN::Core::DataStructures::TLS13_ServerHelloPacketView::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_ServerHelloPacketView::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_ServerHelloPacketView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
+}
+
+
+// TLS Message LE
+
+
+QVPN::Core::DataStructures::TLS13_MessageLittleEndian::TLS13_MessageLittleEndian(UByte* begin, UByte* end)
+{
+	auto length = static_cast<UInt>(0 << 24 | data_[1] << 16 | data_[2] << 8 | data_[3]) + 4;
+	std::copy(begin, begin + length, std::back_inserter(data_));
+}
+
+QVPN::Core::DataStructures::TLSMessageType QVPN::Core::DataStructures::TLS13_MessageLittleEndian::get_tls_msg_type() const
+{
+	return static_cast<TLSMessageType>(data_[0]);
+}
+
+UInt QVPN::Core::DataStructures::TLS13_MessageLittleEndian::get_tls_msg_length() const
+{
+	return static_cast<UInt>(0 << 24 | data_[1] << 16 | data_[2] << 8 | data_[3]);
+}
+
+UInt QVPN::Core::DataStructures::TLS13_MessageLittleEndian::get_tls_msg_full_length() const
+{
+	return get_tls_msg_length() + 4;
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_MessageLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_MessageLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_MessageLittleEndian::get_tls_msg_data() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin() + 4, data_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_MessageLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_MessageLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_MessageLittleEndian::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
+}
+
+
+// TLS Message View
+
+QVPN::Core::DataStructures::TLS13_MessageView::TLS13_MessageView(UByte* begin, UByte* end)
+{
+	data_ = begin;
+	size_ = get_tls_msg_full_length();
+}
+
+QVPN::Core::DataStructures::TLSMessageType QVPN::Core::DataStructures::TLS13_MessageView::get_tls_msg_type() const
+{
+	return static_cast<TLSMessageType>(data_[0]);
+}
+
+UInt QVPN::Core::DataStructures::TLS13_MessageView::get_tls_msg_length() const
+{
+	return static_cast<UInt>(0 << 24 | data_[1] << 16 | data_[2] << 8 | data_[3]);
+}
+
+UInt QVPN::Core::DataStructures::TLS13_MessageView::get_tls_msg_full_length() const
+{
+	return get_tls_msg_length() + 4;
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_MessageView::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_MessageView::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_MessageView::get_tls_msg_data() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 4, data_ + size_);
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_MessageView::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_MessageView::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_MessageView::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
