@@ -120,6 +120,27 @@ namespace QVPN {
 			};
 
 
+			enum TLSRecordType : UByte {
+				CHANGE_CIPHER_SPEC = 20,
+				ALERT = 21,
+				HANDSHAKE = 22,
+				APPLICATION_DATA = 23
+			};
+
+
+			enum TLSHandshakeType : UByte {
+				CLIENT_HELLO = 1,
+				SERVER_HELLO = 2,
+				NEW_SESSION_TICKET = 4,
+				CERTIFICATE = 11,
+				SERVER_KEY_EXCHANGE = 12,
+				CERTIFICATE_REQUEST = 13,
+				SERVER_HELLO_DONE = 14,
+				CERTIFICATE_VERIFY = 15,
+				CLIENT_KEY_EXCHANGE = 16,
+				FINISHED = 20
+			};
+
 			// TLS версии
 			enum TLSProtocolVersion : UShort {
 				SSL30 = 0x0300,
@@ -1642,9 +1663,12 @@ namespace QVPN {
 			template <class TLSRecordImpl>
 			concept TLSRecordPacketLike =
 				requires (TLSRecordImpl t) {
-					{ t.get_content_type() } -> std::same_as<UByte>;
+					{ t.get_tls_record_type() } -> std::same_as<TLSRecordType>;
+					{ t.get_tls_record_version() } -> std::same_as<TLSProtocolVersion>;
+					{ t.get_tls_record_length() } -> std::same_as<UShort>;
+					{ t.get_tls_record_data() } -> std::same_as<std::pair<typename TLSRecordImpl::ConstDataIterator_t, typename TLSRecordImpl::ConstDataIterator_t>>;
 
-			};
+			} && UnifiedPacketLike<TLSRecordImpl>;
 
 			template <class TLSClientHelloImpl>
 			concept TLS13_ClientHelloPacketLike =
@@ -1656,7 +1680,8 @@ namespace QVPN {
 					{ t.get_tls_compression_methods() } -> std::same_as<TLSCompressionView>;
 					{ t.get_tls_extensions_data() } -> std::same_as<TLSExtensionsView>;
 					{ t.get_tls_sni_data() } -> std::same_as<TLSServerNameIndicationExtensionView>;
-			};
+
+			} && UnifiedPacketLike<TLSClientHelloImpl>;
 
 
 			template <class TLSServerHelloImpl>
@@ -1665,10 +1690,11 @@ namespace QVPN {
 					{ t.get_tls_version() } -> std::same_as<UShort>;
 					{ t.get_tls_random() } -> std::same_as<TLSRandomView>;
 					{ t.get_tls_session() } -> std::same_as<TLSSessionIDView>;
-					{ t.get_tls_cipher_suites() } -> std::same_as<TLSCipherSuitView>;
-					{ t.get_tls_compression_methods() } -> std::same_as<TLSCompressionView>;
+					{ t.get_tls_cipher_suites() } -> std::same_as<TLSCipherSuite>;
+					{ t.get_tls_compression_methods() } -> std::same_as<TLSCompressionMethod>;
 					{ t.get_tls_extensions_data() } -> std::same_as<TLSExtensionsView>;
-			};
+
+			} && UnifiedPacketLike<TLSServerHelloImpl>;
 
 
 			template <std::integral Val>
@@ -1706,6 +1732,8 @@ namespace QVPN {
 				TLSCompressionView get_tls_compression_methods() const;
 				TLSExtensionsView get_tls_extensions_data() const;
 				TLSServerNameIndicationExtensionView get_tls_sni_data() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
 
 
@@ -1735,19 +1763,63 @@ namespace QVPN {
 				TLSExtensionsView get_tls_extensions_data() const;
 				TLSServerNameIndicationExtensionView get_tls_sni_data() const;
 
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
 
 
 			class TLS13_ServerHelloPacketLittleEndian
 			{
-			private:
+			public:
 				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+			private:
+				std::vector<UByte> data_;
+				TLS13_HelloPacketScheme<size_t> scheme_;
+
+				void parse_scheme();
+
+			public:
+
+				TLS13_ServerHelloPacketLittleEndian(UByte* begin, UByte* end);
+
+				UShort get_tls_version() const;
+				TLSRandomView get_tls_random() const;
+				TLSSessionIDView get_tls_session() const;
+				TLSCipherSuite get_tls_cipher_suite() const;
+				TLSCompressionMethod get_tls_compression_method() const;
+				TLSExtensionsView get_tls_extensions_data() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				
 			};
 
 
 			class TLS13_ServerHelloPacketView
 			{
+			public:
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
+			private:
+				UByte* data_;
+				UInt size_;
+				TLS13_HelloPacketScheme<size_t> scheme_;
+
+				void parse_scheme();
+
+			public:
+
+				TLS13_ServerHelloPacketView(UByte* begin, UByte* end);
+
+				UShort get_tls_version() const;
+				TLSRandomView get_tls_random() const;
+				TLSSessionIDView get_tls_session() const;
+				TLSCipherSuite get_tls_cipher_suite() const;
+				TLSCompressionMethod get_tls_compression_method() const;
+				TLSExtensionsView get_tls_extensions_data() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
 
 			template <class NetLayer>
