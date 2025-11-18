@@ -105,3 +105,11 @@ QVPN::Core::HttpTools::QVPNCharset QVPN::Core::HttpTools::get_http_charset_by_st
 		return QVPNCharset::UNKNOWN;
 	}
 }
+
+std::pair<std::uniform_int_distribution<QVPN::Core::TLSTools::UInt>, std::mt19937> QVPN::Core::TLSTools::get_bytes_randomizer()
+{
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<UInt> dist(0, 255);
+	return std::pair<std::uniform_int_distribution<UInt>, std::mt19937>(dist, gen);
+}

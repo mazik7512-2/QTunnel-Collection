@@ -1,5 +1,9 @@
 #pragma once
 #include <unordered_map>
+#include <ranges>
+#include <random>
+#include <ctime>
+#include <algorithm>
 #include <qvpn_structures.hpp>
 
 namespace QVPN {
@@ -101,6 +105,40 @@ namespace QVPN {
 
 		};
 
+
+		namespace TLSTools
+		{
+
+			using UInt = QVPN::Core::BaseTypes::UInt;
+			using UByte = QVPN::Core::BaseTypes::UByte;
+
+			std::pair<std::uniform_int_distribution<UInt>, std::mt19937> get_bytes_randomizer();
+
+			template <std::ranges::random_access_range Cont, std::integral LengthSize>
+			Cont bytes_generator(LengthSize length, UInt payload_offset)
+			{
+				auto [dist, gen] = get_bytes_randomizer();
+				Cont obj_bytes;
+				if constexpr (requires {obj_bytes.reserve(length); obj_bytes.resize(length); })
+				{
+					obj_bytes.reserve(length);
+					obj_bytes.resize(length);
+				}
+				std::generate(obj_bytes.begin() + payload_offset, obj_bytes.end(), [&dist, &gen]() { return dist(gen); });
+				return obj_bytes;
+			}
+
+
+			template <std::integral LengthSize>
+			constexpr auto array32_bytes_generator = [](LengthSize length, UInt payload_offset) {
+				return bytes_generator<std::array<UByte, 32>, LengthSize>(length, payload_offset);
+			};
+
+			template <std::integral LengthSize>
+			constexpr auto vector_bytes_generator = [](LengthSize length, UInt payload_offset) {
+				return bytes_generator<std::vector<UByte>, LengthSize>(length, payload_offset);
+			};
+		}
 
 	}
 
