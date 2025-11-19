@@ -2042,6 +2042,24 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
 
+
+			template <class GenerationStrategyImpl>
+			concept TLS13_ClientHelloGenStrategy =
+				requires (GenerationStrategyImpl t) {
+
+					{ t.get_session_length() } -> std::same_as<UByte>;
+					{ t.get_cipher_length() } -> std::same_as<UShort>;
+					{ t.get_compression_length() } -> std::same_as<UShort>;
+					{ t.get_extenstions_length() } -> std::same_as<UShort>;
+
+			};
+
+			class TLS13_DefaultGenerationStrategy
+			{
+
+			};
+
+
 			class TLS13_ClientHelloPacketLittleEndian
 			{
 
@@ -2057,8 +2075,42 @@ namespace QVPN {
 
 			public:
 
-				TLS13_ClientHelloPacketLittleEndian(UByte* begin, UByte* end);
+				template <std::random_access_iterator Iter>
+				TLS13_ClientHelloPacketLittleEndian(Iter begin, Iter end)
+				{
+					std::copy(begin, end, std::back_inserter(data_));
+					parse_scheme();
+				}
 
+				template <TLS13_ClientHelloGenStrategy GenStrategy>
+				static std::vector<UByte> generate_object_bytes(GenStrategy strategy)
+				{
+					std::vector<UByte> obj_bytes;
+
+					auto random = TLSRandomLittleEndian::generate_object_bytes();
+					std::copy(random.begin(), random.end(), std::back_inserter(obj_bytes));
+
+					auto session = TLSSessionIDLittleEndian::generate_object_bytes(strategy.get_session_length());
+					std::copy(session.begin(), session.end(), std::back_inserter(obj_bytes));
+
+					auto cipher = TLSCipherSuitLittleEndian::generate_object_bytes(strategy.get_cipher_length());
+					std::copy(cipher.begin(), cipher.end(), std::back_inserter(obj_bytes));
+
+					auto compres = TLSCompressionLittleEndian::generate_object_bytes(strategy.get_compression_length());
+					std::copy(compres.begin(), compres.end(), std::back_inserter(obj_bytes));
+
+					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes<>();
+					std::copy(extensions.begin(), extensions.end(), std::back_inserter(obj_bytes));
+
+					return std::vector<UByte>();
+				}
+
+				template <TLS13_ClientHelloGenStrategy GenStrategy>
+				static TLS13_ClientHelloPacketLittleEndian generate_object(GenStrategy strategy)
+				{
+					auto obj_bytes = generate_object_bytes<>(strategy);
+					return TLS13_ClientHelloPacketLittleEndian(obj_bytes.begin(), obj_bytes.end());
+				}
 
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;
@@ -2088,7 +2140,13 @@ namespace QVPN {
 
 			public:
 
-				TLS13_ClientHelloPacketView(UByte* begin, UByte* end);
+				template <std::random_access_iterator Iter>
+				TLS13_ClientHelloPacketView(Iter begin, Iter end)
+				{
+					data_ = begin;
+					size_ = std::distance(begin, end);
+					parse_scheme();
+				}
 
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;

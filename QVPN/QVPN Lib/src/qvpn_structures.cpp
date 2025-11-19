@@ -2047,12 +2047,6 @@ void QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::parse_sche
 	unified_parse_client_scheme<size_t, UByte*>(scheme_, data_.data(), data_.data() + data_.size());
 }
 
-QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::TLS13_ClientHelloPacketLittleEndian(UByte* begin, UByte* end)
-{
-	std::copy(begin, end, std::back_inserter(data_));
-	parse_scheme();
-}
-
 UShort QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_tls_version() const
 {
 	return static_cast<UShort>(data_[0] << 8 | data_[1]);
@@ -2108,19 +2102,13 @@ std::pair<QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::Const
 }
 
 
+
 // TLS Client Hello View
 
 
 void QVPN::Core::DataStructures::TLS13_ClientHelloPacketView::parse_scheme()
 {
 	unified_parse_client_scheme<size_t, UByte*>(scheme_, data_, data_ + size_);
-}
-
-QVPN::Core::DataStructures::TLS13_ClientHelloPacketView::TLS13_ClientHelloPacketView(UByte* begin, UByte* end)
-{
-	data_ = begin;
-	size_ = std::distance(begin, end);
-	parse_scheme();
 }
 
 UShort QVPN::Core::DataStructures::TLS13_ClientHelloPacketView::get_tls_version() const
