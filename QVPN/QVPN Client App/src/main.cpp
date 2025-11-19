@@ -11,7 +11,7 @@
 #include <ws2tcpip.h>
 
 
-
+#include <qvpn_structures.hpp>
 #include <cstdint>
 #include <vector>
 #include <algorithm>
@@ -29,12 +29,20 @@ void test(std::string_view t) {
     std::cout << t << std::endl;
 }
 using UByte = unsigned char;
+using UShort = unsigned short;
 
+using TLSSupVerExt = QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian;
+using TLSExtensionLittleEndian = QVPN::Core::DataStructures::TLSExtensionLittleEndian;
+using TLSExtensionsLittleEndian = QVPN::Core::DataStructures::TLSExtensionsLittleEndian;
 
 int main()
 {
+    using TLSExtWrapper = QVPN::Core::DataStructures::TLSExtensionWrapper<TLSExtensionLittleEndian, TLSSupVerExt, UShort>;
+    TLSExtWrapper ex1{ 1 };
+    TLSExtWrapper ex2{ 2 };
 
-
+    //TLSExtensionsLittleEndian exts;
+    auto test_obj = TLSExtensionsLittleEndian::generate_object<TLSExtWrapper, TLSExtWrapper>(ex1, ex2);
 
     QVPN::WinDivertExt::WinDivertTrafficFilter filter;
 

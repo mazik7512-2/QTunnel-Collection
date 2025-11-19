@@ -1551,15 +1551,15 @@ std::pair<QVPN::Core::DataStructures::TLSRandomView::ConstDataIterator_t, QVPN::
 
 std::vector<UByte> QVPN::Core::DataStructures::TLSSessionIDLittleEndian::generate_object_bytes(UByte length)
 {
-	auto obj_bytes = TLSTools::vector_bytes_generator<UByte>(length, 1);
+	auto full_length = length + sizeof(length);
+	auto obj_bytes = TLSTools::vector_bytes_generator<UByte>(full_length, 1);
 	obj_bytes[0] = length;
 	return obj_bytes;
 }
 
 QVPN::Core::DataStructures::TLSSessionIDLittleEndian QVPN::Core::DataStructures::TLSSessionIDLittleEndian::generate_object(UByte length)
 {
-	auto full_length = length + sizeof(length);
-	auto obj_bytes = generate_object_bytes(full_length);
+	auto obj_bytes = generate_object_bytes(length);
 	return TLSSessionIDLittleEndian(obj_bytes.begin(), obj_bytes.end());
 }
 
@@ -1861,7 +1861,8 @@ std::pair<QVPN::Core::DataStructures::TLSKeyShareClientHelloView::ConstDataItera
 
 std::vector<UByte> QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::generate_object_bytes(UShort length)
 {
-	auto obj_bytes = TLSTools::vector_bytes_generator<UByte>(length, 2);
+	auto full_length = length + sizeof(length);
+	auto obj_bytes = TLSTools::vector_bytes_generator<UByte>(full_length, 2);
 	obj_bytes[0] = length >> 8 & 8;
 	obj_bytes[1] = length & 8;
 	return obj_bytes;
@@ -1869,8 +1870,7 @@ std::vector<UByte> QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::genera
 
 QVPN::Core::DataStructures::TLSCipherSuitLittleEndian QVPN::Core::DataStructures::TLSCipherSuitLittleEndian::generate_object(UShort length)
 {
-	auto full_length = length + sizeof(length);
-	auto obj_bytes = generate_object_bytes(full_length);
+	auto obj_bytes = generate_object_bytes(length);
 	return TLSCipherSuitLittleEndian(obj_bytes.begin(), obj_bytes.end());
 }
 
@@ -1916,15 +1916,15 @@ std::pair<QVPN::Core::DataStructures::TLSCipherSuitView::ConstDataIterator_t, QV
 
 std::vector<UByte> QVPN::Core::DataStructures::TLSCompressionLittleEndian::generate_object_bytes(UByte length)
 {
-	auto obj_bytes = TLSTools::vector_bytes_generator<UByte>(length, 1);
+	auto full_length = length + sizeof(length);
+	auto obj_bytes = TLSTools::vector_bytes_generator<UByte>(full_length, 1);
 	obj_bytes[0] = length;
 	return obj_bytes;
 }
 
 QVPN::Core::DataStructures::TLSCompressionLittleEndian QVPN::Core::DataStructures::TLSCompressionLittleEndian::generate_object(UByte length)
 {
-	auto full_length = length + sizeof(length);
-	auto obj_bytes = generate_object_bytes(full_length);
+	auto obj_bytes = generate_object_bytes(length);
 	return TLSCompressionLittleEndian(obj_bytes.begin(), obj_bytes.end());
 }
 
