@@ -169,6 +169,11 @@ namespace QVPN {
 				X25519 = 0x001D,
 			};
 
+			enum TLSKeyTypesLength : UShort
+			{
+				X25519_LENGTH = 32,
+			};
+
 			// Extension types
 			enum TLSExtensionType : UShort {
 				SERVER_NAME = 0,
@@ -1303,7 +1308,7 @@ namespace QVPN {
 					std::copy(first, first + length + 1, std::back_inserter(compressions_));
 				}
 
-				static std::vector<UByte> generate_object_bytes(UByte length = 2);
+				static std::vector<UByte> generate_object_bytes(UByte length = 1);
 				static TLSCompressionLittleEndian generate_object(UByte length = 1);
 
 				UShort get_tls_compressions_full_length() const;
@@ -1378,13 +1383,13 @@ namespace QVPN {
 					std::copy(first, first + length + 4, std::back_inserter(data_));
 				}
 
-				template <TLSExtensionGenerator TLSExtension>
+				template <class TLSExtension>
 				static TLSExtensionType get_extension_type()
 				{
 					return TLSExtension::get_extension_type();
 				}
 
-				template <TLSExtensionGenerator TLSExtension, class ... Args>
+				template <class TLSExtension, class ... Args>
 				static std::vector<UByte> generate_object_bytes(Args&& ... args)
 				{
 					auto args_size = 0;
@@ -1405,7 +1410,7 @@ namespace QVPN {
 					return obj_bytes;
 				}
 
-				template <TLSExtensionGenerator TLSExtension, class ... Args>
+				template <class TLSExtension, class ... Args>
 				static TLSExtensionLittleEndian generate_object(Args&& ... args)
 				{
 					auto obj_bytes = generate_object_bytes<TLSExtension, Args...>(args...);
@@ -1461,11 +1466,12 @@ namespace QVPN {
 			public:
 
 				TLSExtensionWrapper(Args&&... args)
+					: args_(std::forward<Args>(args)...)
 				{
-					args_ = std::make_tuple<>(std::forward<Args...>(args...));
+					//args_ = std::make_tuple<>(std::forward<Args>(args...));
 				}
 
-				std::tuple<Args...> get_args()
+				std::tuple<Args...>& get_args()
 				{
 					return args_;
 				}
@@ -1477,12 +1483,12 @@ namespace QVPN {
 
 				static std::vector<UByte> generate_object_bytes(Args&&... args)
 				{
-					return TLSExtension:: template generate_object_bytes<TLSExtensionData, Args...>(std::forward<Args...>(args...));
+					return TLSExtension:: template generate_object_bytes<TLSExtensionData, Args...>(std::forward<Args>(args)...);
 				}
 
 				static TLSExtension generate_object(Args&&... args)
 				{
-					return TLSExtension:: template generate_object<TLSExtensionData, Args...>(std::forward<Args...>(args...));
+					return TLSExtension:: template generate_object<TLSExtensionData, Args...>(std::forward<Args>(args)...);
 				}
 			};
 
@@ -1516,7 +1522,7 @@ namespace QVPN {
 					obj_bytes.push_back(std::vector<UByte>{});
 					// создается лямбда с параметром index_seq, в которой содержится fold expression которое раскрывается для каждого расширения с параметрами из tuple по его индексу и тут же вызывается
 					[&] <size_t... iters>(std::index_sequence<iters...>) {
-						((obj_bytes.push_back(std::apply(TLSExtensions::generate_object_bytes, ext.get_args()))), ...); // fold expression
+						((obj_bytes.push_back(std::apply(TLSExtensions::generate_object_bytes, std::move(ext.get_args())))), ...); // fold expression
 						((size += obj_bytes[iters].size()), ...);
 					}(std::make_index_sequence<sizeof...(TLSExtensions)>{});
 
@@ -1574,6 +1580,9 @@ namespace QVPN {
 			};
 
 
+			using SupVerIter = std::vector<TLSProtocolVersion>::iterator;
+			using KeyShareIter = std::vector<std::pair<TLSKeyTypes, TLSKeyTypesLength>>::iterator;
+			using SNIIter = std::vector<std::string_view>::iterator;
 
 			class TLSSupportedVersionsEntryLittleEndian final {
 			public:
@@ -1651,13 +1660,13 @@ namespace QVPN {
 				TLSSupportedVersionsExtensionLittleEndian(Iter first, Iter last)
 				{
 					auto length = static_cast<UShort>(first[0]);
-					std::copy(first, first + length + 1, std::back_inserter(versions_));
+					std::copy(first, first + length + 2, std::back_inserter(versions_));
 				}
 
 
 				static TLSExtensionType get_extension_type();
-				static std::vector<UByte> generate_object_bytes(UShort length = 11);
-				static TLSSupportedVersionsExtensionLittleEndian generate_object(UShort length = 11);
+				static std::vector<UByte> generate_object_bytes(UShort length, std::pair<SupVerIter, SupVerIter> versions);
+				static TLSSupportedVersionsExtensionLittleEndian generate_object(UShort length, std::pair<SupVerIter, SupVerIter> versions);
 
 				UShort get_tls_versions_full_length() const;
 				UShort get_tls_versions_length() const;
@@ -1715,8 +1724,8 @@ namespace QVPN {
 					std::copy(first, first + length + 4, std::back_inserter(key_exchange_));
 				}
 
-				static std::vector<UByte> generate_object_bytes(UShort length = 32);
-				static TLSKeyShareEntryLittleEndian generate_object(UShort length = 32);
+				static std::vector<UByte> generate_object_bytes(UShort length = 32, TLSKeyTypes key_type = TLSKeyTypes::X25519);
+				static TLSKeyShareEntryLittleEndian generate_object(UShort length = 32, TLSKeyTypes key_type = TLSKeyTypes::X25519);
 
 				UShort get_tls_key_share_entry_full_length() const;
 				UShort get_tls_key_share_entry_length() const;
@@ -1778,8 +1787,8 @@ namespace QVPN {
 				}
 
 				static TLSExtensionType get_extension_type();
-				static std::vector<UByte> generate_object_bytes(UShort length = 36);
-				static TLSKeyShareEntryLittleEndian generate_object(UShort length = 36);
+				static std::vector<UByte> generate_object_bytes(UShort length, std::pair<KeyShareIter, KeyShareIter> key_shares);
+				static TLSKeyShareEntryLittleEndian generate_object(UShort length, std::pair<KeyShareIter, KeyShareIter> key_shares);
 
 				UShort get_tls_key_share_full_length() const;
 				UShort get_tls_key_share_length() const;
@@ -1836,8 +1845,8 @@ namespace QVPN {
 					std::copy(first, first + length_ + 3, std::back_inserter(data_));
 				}
 
-				static std::vector<UByte> generate_object_bytes(UShort length = 11, std::string_view host = "vk.com");
-				static TLSServerNameIndicationEntryLittleEndian generate_object(UShort length = 11, std::string_view host = "vk.com");
+				static std::vector<UByte> generate_object_bytes(UShort length = 6, std::string_view host = "vk.com");
+				static TLSServerNameIndicationEntryLittleEndian generate_object(UShort length = 6, std::string_view host = "vk.com");
 
 				UShort get_tls_sni_full_length() const;
 				UShort get_tls_sni_length() const;
@@ -1895,9 +1904,9 @@ namespace QVPN {
 					std::copy(first, first + length_ + 2, std::back_inserter(data_));
 				}
 
-				static TLSExtensionType get_tls_extension_type();
-				static std::vector<UByte> generate_object_bytes(UShort length = 11, std::string_view host = "vk.com");
-				static TLSServerNameIndicationExtensionLittleEndian generate_object(UShort length = 11, std::string_view host = "vk.com");
+				static TLSExtensionType get_extension_type();
+				static std::vector<UByte> generate_object_bytes(UShort length, std::pair<SNIIter, SNIIter> hosts);
+				static TLSServerNameIndicationExtensionLittleEndian generate_object(UShort length, std::pair<SNIIter, SNIIter> hosts);
 
 				UShort get_tls_sni_full_length() const;
 				UShort get_tls_sni_length() const;
@@ -2050,13 +2059,36 @@ namespace QVPN {
 					{ t.get_session_length() } -> std::same_as<UByte>;
 					{ t.get_cipher_length() } -> std::same_as<UShort>;
 					{ t.get_compression_length() } -> std::same_as<UShort>;
-					{ t.get_extenstions_length() } -> std::same_as<UShort>;
 
+					// extensions
+					// tls sup ver ext
+					{ t.get_supported_versions_length() } -> std::same_as<UShort>;
+					{ t.get_supported_versions() } -> std::same_as<std::vector<TLSProtocolVersion>>;
+
+					// tls key share client hello ext
+					{ t.get_key_share_length() } -> std::same_as<UShort>;
+					{ t.get_key_share() } -> std::same_as<std::vector<std::pair<TLSKeyTypes, TLSKeyTypesLength>>>;
+
+					// tls sni ext
+					{ t.get_sni_length() } -> std::same_as<UShort>;
+					{ t.get_sni_hosts() } -> std::same_as<std::vector<std::string_view>>;
 			};
 
 			class TLS13_DefaultGenerationStrategy
 			{
+			public:
+				UByte get_session_length() const;
+				UShort get_cipher_length() const;
+				UShort get_compression_length() const;
 
+				UShort get_supported_versions_length() const;
+				std::vector<TLSProtocolVersion> get_supported_versions() const;
+
+				UShort get_key_share_length() const;
+				std::vector<std::pair<TLSKeyTypes, TLSKeyTypesLength>> get_key_share() const;
+
+				UShort get_sni_length() const;
+				std::vector<std::string_view> get_sni_hosts() const;
 			};
 
 
@@ -2099,10 +2131,22 @@ namespace QVPN {
 					auto compres = TLSCompressionLittleEndian::generate_object_bytes(strategy.get_compression_length());
 					std::copy(compres.begin(), compres.end(), std::back_inserter(obj_bytes));
 
-					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes<>();
+					auto sup_vers = strategy.get_supported_versions();
+					auto key_shares = strategy.get_key_share();
+					auto sni_hosts = strategy.get_sni_hosts();
+
+					std::pair<SupVerIter, SupVerIter> vers_iters = std::make_pair<>(sup_vers.begin(), sup_vers.end());
+					std::pair<KeyShareIter, KeyShareIter> key_shares_iters = std::make_pair<>(key_shares.begin(), key_shares.end());
+					std::pair<SNIIter, SNIIter> hosts_iters = std::make_pair<>(sni_hosts.begin(), sni_hosts.end());
+
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSSupportedVersionsExtensionLittleEndian, UShort, std::pair<SupVerIter, SupVerIter>> sup_ver(std::move(strategy.get_supported_versions_length()), std::move(vers_iters));
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSKeyShareClientHelloLittleEndian, UShort, std::pair<KeyShareIter, KeyShareIter>> key_share(std::move(strategy.get_key_share_length()), std::move(key_shares_iters));
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSServerNameIndicationExtensionLittleEndian, UShort, std::pair<SNIIter, SNIIter>> sni(std::move(strategy.get_sni_length()), std::move(hosts_iters));
+
+					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes<>(std::move(sup_ver), std::move(key_share), std::move(sni));
 					std::copy(extensions.begin(), extensions.end(), std::back_inserter(obj_bytes));
 
-					return std::vector<UByte>();
+					return obj_bytes;
 				}
 
 				template <TLS13_ClientHelloGenStrategy GenStrategy>

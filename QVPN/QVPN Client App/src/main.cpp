@@ -34,16 +34,30 @@ using UShort = unsigned short;
 using TLSSupVerExt = QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian;
 using TLSExtensionLittleEndian = QVPN::Core::DataStructures::TLSExtensionLittleEndian;
 using TLSExtensionsLittleEndian = QVPN::Core::DataStructures::TLSExtensionsLittleEndian;
+using TLSDefaultGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy;
+using SupVerIter = QVPN::Core::DataStructures::SupVerIter;
+
+using TLSClientHello = QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian;
 
 int main()
 {
-    using TLSExtWrapper = QVPN::Core::DataStructures::TLSExtensionWrapper<TLSExtensionLittleEndian, TLSSupVerExt, UShort>;
-    TLSExtWrapper ex1{ 1 };
-    TLSExtWrapper ex2{ 2 };
+    TLSDefaultGenStrategy gen_strategy;
+    /*
+    using TLSExtWrapper = QVPN::Core::DataStructures::TLSExtensionWrapper<TLSExtensionLittleEndian, TLSSupVerExt, UShort, std::pair<SupVerIter, SupVerIter>>;
+
+    
+    UShort sup_ver_length = gen_strategy.get_supported_versions_length();
+    auto sup_versions = gen_strategy.get_supported_versions();
+    std::pair<SupVerIter, SupVerIter> sup_versions_iters = std::pair<SupVerIter, SupVerIter>(sup_versions.begin(), sup_versions.end());
+
+    TLSExtWrapper ex1( std::move(sup_ver_length), std::move(sup_versions_iters));
+    TLSExtWrapper ex2( std::move(sup_ver_length), std::move(sup_versions_iters));
 
     //TLSExtensionsLittleEndian exts;
     auto test_obj = TLSExtensionsLittleEndian::generate_object<TLSExtWrapper, TLSExtWrapper>(ex1, ex2);
+    */
 
+    TLSClientHello::generate_object<>(gen_strategy);
     QVPN::WinDivertExt::WinDivertTrafficFilter filter;
 
     test(!filter.ipv4() && filter.tcp() && filter.udp());
