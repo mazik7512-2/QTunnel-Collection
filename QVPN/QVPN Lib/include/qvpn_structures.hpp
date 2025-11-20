@@ -1465,6 +1465,7 @@ namespace QVPN {
 
 			public:
 
+				template<class ... Args>
 				TLSExtensionWrapper(Args&&... args)
 					: args_(std::forward<Args>(args)...)
 				{
@@ -1481,11 +1482,13 @@ namespace QVPN {
 					return TLSExtension::get_extension_type();
 				}
 
+				template <class ... Args>
 				static std::vector<UByte> generate_object_bytes(Args&&... args)
 				{
 					return TLSExtension:: template generate_object_bytes<TLSExtensionData, Args...>(std::forward<Args>(args)...);
 				}
 
+				template <class ... Args>
 				static TLSExtension generate_object(Args&&... args)
 				{
 					return TLSExtension:: template generate_object<TLSExtensionData, Args...>(std::forward<Args>(args)...);
@@ -1513,19 +1516,22 @@ namespace QVPN {
 
 				
 				template <class ... TLSExtensions> // разобраться с концпетом TLSExtensionWrapperGenerator
-				static std::vector<UByte> generate_object_bytes(TLSExtensions ... ext)
+				static std::vector<UByte> generate_object_bytes(TLSExtensions&& ... ext)
 				{
-					std::vector<std::vector<UByte>> obj_bytes;
-					std::vector<UByte> res;
+					std::vector<std::vector<UByte>> obj_bytes{};
+					std::vector<UByte> res{};
 					UShort size = 0;
-
-					obj_bytes.push_back(std::vector<UByte>{});
+					// почесму-то не считает размер
 					// создается лямбда с параметром index_seq, в которой содержится fold expression которое раскрывается для каждого расширения с параметрами из tuple по его индексу и тут же вызывается
-					[&] <size_t... iters>(std::index_sequence<iters...>) {
-						((obj_bytes.push_back(std::apply(TLSExtensions::generate_object_bytes, std::move(ext.get_args())))), ...); // fold expression
-						((size += obj_bytes[iters].size()), ...);
-					}(std::make_index_sequence<sizeof...(TLSExtensions)>{});
+					[&ext..., &obj_bytes]() {
+						((obj_bytes.push_back(std::move(std::apply(TLSExtensions:: template generate_object_bytes<>, std::forward_as_tuple(ext.get_args()))))), ...); // fold expression
+						//((size += obj_bytes[iters].size()), ...);
+					}();
 
+					for (size_t i = 0; i < obj_bytes.size(); i++)
+					{
+						size += obj_bytes[i].size();
+					}
 
 					res.push_back(static_cast<UByte>(size >> 8 & 8));
 					res.push_back(static_cast<UByte>(size & 8));
@@ -1537,7 +1543,7 @@ namespace QVPN {
 				}
 
 				template<class ...TLSExtensions> // разобраться с концпетом TLSExtensionWrapperGenerator
-				static TLSExtensionsLittleEndian generate_object(TLSExtensions ... ext)
+				static TLSExtensionsLittleEndian generate_object(TLSExtensions&& ... ext)
 				{
 					auto objs_bytes = generate_object_bytes<TLSExtensions...>(ext...);
 					return TLSExtensionsLittleEndian(objs_bytes.begin(), objs_bytes.end());
@@ -2139,11 +2145,11 @@ namespace QVPN {
 					std::pair<KeyShareIter, KeyShareIter> key_shares_iters = std::make_pair<>(key_shares.begin(), key_shares.end());
 					std::pair<SNIIter, SNIIter> hosts_iters = std::make_pair<>(sni_hosts.begin(), sni_hosts.end());
 
-					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSSupportedVersionsExtensionLittleEndian, UShort, std::pair<SupVerIter, SupVerIter>> sup_ver(std::move(strategy.get_supported_versions_length()), std::move(vers_iters));
-					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSKeyShareClientHelloLittleEndian, UShort, std::pair<KeyShareIter, KeyShareIter>> key_share(std::move(strategy.get_key_share_length()), std::move(key_shares_iters));
-					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSServerNameIndicationExtensionLittleEndian, UShort, std::pair<SNIIter, SNIIter>> sni(std::move(strategy.get_sni_length()), std::move(hosts_iters));
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSSupportedVersionsExtensionLittleEndian, UShort, std::pair<SupVerIter, SupVerIter>> sup_ver(strategy.get_supported_versions_length(), vers_iters);
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSKeyShareClientHelloLittleEndian, UShort, std::pair<KeyShareIter, KeyShareIter>> key_share(strategy.get_key_share_length(), key_shares_iters);
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSServerNameIndicationExtensionLittleEndian, UShort, std::pair<SNIIter, SNIIter>> sni(strategy.get_sni_length(), hosts_iters);
 
-					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes<>(std::move(sup_ver), std::move(key_share), std::move(sni));
+					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes<>(sup_ver, key_share, sni);
 					std::copy(extensions.begin(), extensions.end(), std::back_inserter(obj_bytes));
 
 					return obj_bytes;

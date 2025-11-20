@@ -2032,27 +2032,27 @@ void unified_parse_client_scheme(QVPN::Core::DataStructures::TLS13_HelloPacketSc
 {
 	QVPN::Core::DataStructures::TLSRandomView r(first, last);
 	size_t start = 2;
-	size_t end = r.get_tls_random_full_length();
+	size_t end = start + r.get_tls_random_full_length();
 	scheme.random = std::make_pair<>(start, end);
 
 	QVPN::Core::DataStructures::TLSSessionIDView s(first + end, last);
 	start = end;
-	end = s.get_tls_id_full_length();
+	end = start + s.get_tls_id_full_length();
 	scheme.session = std::make_pair<>(start, end);
 
 	QVPN::Core::DataStructures::TLSCipherSuitView c(first + end, last);
 	start = end;
-	end = c.get_tls_ciphers_full_length();
+	end = start + c.get_tls_ciphers_full_length();
 	scheme.ciphers = std::make_pair<>(start, end);
 
 	QVPN::Core::DataStructures::TLSCompressionView comp(first + end, last);
 	start = end;
-	end = comp.get_tls_compressions_full_length();
+	end = start + comp.get_tls_compressions_full_length();
 	scheme.compressions = std::make_pair<>(start, end);
 
 	QVPN::Core::DataStructures::TLSExtensionsView ext(first + end, last);
 	start = end;
-	end = ext.get_tls_extensions_full_length();
+	end = start + ext.get_tls_extensions_full_length();
 	scheme.extensions = std::make_pair<>(start, end);
 }
 

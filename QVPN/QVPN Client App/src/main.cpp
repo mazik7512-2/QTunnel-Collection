@@ -57,7 +57,7 @@ int main()
     auto test_obj = TLSExtensionsLittleEndian::generate_object<TLSExtWrapper, TLSExtWrapper>(ex1, ex2);
     */
 
-    TLSClientHello::generate_object<>(gen_strategy);
+    auto client_hello = TLSClientHello::generate_object<>(gen_strategy);
     QVPN::WinDivertExt::WinDivertTrafficFilter filter;
 
     test(!filter.ipv4() && filter.tcp() && filter.udp());
