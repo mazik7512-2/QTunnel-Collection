@@ -198,6 +198,23 @@ namespace QVPN
 
 		};
 
+
+		namespace Tools
+		{
+			template <class Callable, class ... Args>
+			decltype(auto) function_invoker(Callable F, Args&& ... args)
+			{
+				return F(std::forward<Args>(args)...);
+			}
+
+			template <class Callable, class ... Args>
+			decltype(auto) function_invoker(Callable&& F, std::tuple<Args...>& tuple)
+			{
+				constexpr size_t tuple_args_count = std::tuple_size_v<std::tuple<Args...>>;
+				return[&] <size_t ... it>(std::index_sequence<it...>) { return F(std::get<it>(tuple)...); }(std::make_index_sequence<tuple_args_count>{});
+			}
+		}
+
 	}
 
 }

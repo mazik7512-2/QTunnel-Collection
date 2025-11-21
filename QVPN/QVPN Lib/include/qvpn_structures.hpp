@@ -1360,7 +1360,9 @@ namespace QVPN {
 			template <class TLSExtensionImpl, class ... Args>
 			concept TLSExtensionWrapperGenerator =
 				requires (TLSExtensionImpl t) {
-					{ t.get_args() } -> std::same_as<const std::tuple<Args...>>;
+
+				typename TLSExtensionImpl::ArgsType;
+					{ t.get_args() } -> std::same_as<std::tuple<Args...>&>;
 
 			} && TLSExtensionGenerator<TLSExtensionImpl, Args...>;
 
@@ -1394,17 +1396,15 @@ namespace QVPN {
 				{
 					auto args_size = 0;
 					((args_size += sizeof(args)), ...);
-					//auto length = std::get<0>(args...);
-					//UShort full_length = length + sizeof(length) + sizeof(TLSExtension::get_extension_type());
-					//std::get<0>(args...) = full_length;
 
 					std::vector<UByte> obj_bytes;
-					auto ext_bytes = std::apply(TLSExtension::generate_object_bytes, std::forward<FuncArgs>(args)...);//TLSExtension::generate_object_bytes(args_);//std::apply(TLSExtension::generate_object_bytes, args_); // ОШИБКА ЗДЕСЬ нужно как-то раскрыть tuple , пробовать std::apply
+					auto ext_bytes = TLSExtension::generate_object_bytes(std::forward<FuncArgs>(args)...);//std::apply(TLSExtension::generate_object_bytes, std::forward<FuncArgs>(args)...);//TLSExtension::generate_object_bytes(args_);//std::apply(TLSExtension::generate_object_bytes, args_); // ОШИБКА ЗДЕСЬ нужно как-то раскрыть tuple , пробовать std::apply
 					auto ext_type = static_cast<UShort>(TLSExtension::get_extension_type());
+					auto length = ext_bytes.size();
 					obj_bytes.push_back(ext_type >> 8 & 0xFF);
 					obj_bytes.push_back(ext_type & 0xFF);
-					obj_bytes.push_back(0 >> 8 & 0xFF);
-					obj_bytes.push_back(0 & 0xFF);
+					obj_bytes.push_back(static_cast<UByte>(length >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(length & 0xFF));
 					std::copy(ext_bytes.begin(), ext_bytes.end(), std::back_inserter(obj_bytes));
 					return obj_bytes;
 				}
@@ -1457,7 +1457,7 @@ namespace QVPN {
 			// разобраться с концептами (TLSExtensionWrapperGenerator, ...)
 			template <class TLSExtension, class TLSExtensionData, class ... Args>
 			class TLSExtensionWrapper final
-			{
+			{	
 			private:
 
 				std::tuple<Args...> args_;
@@ -1466,10 +1466,7 @@ namespace QVPN {
 
 				template<class ... FuncArgs>
 				TLSExtensionWrapper(FuncArgs&& ... args)
-					: args_(std::forward<FuncArgs>(args)...)
-				{
-					//args_ = std::make_tuple<>(std::forward<Args>(args...));
-				}
+					: args_(std::forward<FuncArgs>(args)...) {}
 
 				std::tuple<Args...>& get_args()
 				{
@@ -1481,11 +1478,11 @@ namespace QVPN {
 					return TLSExtension::get_extension_type();
 				}
 
-				template <class ... FuncArgs>
-				static std::vector<UByte> generate_object_bytes(FuncArgs&&... args)
+				//template <class ... FuncArgs>
+				static std::vector<UByte> generate_object_bytes(Args... args)
 				{
 					std::cout << "TLS Ext Wrapper generate object bytes call " << std::endl;
-					return TLSExtension:: template generate_object_bytes<TLSExtensionData, FuncArgs...>(std::forward<FuncArgs>(args)...);
+					return TLSExtension:: template generate_object_bytes<TLSExtensionData, Args...>(std::forward<Args>(args)...);
 				}
 
 				template <class ... FuncArgs>
@@ -1494,11 +1491,6 @@ namespace QVPN {
 					return TLSExtension:: template generate_object<TLSExtensionData, FuncArgs...>(std::forward<FuncArgs>(args)...);
 				}
 			};
-
-
-			class TLS13_DefaultGenerationStrategy;
-			class TLSSupportedVersionsExtensionLittleEndian;
-			using SupVerIter = std::vector<TLSProtocolVersion>::iterator;
 
 			class TLSExtensionsLittleEndian final
 			{
@@ -1520,25 +1512,20 @@ namespace QVPN {
 
 				
 				template <class ... TLSExtensionWrapperType> // разобраться с концпетом TLSExtensionWrapperGenerator
-				static std::vector<UByte> generate_object_bytes(TLSExtensionWrapperType ... ext)
+				static std::vector<UByte> generate_object_bytes(TLSExtensionWrapperType&& ... ext)
 				{
 					std::vector<std::vector<UByte>> obj_bytes{};
 					std::vector<UByte> res{};
 					UShort size = 0;
 					
-
-					((obj_bytes.push_back(TLSExtensionWrapperType::generate_object_bytes(ext.get_args()))), ...); // работает но передает std::tuple
-
-					[&]<size_t... iters> (std::index_sequence<iters...>) {
-						((size += obj_bytes[iters].size()), ...);
+					((obj_bytes.push_back(std::apply(TLSExtensionWrapperType::generate_object_bytes, ext.get_args()))), ...);
+					[&]<size_t... i> (std::index_sequence<i...>) {
+						((size += obj_bytes[i].size()), ...);
+						((std::copy(obj_bytes[i].begin(), obj_bytes[i].end(), std::back_inserter(res))), ...);
 					}(std::make_index_sequence<sizeof...(TLSExtensionWrapperType)>{});
 
-					res.push_back(static_cast<UByte>(size >> 8 & 0xFF));
-					res.push_back(static_cast<UByte>(size & 0xFF));
-					for (size_t i = 0; i < obj_bytes.size(); i++)
-					{
-						std::copy(obj_bytes[i].begin(), obj_bytes[i].end(), std::back_inserter(res));
-					}
+					res.insert(res.begin(), static_cast<UByte>(size >> 8 & 0xFF));
+					res.insert(res.begin() + 1, static_cast<UByte>(size & 0xFF));
 					return res;
 				}
 
@@ -1665,17 +1652,17 @@ namespace QVPN {
 				template<std::random_access_iterator Iter>
 				TLSSupportedVersionsExtensionLittleEndian(Iter first, Iter last)
 				{
-					auto length = static_cast<UShort>(first[0]);
-					std::copy(first, first + length + 2, std::back_inserter(versions_));
+					auto length = static_cast<UByte>(first[0]);
+					std::copy(first, first + length + 1, std::back_inserter(versions_));
 				}
 
 
 				static TLSExtensionType get_extension_type();
-				static std::vector<UByte> generate_object_bytes(UShort length, std::pair<SupVerIter, SupVerIter> versions);
+				static std::vector<UByte> generate_object_bytes(UByte length, std::pair<SupVerIter, SupVerIter> versions);
 				static TLSSupportedVersionsExtensionLittleEndian generate_object(UShort length, std::pair<SupVerIter, SupVerIter> versions);
 
 				UShort get_tls_versions_full_length() const;
-				UShort get_tls_versions_length() const;
+				UByte get_tls_versions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_supported_versions() const;
 
 				/* Unified Packet implementaion */
@@ -1703,7 +1690,7 @@ namespace QVPN {
 				}
 
 				UShort get_tls_versions_full_length() const;
-				UShort get_tls_versions_length() const;
+				UByte get_tls_versions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_supported_versions() const;
 
 				/* Unified Packet implementaion */
@@ -2146,11 +2133,11 @@ namespace QVPN {
 					std::pair<SNIIter, SNIIter> hosts_iters = std::make_pair<>(sni_hosts.begin(), sni_hosts.end());
 
 					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSSupportedVersionsExtensionLittleEndian, UShort, std::pair<SupVerIter, SupVerIter>> sup_ver(strategy.get_supported_versions_length(), vers_iters);
-					//TLSExtensionWrapper<TLSExtensionLittleEndian, TLSKeyShareClientHelloLittleEndian, UShort, std::pair<KeyShareIter, KeyShareIter>> key_share(strategy.get_key_share_length(), key_shares_iters);
-					//TLSExtensionWrapper<TLSExtensionLittleEndian, TLSServerNameIndicationExtensionLittleEndian, UShort, std::pair<SNIIter, SNIIter>> sni(strategy.get_sni_length(), hosts_iters);
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSKeyShareClientHelloLittleEndian, UShort, std::pair<KeyShareIter, KeyShareIter>> key_share(strategy.get_key_share_length(), key_shares_iters);
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSServerNameIndicationExtensionLittleEndian, UShort, std::pair<SNIIter, SNIIter>> sni(strategy.get_sni_length(), hosts_iters);
 
-					//auto extensions = TLSExtensionsLittleEndian::generate_object_bytes<>(sup_ver, key_share, sni);
-					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes<>(std::move(sup_ver));
+					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver), std::move(key_share), std::move(sni));
+					//auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver));
 					std::copy(extensions.begin(), extensions.end(), std::back_inserter(obj_bytes));
 
 					return obj_bytes;
