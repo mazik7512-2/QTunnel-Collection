@@ -13,6 +13,7 @@
 #include <tuple>
 #include <functional>
 #include <algorithm>
+#include <type_traits>
 
 
 
@@ -1478,11 +1479,11 @@ namespace QVPN {
 					return TLSExtension::get_extension_type();
 				}
 
-				//template <class ... FuncArgs>
-				static std::vector<UByte> generate_object_bytes(Args... args)
+				template <class ... FuncArgs>
+				static std::vector<UByte> generate_object_bytes(FuncArgs&&... args)
 				{
 					std::cout << "TLS Ext Wrapper generate object bytes call " << std::endl;
-					return TLSExtension:: template generate_object_bytes<TLSExtensionData, Args...>(std::forward<Args>(args)...);
+					return TLSExtension:: template generate_object_bytes<TLSExtensionData, FuncArgs...>(std::forward<FuncArgs>(args)...);
 				}
 
 				template <class ... FuncArgs>
@@ -1501,6 +1502,17 @@ namespace QVPN {
 			private:
 				std::vector<UByte> extensions_;
 
+				// need to unpack tuple params
+				template <class ExtWrapper, class Tuple>
+				static decltype(auto) extension_wrapper_caller(Tuple&& tuple)
+				{
+					using NoRefTupleType = std::remove_reference_t<Tuple>;
+					return[&]<size_t ... args_index>(std::index_sequence<args_index ...>)
+					{
+						return std::apply(ExtWrapper:: template generate_object_bytes<std::tuple_element_t<args_index, NoRefTupleType>...>, std::forward<NoRefTupleType>(tuple));
+					}(std::make_index_sequence<std::tuple_size_v<NoRefTupleType>>{});
+				}
+
 			public:
 
 				template<std::random_access_iterator Iter>
@@ -1518,7 +1530,7 @@ namespace QVPN {
 					std::vector<UByte> res{};
 					UShort size = 0;
 					
-					((obj_bytes.push_back(std::apply(TLSExtensionWrapperType::generate_object_bytes, ext.get_args()))), ...);
+					((obj_bytes.push_back(extension_wrapper_caller<TLSExtensionWrapperType>(ext.get_args()))), ...);
 					[&]<size_t... i> (std::index_sequence<i...>) {
 						((size += obj_bytes[i].size()), ...);
 						((std::copy(obj_bytes[i].begin(), obj_bytes[i].end(), std::back_inserter(res))), ...);
