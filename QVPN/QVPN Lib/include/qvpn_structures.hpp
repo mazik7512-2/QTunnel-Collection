@@ -1395,11 +1395,8 @@ namespace QVPN {
 				template <class TLSExtension, class ... FuncArgs>
 				static std::vector<UByte> generate_object_bytes(FuncArgs&& ... args)
 				{
-					auto args_size = 0;
-					((args_size += sizeof(args)), ...);
-
 					std::vector<UByte> obj_bytes;
-					auto ext_bytes = TLSExtension::generate_object_bytes(std::forward<FuncArgs>(args)...);//std::apply(TLSExtension::generate_object_bytes, std::forward<FuncArgs>(args)...);//TLSExtension::generate_object_bytes(args_);//std::apply(TLSExtension::generate_object_bytes, args_); // ОШИБКА ЗДЕСЬ нужно как-то раскрыть tuple , пробовать std::apply
+					auto ext_bytes = TLSExtension::generate_object_bytes(std::forward<FuncArgs>(args)...);
 					auto ext_type = static_cast<UShort>(TLSExtension::get_extension_type());
 					auto length = ext_bytes.size();
 					obj_bytes.push_back(ext_type >> 8 & 0xFF);
@@ -1482,7 +1479,6 @@ namespace QVPN {
 				template <class ... FuncArgs>
 				static std::vector<UByte> generate_object_bytes(FuncArgs&&... args)
 				{
-					std::cout << "TLS Ext Wrapper generate object bytes call " << std::endl;
 					return TLSExtension:: template generate_object_bytes<TLSExtensionData, FuncArgs...>(std::forward<FuncArgs>(args)...);
 				}
 
@@ -1960,7 +1956,19 @@ namespace QVPN {
 					{ t.get_tls_record_length() } -> std::same_as<UShort>;
 					{ t.get_tls_record_data() } -> std::same_as<std::pair<typename TLSRecordImpl::ConstDataIterator_t, typename TLSRecordImpl::ConstDataIterator_t>>;
 
-			}&& UnifiedPacketLike<TLSRecordImpl>;
+			} && UnifiedPacketLike<TLSRecordImpl>;
+
+
+			template <class TLSMessageImpl>
+			concept TLS13_MessagePacketLike =
+				requires (TLSMessageImpl t) {
+					{ t.get_tls_msg_type() } -> std::same_as<TLSMessageType>;
+					{ t.get_tls_msg_length() } -> std::same_as<UInt>;
+					{ t.get_tls_msg_full_length() } -> std::same_as<UInt>;
+					{ t.get_tls_msg_data() } -> std::same_as<std::pair<typename TLSMessageImpl::ConstDataIterator_t, typename TLSMessageImpl::ConstDataIterator_t>>;
+
+			} && UnifiedPacketLike<TLSMessageImpl>;
+
 
 			template <class TLSClientHelloImpl>
 			concept TLS13_ClientHelloPacketLike =
@@ -1973,7 +1981,7 @@ namespace QVPN {
 					{ t.get_tls_extensions_data() } -> std::same_as<TLSExtensionsView>;
 					{ t.get_tls_sni_data() } -> std::same_as<TLSServerNameIndicationExtensionView>;
 
-			}&& UnifiedPacketLike<TLSClientHelloImpl>;
+			} && UnifiedPacketLike<TLSClientHelloImpl>;
 
 
 			template <class TLSServerHelloImpl>
@@ -1987,18 +1995,24 @@ namespace QVPN {
 					{ t.get_tls_compression_methods() } -> std::same_as<TLSCompressionMethod>;
 					{ t.get_tls_extensions_data() } -> std::same_as<TLSExtensionsView>;
 
-			}&& UnifiedPacketLike<TLSServerHelloImpl>;
+			} && UnifiedPacketLike<TLSServerHelloImpl>;
 
 
-			template <class TLSMessageImpl>
-			concept TLS13_MessagePacketLike =
-				requires (TLSMessageImpl t) {
-					{ t.get_tls_msg_type() } -> std::same_as<TLSMessageType>;
-					{ t.get_tls_msg_length() } -> std::same_as<UInt>;
-					{ t.get_tls_msg_full_length() } -> std::same_as<UInt>;
-					{ t.get_tls_msg_data() } -> std::same_as<std::pair<typename TLSMessageImpl::ConstDataIterator_t, typename TLSMessageImpl::ConstDataIterator_t>>;
+			template <class TLSPacketImpl, class ... Args> // not TLSExtensionGenerator
+			concept TLSPacketGeneratorLike = 
+				requires (TLSPacketImpl t, Args&& ... args) {
 
-			}&& UnifiedPacketLike<TLSMessageImpl>;
+				typename TLSPacketImpl::OverlayProtocolType;
+				{ TLSPacketImpl::get_overlay_protocol_type() } -> std::same_as<typename TLSPacketImpl::OverlayProtocolType>;
+				{ TLSPacketImpl::generate_object_bytes(args...) } -> std::same_as<std::vector<UByte>>;
+				{ TLSPacketImpl::generate_object(args...) } -> std::same_as<TLSPacketImpl>;
+
+			};
+
+
+			template <class TLSPacketImpl, class ... Args>
+			concept TLSHelloPacketGeneratorLike = TLSPacketGeneratorLike<TLSPacketImpl, Args...> && (TLS13_ClientHelloPacketLike<TLSPacketImpl> || TLS13_ServerHelloPacketLike<TLSPacketImpl>);
+
 
 			template <std::integral Val>
 			struct TLS13_HelloPacketScheme
@@ -2017,6 +2031,7 @@ namespace QVPN {
 
 				using DataIterator_t = std::vector<UByte>::iterator;
 				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using OverlayProtocolType = TLSRecordType;
 
 			private:
 				std::vector<UByte> data_;
@@ -2028,6 +2043,29 @@ namespace QVPN {
 				TLSMessageType get_tls_msg_type() const;
 				UInt get_tls_msg_length() const;
 				UInt get_tls_msg_full_length() const;
+
+				template <class TLSPacketGenerator, class TLSGenerationStrategy>
+				static std::vector<UByte> generate_object_bytes(TLSGenerationStrategy&& strategy)
+				{
+					std::vector<UByte> obj_bytes = TLSPacketGenerator:: template generate_object_bytes<TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+					auto size = static_cast<UInt>(obj_bytes.size());
+					TLSMessageType msg_type = TLSPacketGenerator::get_overlay_protocol_type();
+
+					obj_bytes.insert(obj_bytes.begin(), static_cast<UByte>(msg_type));
+
+					obj_bytes.insert(obj_bytes.begin() + 1, static_cast<UByte>(size >> 16 & 0xFF));
+					obj_bytes.insert(obj_bytes.begin() + 2, static_cast<UByte>(size >> 8 & 0xFF));
+					obj_bytes.insert(obj_bytes.begin() + 3, static_cast<UByte>(size & 0xFF));
+
+					return obj_bytes;
+				}
+
+				template <class TLSGenerator, class TLSGenerationStrategy>
+				static TLS13_MessageLittleEndian generate_object(TLSGenerationStrategy&& strategy)
+				{
+					auto obj_bytes = generate_object_bytes<TLSGenerator, TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+					return TLS13_MessageLittleEndian(obj_bytes.begin(), obj_bytes.end());
+				}
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_msg_data() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -2103,6 +2141,7 @@ namespace QVPN {
 			public:
 				using DataIterator_t = std::vector<UByte>::iterator;
 				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using OverlayProtocolType = TLSMessageType;
 
 			private:
 				std::vector<UByte> data_;
@@ -2162,6 +2201,8 @@ namespace QVPN {
 					return TLS13_ClientHelloPacketLittleEndian(obj_bytes.begin(), obj_bytes.end());
 				}
 
+				static OverlayProtocolType get_overlay_protocol_type();
+
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;
 				TLSSessionIDView get_tls_session() const;
@@ -2180,6 +2221,7 @@ namespace QVPN {
 			public:
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = const UByte*;
+				using OverlayProtocolType = TLSMessageType;
 
 			private:
 				UByte* data_;
@@ -2198,6 +2240,9 @@ namespace QVPN {
 					parse_scheme();
 				}
 
+
+				static OverlayProtocolType get_overlay_protocol_type();
+
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;
 				TLSSessionIDView get_tls_session() const;
@@ -2215,6 +2260,7 @@ namespace QVPN {
 			public:
 				using DataIterator_t = std::vector<UByte>::iterator;
 				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using OverlayProtocolType = TLSMessageType;
 
 			private:
 				std::vector<UByte> data_;
@@ -2225,6 +2271,8 @@ namespace QVPN {
 			public:
 
 				TLS13_ServerHelloPacketLittleEndian(UByte* begin, UByte* end);
+
+				static OverlayProtocolType get_overlay_protocol_type();
 
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;
@@ -2243,6 +2291,7 @@ namespace QVPN {
 			public:
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = const UByte*;
+				using OverlayProtocolType = TLSMessageType;
 
 			private:
 				UByte* data_;
@@ -2254,6 +2303,8 @@ namespace QVPN {
 			public:
 
 				TLS13_ServerHelloPacketView(UByte* begin, UByte* end);
+
+				static OverlayProtocolType get_overlay_protocol_type();
 
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;

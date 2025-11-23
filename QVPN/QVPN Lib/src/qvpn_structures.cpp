@@ -1677,9 +1677,7 @@ QVPN::Core::DataStructures::TLSExtensionType QVPN::Core::DataStructures::TLSSupp
 
 std::vector<UByte> QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian::generate_object_bytes(UByte length, std::pair<SupVerIter, SupVerIter> versions)
 {
-	std::cout << "TLSSupVerExt generate object bytes call" << std::endl;
 	auto full_length = length + sizeof(length);
-	//auto obj_bytes = TLSTools::vector_bytes_generator<UByte>(length, sizeof(length));
 	std::vector<UByte> obj_bytes;
 	obj_bytes.push_back(length & 0xFF);
 	for (auto& i = versions.first; i < versions.second; i++)
@@ -2065,6 +2063,11 @@ void QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::parse_sche
 	unified_parse_client_scheme<size_t, UByte*>(scheme_, data_.data(), data_.data() + data_.size());
 }
 
+QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::OverlayProtocolType QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_overlay_protocol_type()
+{
+	return OverlayProtocolType::CLIENT_HELLO;
+}
+
 UShort QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_tls_version() const
 {
 	return static_cast<UShort>(data_[0] << 8 | data_[1]);
@@ -2127,6 +2130,11 @@ std::pair<QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::Const
 void QVPN::Core::DataStructures::TLS13_ClientHelloPacketView::parse_scheme()
 {
 	unified_parse_client_scheme<size_t, UByte*>(scheme_, data_, data_ + size_);
+}
+
+QVPN::Core::DataStructures::TLS13_ClientHelloPacketView::OverlayProtocolType QVPN::Core::DataStructures::TLS13_ClientHelloPacketView::get_overlay_protocol_type()
+{
+	return OverlayProtocolType::CLIENT_HELLO;
 }
 
 UShort QVPN::Core::DataStructures::TLS13_ClientHelloPacketView::get_tls_version() const
@@ -2302,6 +2310,11 @@ QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::TLS13_ServerHel
 	parse_scheme();
 }
 
+QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::OverlayProtocolType QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::get_overlay_protocol_type()
+{
+	return OverlayProtocolType::SERVER_HELLO;
+}
+
 UShort QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian::get_tls_version() const
 {
 	return static_cast<UShort>(data_[0] << 8 | data_[1]);
@@ -2351,6 +2364,11 @@ QVPN::Core::DataStructures::TLS13_ServerHelloPacketView::TLS13_ServerHelloPacket
 	data_ = begin;
 	size_ = std::distance(begin, end);
 	parse_scheme();
+}
+
+QVPN::Core::DataStructures::TLS13_ServerHelloPacketView::OverlayProtocolType QVPN::Core::DataStructures::TLS13_ServerHelloPacketView::get_overlay_protocol_type()
+{
+	return OverlayProtocolType::SERVER_HELLO;
 }
 
 UShort QVPN::Core::DataStructures::TLS13_ServerHelloPacketView::get_tls_version() const
