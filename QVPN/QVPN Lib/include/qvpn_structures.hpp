@@ -1951,7 +1951,7 @@ namespace QVPN {
 			concept TLSRecordPacketLike =
 				requires (TLSRecordImpl t) {
 					{ t.get_tls_record_type() } -> std::same_as<TLSRecordType>;
-					{ t.get_tls_record_version() } -> std::same_as<TLSProtocolVersion>;
+					{ t.get_tls_protocol_version() } -> std::same_as<TLSProtocolVersion>;
 					{ t.get_tls_record_full_length() } -> std::same_as<UShort>;
 					{ t.get_tls_record_length() } -> std::same_as<UShort>;
 					{ t.get_tls_record_data() } -> std::same_as<std::pair<typename TLSRecordImpl::ConstDataIterator_t, typename TLSRecordImpl::ConstDataIterator_t>>;
@@ -2012,6 +2012,114 @@ namespace QVPN {
 
 			template <class TLSPacketImpl, class ... Args>
 			concept TLSHelloPacketGeneratorLike = TLSPacketGeneratorLike<TLSPacketImpl, Args...> && (TLS13_ClientHelloPacketLike<TLSPacketImpl> || TLS13_ServerHelloPacketLike<TLSPacketImpl>);
+
+
+			template <class TLSStrategy>
+			concept TLSRecordGenerationStrategy =
+				requires (TLSStrategy t) {
+					
+					{ t.get_legacy_version() } -> std::same_as<TLSProtocolVersion>;
+			};
+
+
+			class TLS13_RecordLittleEndian
+			{
+			public:
+				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+			private:
+
+				std::vector<UByte> data_;
+
+			public:
+
+				template <std::random_access_iterator Iter>
+				TLS13_RecordLittleEndian(Iter begin, Iter end)
+				{
+					std::copy(begin, end, std::back_inserter(data_));
+				}
+
+
+				template <class TLSPacketGenerator, TLSRecordGenerationStrategy TLSRecordGeneStrategy, class ... Args>
+				static std::vector<UByte> generate_object_bytes(TLSRecordGeneStrategy&& rec_strategy, Args&& ... args)
+				{
+					std::vector<UByte> obj_bytes = TLSPacketGenerator:: template generate_object_bytes<Args>(std::forward<Args>(args)...);
+					auto size = static_cast<UShort>(obj_bytes.size());
+
+					TLSMessageType msg_type = TLSPacketGenerator::get_overlay_protocol_type();
+					obj_bytes.insert(obj_bytes.begin(), static_cast<UByte>(msg_type));
+
+					auto legacy_version = rec_strategy.get_legacy_version();
+					obj_bytes.insert(obj_bytes.begin() + 1, static_cast<UByte>(legacy_version >> 8 & 0xFF));
+					obj_bytes.insert(obj_bytes.begin() + 2, static_cast<UByte>(legacy_version & 0xFF));
+
+					obj_bytes.insert(obj_bytes.begin() + 3, static_cast<UByte>(size >> 8 & 0xFF));
+					obj_bytes.insert(obj_bytes.begin() + 4, static_cast<UByte>(size & 0xFF));
+
+					return obj_bytes;
+				}
+
+				template <class TLSPacketGenerator, class TLSGenerationStrategy>
+				static TLS13_RecordLittleEndian generate_object(TLSGenerationStrategy&& strategy)
+				{
+					auto obj_bytes = generate_object_bytes<TLSPacketGenerator, TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+					return TLS13_RecordLittleEndian(obj_bytes.begin(), obj_bytes.end());
+				}
+
+				TLSRecordType get_tls_record_type() const;
+				TLSProtocolVersion get_tls_protocol_version() const;
+
+				UShort get_tls_record_full_length() const;
+				UShort get_tls_record_length() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_record_data() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
+
+
+			class TLS13_RecordView
+			{
+			public:
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+			private:
+
+				UByte* data_;
+				UShort size_;
+
+			public:
+
+				template <std::random_access_iterator Iter>
+				TLS13_RecordView(Iter begin, Iter end)
+				{
+					data_ = begin;
+					size_ = std::distance(begin, end);
+				}
+
+
+				template <class TLSPacketGenerator, class TLSGenerationStrategy, class TLSRecordGenerationStrategy>
+				static std::vector<UByte> generate_object_bytes(TLSGenerationStrategy&& strategy, TLSRecordGenerationStrategy&& rec_strategy)
+				{
+					return TLS13_RecordLittleEndian::generate_object_bytes<TLSPacketGenerator, TLSGenerationStrategy, TLSRecordGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy), std::forward<TLSRecordGenerationStrategy>(rec_strategy));
+				}
+
+				template <class TLSPacketGenerator, class TLSGenerationStrategy, class TLSRecordGenerationStrategy>
+				static TLS13_RecordLittleEndian generate_object(TLSGenerationStrategy&& strategy, TLSRecordGenerationStrategy&& rec_strategy)
+				{
+					return TLS13_RecordLittleEndian::generate_object<TLSPacketGenerator, TLSGenerationStrategy, TLSRecordGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy), std::forward<TLSRecordGenerationStrategy>(rec_strategy));
+				}
+
+				TLSRecordType get_tls_record_type() const;
+				TLSProtocolVersion get_tls_protocol_version() const;
+
+				UShort get_tls_record_full_length() const;
+				UShort get_tls_record_length() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_record_data() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
 
 
 			template <std::integral Val>

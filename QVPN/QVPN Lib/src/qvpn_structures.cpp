@@ -2706,3 +2706,71 @@ std::vector<QVPN::Core::DataStructures::TLSProtocolVersion> QVPN::Core::DataStru
 {
 	return std::vector<TLSProtocolVersion>{ TLSProtocolVersion::TLS13 };
 }
+
+
+// TLS Record LE
+
+
+QVPN::Core::DataStructures::TLSRecordType QVPN::Core::DataStructures::TLS13_RecordLittleEndian::get_tls_record_type() const
+{
+	return static_cast<TLSRecordType>(data_[0]);
+}
+
+QVPN::Core::DataStructures::TLSProtocolVersion QVPN::Core::DataStructures::TLS13_RecordLittleEndian::get_tls_protocol_version() const
+{
+	return static_cast<TLSProtocolVersion>(data_[1] << 8 | data_[2]);
+}
+
+UShort QVPN::Core::DataStructures::TLS13_RecordLittleEndian::get_tls_record_full_length() const
+{
+	return get_tls_record_length() + sizeof(TLSRecordType) + sizeof(TLSProtocolVersion) + sizeof(UShort);
+}
+
+UShort QVPN::Core::DataStructures::TLS13_RecordLittleEndian::get_tls_record_length() const
+{
+	return static_cast<UShort>(data_[3] << 8 | data_[4]);
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_RecordLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_RecordLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_RecordLittleEndian::get_tls_record_data() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.begin() + sizeof(TLSRecordType) + sizeof(TLSProtocolVersion) + sizeof(UShort), data_.end());
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_RecordLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_RecordLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_RecordLittleEndian::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.begin(), data_.end());
+}
+
+
+// TLS Record View
+
+
+QVPN::Core::DataStructures::TLSRecordType QVPN::Core::DataStructures::TLS13_RecordView::get_tls_record_type() const
+{
+	return static_cast<TLSRecordType>(data_[0]);
+}
+
+QVPN::Core::DataStructures::TLSProtocolVersion QVPN::Core::DataStructures::TLS13_RecordView::get_tls_protocol_version() const
+{
+	return static_cast<TLSProtocolVersion>(data_[1] << 8 | data_[2]);
+}
+
+UShort QVPN::Core::DataStructures::TLS13_RecordView::get_tls_record_full_length() const
+{
+	return get_tls_record_length() + sizeof(TLSRecordType) + sizeof(TLSProtocolVersion) + sizeof(UShort);
+}
+
+UShort QVPN::Core::DataStructures::TLS13_RecordView::get_tls_record_length() const
+{
+	return static_cast<UShort>(data_[3] << 8 | data_[4]);
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_RecordView::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_RecordView::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_RecordView::get_tls_record_data() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + sizeof(TLSRecordType) + sizeof(TLSProtocolVersion) + sizeof(UShort), data_ + size_);
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_RecordView::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_RecordView::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_RecordView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
+}
