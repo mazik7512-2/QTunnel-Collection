@@ -2270,13 +2270,13 @@ template <std::integral scheme_type, std::random_access_iterator Iter>
 void unified_server_parse_scheme(QVPN::Core::DataStructures::TLS13_HelloPacketScheme<scheme_type>& scheme, Iter first, Iter last)
 {
 	QVPN::Core::DataStructures::TLSRandomView r(first, last);
-	size_t start = 2;
-	size_t end = r.get_tls_random_full_length();
+	size_t start = 0;
+	size_t end = start + r.get_tls_random_full_length();
 	scheme.random = std::make_pair<>(start, end);
 
 	QVPN::Core::DataStructures::TLSSessionIDView s(first + end, last);
 	start = end;
-	end = s.get_tls_id_full_length();
+	end = start + s.get_tls_id_full_length();
 	scheme.session = std::make_pair<>(start, end);
 
 	start = end;
@@ -2289,7 +2289,7 @@ void unified_server_parse_scheme(QVPN::Core::DataStructures::TLS13_HelloPacketSc
 
 	QVPN::Core::DataStructures::TLSExtensionsView ext(first + end, last);
 	start = end;
-	end = ext.get_tls_extensions_full_length();
+	end = start + ext.get_tls_extensions_full_length();
 	scheme.extensions = std::make_pair<>(start, end);
 }
 
@@ -2624,47 +2624,85 @@ std::pair<QVPN::Core::DataStructures::TLSSupportedVersionsEntryView::ConstDataIt
 
 // TLS1.3 Default Generation Strategy
 
-UByte QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy::get_session_length() const
+QVPN::Core::DataStructures::TLSProtocolVersion QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_legacy_version() const
+{
+	return TLSProtocolVersion::TLS12;
+}
+
+UByte QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_session_length() const
 {
 	return 32;
 }
 
-UShort QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy::get_cipher_length() const
+UShort QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_cipher_length() const
 {
 	return 34;
 }
 
-UShort QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy::get_compression_length() const
+UShort QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_compression_length() const
 {
 	return 1;
 }
 
-UShort QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy::get_supported_versions_length() const
+UShort QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_supported_versions_length() const
 {
 	return 8;
 }
 
-std::vector<QVPN::Core::DataStructures::TLSProtocolVersion> QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy::get_supported_versions() const
+std::vector<QVPN::Core::DataStructures::TLSProtocolVersion> QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_supported_versions() const
 {
 	return std::vector<TLSProtocolVersion>{ TLSProtocolVersion::TLS13, TLSProtocolVersion::TLS12, TLSProtocolVersion::TLS11, TLSProtocolVersion::TLS10 };
 }
 
-UShort QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy::get_key_share_length() const
+UShort QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_key_share_length() const
 {
 	return 32;
 }
 
-std::vector<std::pair<QVPN::Core::DataStructures::TLSKeyTypes, QVPN::Core::DataStructures::TLSKeyTypesLength>> QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy::get_key_share() const
+std::vector<std::pair<QVPN::Core::DataStructures::TLSKeyTypes, QVPN::Core::DataStructures::TLSKeyTypesLength>> QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_key_share() const
 {
 	return std::vector<std::pair<TLSKeyTypes, TLSKeyTypesLength>>{ {TLSKeyTypes::X25519, TLSKeyTypesLength::X25519_LENGTH} };
 }
 
-UShort QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy::get_sni_length() const
+UShort QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_sni_length() const
 {
 	return 6;
 }
 
-std::vector<std::string_view> QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy::get_sni_hosts() const
+std::vector<std::string_view> QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy::get_sni_hosts() const
 {
 	return std::vector<std::string_view>{ "vk.com" };
+}
+
+// TLS Default Client hello Gen strategy
+
+
+QVPN::Core::DataStructures::TLSProtocolVersion QVPN::Core::DataStructures::TLS13_DefaultServerHelloGenerationStrategy::get_legacy_version() const
+{
+	return TLSProtocolVersion::TLS12;
+}
+
+UByte QVPN::Core::DataStructures::TLS13_DefaultServerHelloGenerationStrategy::get_session_length() const
+{
+	return 32;
+}
+
+QVPN::Core::DataStructures::TLSCipherSuite QVPN::Core::DataStructures::TLS13_DefaultServerHelloGenerationStrategy::get_cipher_suite() const
+{
+	return TLSCipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256;
+}
+
+QVPN::Core::DataStructures::TLSCompressionMethod QVPN::Core::DataStructures::TLS13_DefaultServerHelloGenerationStrategy::get_compression_method() const
+{
+	return TLSCompressionMethod::NULL_COMPRESSION;
+}
+
+UShort QVPN::Core::DataStructures::TLS13_DefaultServerHelloGenerationStrategy::get_supported_versions_length() const
+{
+	return 2;
+}
+
+std::vector<QVPN::Core::DataStructures::TLSProtocolVersion> QVPN::Core::DataStructures::TLS13_DefaultServerHelloGenerationStrategy::get_supported_versions() const
+{
+	return std::vector<TLSProtocolVersion>{ TLSProtocolVersion::TLS13 };
 }

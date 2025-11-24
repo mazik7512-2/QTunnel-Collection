@@ -2098,7 +2098,8 @@ namespace QVPN {
 			template <class GenerationStrategyImpl>
 			concept TLS13_ClientHelloGenStrategy =
 				requires (GenerationStrategyImpl t) {
-
+					
+					{ t.get_legacy_version() } -> std::same_as<TLSProtocolVersion>;
 					{ t.get_session_length() } -> std::same_as<UByte>;
 					{ t.get_cipher_length() } -> std::same_as<UShort>;
 					{ t.get_compression_length() } -> std::same_as<UShort>;
@@ -2117,9 +2118,12 @@ namespace QVPN {
 					{ t.get_sni_hosts() } -> std::same_as<std::vector<std::string_view>>;
 			};
 
-			class TLS13_DefaultGenerationStrategy
+			class TLS13_DefaultClientHelloGenerationStrategy
 			{
 			public:
+
+				TLSProtocolVersion get_legacy_version() const;
+
 				UByte get_session_length() const;
 				UShort get_cipher_length() const;
 				UShort get_compression_length() const;
@@ -2159,9 +2163,15 @@ namespace QVPN {
 				}
 
 				template <TLS13_ClientHelloGenStrategy GenStrategy>
-				static std::vector<UByte> generate_object_bytes(GenStrategy strategy)
+				static std::vector<UByte> generate_object_bytes(GenStrategy&& strategy)
 				{
 					std::vector<UByte> obj_bytes;
+
+					// legacy version, must be TLS 1.2
+					auto legacy_version = strategy.get_legacy_version();
+
+					obj_bytes.push_back(static_cast<UByte>(legacy_version >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(legacy_version & 0xFF));
 
 					auto random = TLSRandomLittleEndian::generate_object_bytes();
 					std::copy(random.begin(), random.end(), std::back_inserter(obj_bytes));
@@ -2195,9 +2205,9 @@ namespace QVPN {
 				}
 
 				template <TLS13_ClientHelloGenStrategy GenStrategy>
-				static TLS13_ClientHelloPacketLittleEndian generate_object(GenStrategy strategy)
+				static TLS13_ClientHelloPacketLittleEndian generate_object(GenStrategy&& strategy)
 				{
-					auto obj_bytes = generate_object_bytes<>(strategy);
+					auto obj_bytes = generate_object_bytes<>(std::forward<GenStrategy>(strategy));
 					return TLS13_ClientHelloPacketLittleEndian(obj_bytes.begin(), obj_bytes.end());
 				}
 
@@ -2255,6 +2265,39 @@ namespace QVPN {
 			};
 
 
+			template <class GenerationStrategyImpl>
+			concept TLS13_ServerHelloGenStrategy =
+				requires (GenerationStrategyImpl t) {
+
+					{ t.get_legacy_version() } -> std::same_as<TLSProtocolVersion>;
+
+					{ t.get_session_length() } -> std::same_as<UByte>;
+
+					{ t.get_cipher_suite() } -> std::same_as<TLSCipherSuite>;
+					{ t.get_compression_method() } -> std::same_as<TLSCompressionMethod>;
+
+					// extensions
+					// tls sup ver ext
+					{ t.get_supported_versions_length() } -> std::same_as<UShort>;
+					{ t.get_supported_versions() } -> std::same_as<std::vector<TLSProtocolVersion>>;
+
+			};
+
+
+			class TLS13_DefaultServerHelloGenerationStrategy
+			{
+				TLSProtocolVersion get_legacy_version() const;
+
+				UByte get_session_length() const;
+
+				TLSCipherSuite get_cipher_suite() const;
+				TLSCompressionMethod get_compression_method() const;
+
+				UShort get_supported_versions_length() const;
+				std::vector<TLSProtocolVersion> get_supported_versions() const;
+			};
+
+
 			class TLS13_ServerHelloPacketLittleEndian
 			{
 			public:
@@ -2273,6 +2316,51 @@ namespace QVPN {
 				TLS13_ServerHelloPacketLittleEndian(UByte* begin, UByte* end);
 
 				static OverlayProtocolType get_overlay_protocol_type();
+
+				template <TLS13_ServerHelloGenStrategy GenStrategy>
+				static std::vector<UByte> generate_object_bytes(GenStrategy&& strategy)
+				{
+					std::vector<UByte> obj_bytes;
+
+					// legacy version, must be TLS 1.2
+
+					auto legacy_version = strategy.get_legacy_version();
+
+					obj_bytes.push_back(static_cast<UByte>(legacy_version >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(legacy_version & 0xFF));
+
+					auto random = TLSRandomLittleEndian::generate_object_bytes();
+					std::copy(random.begin(), random.end(), std::back_inserter(obj_bytes));
+
+					// In server hello must be same as client hello, maybe rework this later
+					auto session = TLSSessionIDLittleEndian::generate_object_bytes(strategy.get_session_length());
+					std::copy(session.begin(), session.end(), std::back_inserter(obj_bytes));
+
+					auto cipher_suite = strategy.get_cipher_suite();
+					obj_bytes.push_back(static_cast<UByte>(cipher_suite >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(cipher_suite & 0xFF));
+
+					auto compres_method = strategy.get_compression_method();
+					obj_bytes.push_back(static_cast<UByte>(compres_method & 0xFF));
+
+					auto sup_vers = strategy.get_supported_versions();
+
+					std::pair<SupVerIter, SupVerIter> vers_iters = std::make_pair<>(sup_vers.begin(), sup_vers.end());
+
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSSupportedVersionsExtensionLittleEndian, UShort, std::pair<SupVerIter, SupVerIter>> sup_ver(strategy.get_supported_versions_length(), vers_iters);
+					
+					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver));
+					std::copy(extensions.begin(), extensions.end(), std::back_inserter(obj_bytes));
+
+					return obj_bytes;
+				}
+
+				template <TLS13_ServerHelloGenStrategy GenStrategy>
+				static TLS13_ServerHelloPacketLittleEndian generate_object(GenStrategy&& strategy)
+				{
+					auto obj_bytes = generate_object_bytes<>(std::forward<GenStrategy>(strategy));
+					return TLS13_ServerHelloPacketLittleEndian(obj_bytes.begin(), obj_bytes.end());
+				}
 
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;

@@ -34,7 +34,7 @@ using UShort = unsigned short;
 using TLSSupVerExt = QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian;
 using TLSExtensionLittleEndian = QVPN::Core::DataStructures::TLSExtensionLittleEndian;
 using TLSExtensionsLittleEndian = QVPN::Core::DataStructures::TLSExtensionsLittleEndian;
-using TLSDefaultGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultGenerationStrategy;
+using TLSDefaultGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy;
 using SupVerIter = QVPN::Core::DataStructures::SupVerIter;
 
 using TLSClientHello = QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian;
