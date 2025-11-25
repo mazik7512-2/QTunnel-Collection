@@ -40,14 +40,14 @@ namespace QVPN {
 			};
 
 			// only ip4 and ip6
-			enum NetProtocols
+			enum NetProtocols : UByte
 			{
 				IPv4 = 4,
 				IPv6 = 6
 			};
 
 			// only tcp and udp
-			enum TransportProtocols
+			enum TransportProtocols : UByte
 			{
 				TCP = 6,
 				UDP = 17
@@ -2041,10 +2041,10 @@ namespace QVPN {
 				}
 
 
-				template <class TLSPacketGenerator, TLSRecordGenerationStrategy TLSRecordGeneStrategy, class ... Args>
-				static std::vector<UByte> generate_object_bytes(TLSRecordGeneStrategy&& rec_strategy, Args&& ... args)
+				template <class TLSPacketGenerator, TLSRecordGenerationStrategy TLSRecordGenStrategy, class ... Args>
+				static std::vector<UByte> generate_object_bytes(TLSRecordGenStrategy&& rec_strategy, Args&& ... args)
 				{
-					std::vector<UByte> obj_bytes = TLSPacketGenerator:: template generate_object_bytes<Args>(std::forward<Args>(args)...);
+					std::vector<UByte> obj_bytes = TLSPacketGenerator:: template generate_object_bytes<Args...>(std::forward<Args>(args)...);
 					auto size = static_cast<UShort>(obj_bytes.size());
 
 					TLSMessageType msg_type = TLSPacketGenerator::get_overlay_protocol_type();
@@ -2701,7 +2701,7 @@ namespace QVPN {
 			};
 
 			template <>
-			class FullPacket<Ipv4Packet_View, UdpPacketView, DataPacket_View> : public Ipv4Packet_View, public UdpPacketView, public DataPacket_View
+			class FullPacket<Ipv4Packet_View, UdpPacket_View, DataPacket_View> : public Ipv4Packet_View, public UdpPacketView, public DataPacket_View
 			{
 			private:
 

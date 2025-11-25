@@ -140,6 +140,74 @@ namespace QVPN {
 			};
 		}
 
+
+		namespace Tools
+		{
+			template <class Callable, class ... Args>
+			decltype(auto) function_invoker(Callable F, Args&& ... args)
+			{
+				return F(std::forward<Args>(args)...);
+			}
+
+			template <class Callable, class ... Args>
+			decltype(auto) function_invoker(Callable&& F, std::tuple<Args...>& tuple)
+			{
+				constexpr size_t tuple_args_count = std::tuple_size_v<std::tuple<Args...>>;
+				return[&] <size_t ... it>(std::index_sequence<it...>) { return F(std::get<it>(tuple)...); }(std::make_index_sequence<tuple_args_count>{});
+			}
+		}
+		
+		class PreParser
+		{
+		private:
+
+			using Ipv4TcpPacketView = QVPN::Core::DataStructures::Ipv4TcpPacket_View;
+			using Ipv4UdpPacketView = QVPN::Core::DataStructures::Ipv4UdpPacket_View;
+			using UByte = QVPN::Core::BaseTypes::UByte;
+
+		private:
+
+			template <std::random_access_iterator Iter>
+			std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> pre_parse_ipv4(Iter begin, Iter end)
+			{
+				using TransportProtocols = QVPN::Core::DataStructures::TransportProtocols;
+				//std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> ret;
+				QVPN::Core::DataStructures::Ipv4Packet_View packet(begin, end);
+				UByte proto = packet.get_ip_protocol();
+				switch (proto) {
+				case TransportProtocols::TCP:
+					return Ipv4TcpPacketView(begin, end);
+					break;
+				case TransportProtocols::UDP:
+					return Ipv4UdpPacketView(begin, end);
+					break;
+				default:
+					break;
+				}
+				//return ret;
+			}
+
+		public:
+
+			template <std::random_access_iterator Iter>
+			std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> pre_parse(Iter begin, Iter end)
+			{
+				using NetProtocols = QVPN::Core::DataStructures::NetProtocols;
+				//std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> ret;
+				UByte ip_ver = begin[0] >> 4 & 0xF;
+				switch (ip_ver) {
+				case NetProtocols::IPv4:
+					return pre_parse_ipv4<Iter>(begin, end);
+					break;
+				case NetProtocols::IPv6:
+					break;
+				default:
+					break;
+				}
+				//return ret;
+			}
+		};
+
 	}
 
 }
