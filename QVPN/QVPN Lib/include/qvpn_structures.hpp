@@ -2512,6 +2512,51 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
 
+			
+			class TLS13_ApplicationDataLittleEndian
+			{
+			public:
+				using DataIterator_t = std::vector<UByte>::iterator;
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using OverlayProtocolType = TLSRecordType;
+
+			private:
+
+				std::vector<UByte> data_;
+
+			public:
+
+				template <std::random_access_iterator Iter>
+				TLS13_ApplicationDataLittleEndian(Iter begin, Iter end)
+				{
+					std::copy(begin, end, std::back_inserter(data_));
+				}
+
+				static OverlayProtocolType get_overlay_protocol_type();
+
+				template <std::random_access_iterator Iter>
+				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end)
+				{
+
+				}
+
+				template <std::random_access_iterator Iter>
+				static TLS13_ApplicationDataLittleEndian generate_object(Iter begin, Iter end)
+				{
+
+				}
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_app_data() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
+
+
+			class TLS13_ApplicationDataView
+			{
+
+			};
+
+
 			template <class NetLayer>
 			concept is_net_layer = Ip4PacketLike<NetLayer>;
 

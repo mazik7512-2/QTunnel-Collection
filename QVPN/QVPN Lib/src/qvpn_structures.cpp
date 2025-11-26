@@ -2774,3 +2774,22 @@ std::pair<QVPN::Core::DataStructures::TLS13_RecordView::ConstDataIterator_t, QVP
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
+
+
+// TLS 1.3 Application Data
+
+
+QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian::OverlayProtocolType QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian::get_overlay_protocol_type()
+{
+	return OverlayProtocolType::APPLICATION_DATA;
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian::get_app_data() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
+}
+
+std::pair<QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
+}
