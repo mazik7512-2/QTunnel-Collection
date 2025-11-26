@@ -9,6 +9,10 @@ namespace QVPN
 	namespace Core
 	{
 
+		using UByte = QVPN::Core::BaseTypes::UByte;
+		using UShort = QVPN::Core::BaseTypes::UShort;
+		using UInt = QVPN::Core::BaseTypes::UInt;
+
 		enum class LayerTypes
 		{
 			BASE_LAYER = 0,
@@ -17,61 +21,135 @@ namespace QVPN
 			DEFENCE_LAYER
 		};
 
+		template <std::random_access_iterator Iter>
 		class BaseLayer
 		{
 		public:
 
-			virtual LayerTypes get_layer_type() const;
-			virtual std::string_view get_layer_name() const;
-			virtual std::vector<BaseTypes::UByte> layer_encode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
-			virtual std::vector<BaseTypes::UByte> layer_decode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+			virtual LayerTypes get_layer_type() const = 0;
+			virtual std::string_view get_layer_name() const = 0;
+			
+			virtual std::vector<BaseTypes::UByte> layer_encode(Iter begin, Iter end) const = 0;
+			virtual std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const = 0;
 
 			virtual ~BaseLayer() = default;
 		};
 
 
+		template <std::random_access_iterator Iter>
 		class LayerWrapper final
 		{
 		private:
-			std::unique_ptr<BaseLayer> layer_;
+			std::unique_ptr<BaseLayer<Iter>> layer_;
 			bool active_;
 
 		public:
-			LayerWrapper(std::unique_ptr<BaseLayer> layer, bool active = true);
+			LayerWrapper(std::unique_ptr<BaseLayer<Iter>> layer, bool active = true)
+				: layer_(std::move(layer)), active_(active) {}
 
-			bool is_active() const;
-			void set_activity(bool status);
+			bool is_active() const
+			{
+				return active_;
+			}
 
-			LayerTypes get_layer_type() const;
-			std::string_view get_layer_name() const;
-			std::vector<BaseTypes::UByte> layer_encode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
-			std::vector<BaseTypes::UByte> layer_decode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+			void set_activity(bool status)
+			{
+				active_ = status;
+			}
+
+			LayerTypes get_layer_type() const
+			{
+				return layer_->get_layer_type();
+			}
+
+			std::string_view get_layer_name() const
+			{
+				return layer_->get_layer_name();
+			}
+
+			std::vector<BaseTypes::UByte> layer_encode(Iter begin, Iter end) const
+			{
+				return layer_->layer_encode(begin, end);
+			}
+
+			std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const
+			{
+				return layer_->layer_decode(begin, end);
+			}
 
 		}; 
 
-		template <class Layer>
+
+		template <class Generator, std::random_access_iterator Iter>
+		class QLayer : public BaseLayer<Iter>
+		{
+		private:
+
+		public:
+
+			LayerTypes get_layer_type() const override
+			{
+				return LayerTypes::QUIET_LAYER;
+			}
+
+			std::string_view get_layer_name() const override
+			{
+				return "Quiet layer";
+			}
+
+			
+			std::vector<UByte> layer_encode(Iter begin, Iter end) const override
+			{
+				return std::vector<UByte>();
+			}
+
+			std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const override
+			{
+				return std::vector<UByte>();
+			}
+		};
+
+
+		template <class Layer, class Iter>
 		concept is_layer = 
-			requires (Layer l, const BaseTypes::UByte * begin, const BaseTypes::UByte * end) {
+			requires (Layer l, Iter begin, Iter end) {
 			
 				{ l.get_layer_type() } -> std::same_as<LayerTypes>;
 				{ l.get_layer_name() } -> std::same_as <std::string_view> ;
 				{ l.layer_encode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 				{ l.layer_decode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
-		} && std::is_base_of<BaseLayer, Layer>::value;
+		} && std::is_base_of<BaseLayer<Iter>, Layer>::value;
 
 
+		template <std::random_access_iterator Iter>
 		class QVPNLayersSettings
 		{
 		private:
-			std::vector<LayerWrapper> layers_;
+			std::vector<LayerWrapper<Iter>> layers_;
 
 		public:
 
-			void add_layer(std::unique_ptr<BaseLayer> l, bool status = true);
+			void add_layer(std::unique_ptr<BaseLayer<Iter>> l, bool status = true)
+			{
+				layers_.emplace_back(std::move(l), status);
+			}
 
-			std::vector<BaseTypes::UByte> layers_encode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
-			std::vector<BaseTypes::UByte> layers_decode(const BaseTypes::UByte* begin, const BaseTypes::UByte* end) const;
+			std::vector<BaseTypes::UByte> layers_encode(Iter begin, Iter end) const
+			{
+				std::vector<BaseTypes::UByte> res_data(begin, end);
+				for (auto& l : layers_)
+				{
+					if (l.is_active())
+						res_data = l.layer_encode(res_data.data(), res_data.data() + res_data.size());
+				}
+				return res_data;
+			}
+
+			std::vector<BaseTypes::UByte> layers_decode(Iter begin, Iter end) const
+			{
+				return std::vector<BaseTypes::UByte>();
+			}
 
 		};
 
@@ -114,12 +192,14 @@ namespace QVPN
 			std::string_view get_key() const;
 		};
 
-		class QVPNSettings : public QVPNLayersSettings, public QVPNConnectionSettings, public QVPNAuthenticationSettings
+		template <std::random_access_iterator Iter>
+		class QVPNSettings : public QVPNLayersSettings<Iter>, public QVPNConnectionSettings, public QVPNAuthenticationSettings
 		{
 		private:
 
 		public:
-			QVPNSettings(QVPNLayersSettings layers, QVPNConnectionSettings connection, QVPNAuthenticationSettings auth);
+			QVPNSettings(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNAuthenticationSettings auth)
+				: QVPNSettings:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNSettings::QVPNConnectionSettings(std::move(connection)), QVPNSettings::QVPNAuthenticationSettings(std::move(auth)) {}
 
 		};
 
@@ -132,18 +212,28 @@ namespace QVPN
 
 		};
 
+		template <std::random_access_iterator Iter>
 		class QVPNDriver
 		{
 		private:
 
-			QVPNSettings settings_;
+			QVPNSettings<Iter> settings_;
 
 		public:
 
-			QVPNDriver(QVPNSettings settings);
-			std::vector<BaseTypes::UByte> encode_data(const BaseTypes::UByte* begin, const BaseTypes::UByte* end);
-			std::vector<BaseTypes::UByte> decode_data(const BaseTypes::UByte* begin, const BaseTypes::UByte* end);
+			QVPNDriver(QVPNSettings<Iter> settings)
+				: settings_(std::move(settings)) {}
+
+			std::vector<BaseTypes::UByte> encode_data(Iter begin, Iter end)
+			{
+				return settings_.layers_encode(begin, end);
+			}
+
+			std::vector<BaseTypes::UByte> decode_data(Iter begin, Iter end)
+			{
+				return settings_.layers_decode(begin, end);
+			}
 
 		};
-	}
+}
 }

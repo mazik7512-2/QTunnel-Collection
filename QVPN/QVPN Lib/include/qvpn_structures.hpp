@@ -2724,9 +2724,9 @@ namespace QVPN {
 				void recalculate_checksums()
 				{
 					Ipv4Packet_View::recalculate_ip_checksum();
-					UShort length = UdpPacketView::get_transport_length();
+					UShort length = Ipv4Packet_View::get_ip_total_length() - (Ipv4Packet_View::get_ip_header_length() * 4);
 					auto [b, e] = DataPacket_View::get_data();
-					length = length + (e - b);
+					//length = length + (e - b);
 					auto src = Ipv4Packet_View::get_ip_source();
 					auto dst = Ipv4Packet_View::get_ip_dest();
 					auto pseudo = TransportIpv4PseudoHeader(src, dst, Ipv4Packet_View::get_ip_protocol(), length);
