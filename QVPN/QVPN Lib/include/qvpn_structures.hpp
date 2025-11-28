@@ -1167,6 +1167,11 @@ namespace QVPN {
 					size_ = std::distance(first, first + 32);
 				}
 
+
+				static std::array<UByte, 32> generate_object_bytes();
+				static TLSRandomLittleEndian generate_object();
+
+
 				UShort get_tls_random_full_length() const;
 				UInt get_tls_unix_time() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_random_bytes() const;
@@ -1226,6 +1231,11 @@ namespace QVPN {
 					size_ = std::distance(first, first + length);
 				}
 
+
+				static std::vector<UByte> generate_object_bytes(UByte length = 32);
+				static TLSSessionIDLittleEndian generate_object(UByte length = 32);
+
+
 				UInt get_tls_id_full_length() const;
 				UByte get_tls_id_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_id();
@@ -1284,6 +1294,11 @@ namespace QVPN {
 					size_ = std::distance(first, first + get_tls_ciphers_full_length());
 				}
 
+
+				static std::vector<UByte> generate_object_bytes(UShort length = 34);
+				static TLSCipherSuitLittleEndian generate_object(UShort length = 34);
+
+
 				UShort get_tls_ciphers_full_length() const;
 				UShort get_tls_ciphers_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_cipher_suites() const;
@@ -1337,6 +1352,11 @@ namespace QVPN {
 					data_ = first;
 					size_ = std::distance(first, first + get_tls_compressions_full_length());
 				}
+
+
+				static std::vector<UByte> generate_object_bytes(UByte length = 1);
+				static TLSCompressionLittleEndian generate_object(UByte length = 1);
+
 
 				UShort get_tls_compressions_full_length() const;
 				UByte get_tls_compressions_length() const;
@@ -1442,6 +1462,26 @@ namespace QVPN {
 					size_ = std::distance(first, first + get_tls_ext_full_length());
 				}
 
+
+				template <class TLSExtension>
+				static TLSExtensionType get_extension_type()
+				{
+					return TLSExtension::get_extension_type();
+				}
+
+				template <class TLSExtension, class ... FuncArgs>
+				static std::vector<UByte> generate_object_bytes(FuncArgs&& ... args)
+				{
+					return TLSExtensionLittleEndian::generate_object_bytes<TLSExtension, FuncArgs...>(std::forward<FuncArgs>(args)...);
+				}
+
+				template <class TLSExtension, class ... FuncArgs>
+				static TLSExtensionLittleEndian generate_object(FuncArgs&& ... args)
+				{
+					return TLSExtensionLittleEndian::generate_object<TLSExtension, FuncArgs...>(std::forward<FuncArgs>(args)...);
+				}
+
+
 				UShort get_tls_ext_full_length() const;
 				TLSExtensionType get_tls_ext_type() const;
 				UShort get_tls_ext_length() const;
@@ -1498,12 +1538,12 @@ namespace QVPN {
 			private:
 				std::vector<UByte> extensions_;
 
-				// need to unpack tuple params
+				// wrapper to unpack tuple params
 				template <class ExtWrapper, class Tuple>
 				static decltype(auto) extension_wrapper_caller(Tuple&& tuple)
 				{
 					using NoRefTupleType = std::remove_reference_t<Tuple>;
-					return[&]<size_t ... args_index>(std::index_sequence<args_index ...>)
+					return [&]<size_t ... args_index>(std::index_sequence<args_index ...>)
 					{
 						return std::apply(ExtWrapper:: template generate_object_bytes<std::tuple_element_t<args_index, NoRefTupleType>...>, std::forward<NoRefTupleType>(tuple));
 					}(std::make_index_sequence<std::tuple_size_v<NoRefTupleType>>{});
@@ -1537,10 +1577,10 @@ namespace QVPN {
 					return res;
 				}
 
-				template<class ...TLSExtensions> // разобраться с концпетом TLSExtensionWrapperGenerator
-				static TLSExtensionsLittleEndian generate_object(TLSExtensions&& ... ext)
+				template<class ...TLSExtensionWrapperType> // разобраться с концпетом TLSExtensionWrapperGenerator
+				static TLSExtensionsLittleEndian generate_object(TLSExtensionWrapperType&& ... ext)
 				{
-					auto objs_bytes = generate_object_bytes<TLSExtensions...>(ext...);
+					auto objs_bytes = generate_object_bytes<TLSExtensionWrapperType...>(std::forward<TLSExtensionWrapperType>(ext)...);
 					return TLSExtensionsLittleEndian(objs_bytes.begin(), objs_bytes.end());
 				}
 
@@ -1571,6 +1611,20 @@ namespace QVPN {
 					data_ = first;
 					size_ = std::distance(first, first + get_tls_extensions_full_length());
 				}
+
+
+				template <class ... TLSExtensionWrapperType> // разобраться с концпетом TLSExtensionWrapperGenerator
+				static std::vector<UByte> generate_object_bytes(TLSExtensionWrapperType&& ... ext)
+				{
+					return TLSExtensionsLittleEndian::generate_object_bytes<TLSExtensionWrapperType...>(std::forward<TLSExtensionWrapperType>(ext)...);
+				}
+
+				template<class ...TLSExtensionWrapperType> // разобраться с концпетом TLSExtensionWrapperGenerator
+				static TLSExtensionsLittleEndian generate_object(TLSExtensionWrapperType&& ... ext)
+				{
+					return TLSExtensionsLittleEndian::generate_object<TLSExtensionWrapperType...>(std::forward<TLSExtensionWrapperType>(ext)...);
+				}
+
 
 				UShort get_tls_extensions_full_length() const;
 				UShort get_tls_extensions_length() const;
@@ -1633,6 +1687,11 @@ namespace QVPN {
 					data_ = first;
 					size_ = 2;
 				}
+
+
+				static std::vector<UByte> generate_object_bytes(UShort length = 2, TLSProtocolVersion version = TLSProtocolVersion::TLS13);
+				static TLSSupportedVersionsEntryLittleEndian generate_object(UShort length = 2, TLSProtocolVersion version = TLSProtocolVersion::TLS13);
+
 
 				UShort get_tls_versions_full_length() const;
 				UShort get_tls_versions_length() const;
@@ -1697,6 +1756,12 @@ namespace QVPN {
 					size_ = std::distance(first, first + length);
 				}
 
+
+				static TLSExtensionType get_extension_type();
+				static std::vector<UByte> generate_object_bytes(UByte length, std::pair<SupVerIter, SupVerIter> versions);
+				static TLSSupportedVersionsExtensionLittleEndian generate_object(UShort length, std::pair<SupVerIter, SupVerIter> versions);
+
+
 				UShort get_tls_versions_full_length() const;
 				UByte get_tls_versions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_supported_versions() const;
@@ -1759,6 +1824,11 @@ namespace QVPN {
 					size_ = std::distance(first, first + length);
 				}
 
+
+				static std::vector<UByte> generate_object_bytes(UShort length = 32, TLSKeyTypes key_type = TLSKeyTypes::X25519);
+				static TLSKeyShareEntryLittleEndian generate_object(UShort length = 32, TLSKeyTypes key_type = TLSKeyTypes::X25519);
+
+
 				UShort get_tls_key_share_entry_full_length() const;
 				UShort get_tls_key_share_key_type() const;
 				UShort get_tls_key_share_entry_length() const;
@@ -1820,6 +1890,12 @@ namespace QVPN {
 					size_ = std::distance(first, first + length);
 				}
 
+
+				static TLSExtensionType get_extension_type();
+				static std::vector<UByte> generate_object_bytes(UShort length, std::pair<KeyShareIter, KeyShareIter> key_shares);
+				static TLSKeyShareEntryLittleEndian generate_object(UShort length, std::pair<KeyShareIter, KeyShareIter> key_shares);
+
+
 				UShort get_tls_key_share_full_length() const;
 				UShort get_tls_key_share_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_key_share() const;
@@ -1877,6 +1953,9 @@ namespace QVPN {
 					auto length_ = static_cast<UShort>(first[1] << 8 | first[2]);
 					size_ = length_ + 3;
 				}
+
+				static std::vector<UByte> generate_object_bytes(UShort length = 6, std::string_view host = "vk.com");
+				static TLSServerNameIndicationEntryLittleEndian generate_object(UShort length = 6, std::string_view host = "vk.com");
 
 				UShort get_tls_sni_full_length() const;
 				UShort get_tls_sni_length() const;
@@ -1937,6 +2016,10 @@ namespace QVPN {
 					auto length = get_tls_sni_full_length(); // length + type (2 bytes)
 					size_ = std::distance(first, first + length);
 				}
+
+				static TLSExtensionType get_extension_type();
+				static std::vector<UByte> generate_object_bytes(UShort length, std::pair<SNIIter, SNIIter> hosts);
+				static TLSServerNameIndicationExtensionLittleEndian generate_object(UShort length, std::pair<SNIIter, SNIIter> hosts);
 
 				UShort get_tls_sni_full_length() const;
 				UShort get_tls_sni_length() const;
@@ -2152,6 +2235,8 @@ namespace QVPN {
 				UInt get_tls_msg_length() const;
 				UInt get_tls_msg_full_length() const;
 
+				static OverlayProtocolType get_overlay_protocol_type();
+
 				template <class TLSPacketGenerator, class TLSGenerationStrategy>
 				static std::vector<UByte> generate_object_bytes(TLSGenerationStrategy&& strategy)
 				{
@@ -2185,6 +2270,7 @@ namespace QVPN {
 
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = const UByte*;
+				using OverlayProtocolType = TLSRecordType;
 
 			private:
 				UByte* data_;
@@ -2197,6 +2283,22 @@ namespace QVPN {
 				TLSMessageType get_tls_msg_type() const;
 				UInt get_tls_msg_length() const;
 				UInt get_tls_msg_full_length() const;
+
+
+				static OverlayProtocolType get_overlay_protocol_type();
+
+				template <class TLSPacketGenerator, class TLSGenerationStrategy>
+				static std::vector<UByte> generate_object_bytes(TLSGenerationStrategy&& strategy)
+				{
+					return TLS13_MessageLittleEndian::generate_object_bytes<TLSPacketGenerator, TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+				}
+
+				template <class TLSGenerator, class TLSGenerationStrategy>
+				static TLS13_MessageLittleEndian generate_object(TLSGenerationStrategy&& strategy)
+				{
+					return TLS13_MessageLittleEndian::generate_object<TLSGenerator, TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+				}
+
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_msg_data() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -2358,6 +2460,17 @@ namespace QVPN {
 					parse_scheme();
 				}
 
+				template <TLS13_ClientHelloGenStrategy GenStrategy>
+				static std::vector<UByte> generate_object_bytes(GenStrategy&& strategy)
+				{
+					return TLS13_ClientHelloPacketLittleEndian::generate_object_bytes<GenStrategy>(std::forward<GenStrategy>(strategy));
+				}
+
+				template <TLS13_ClientHelloGenStrategy GenStrategy>
+				static TLS13_ClientHelloPacketLittleEndian generate_object(GenStrategy&& strategy)
+				{
+					return TLS13_ClientHelloPacketLittleEndian::generate_object<GenStrategy>(std::forward<GenStrategy>(strategy));
+				}
 
 				static OverlayProtocolType get_overlay_protocol_type();
 
@@ -2502,6 +2615,19 @@ namespace QVPN {
 
 				static OverlayProtocolType get_overlay_protocol_type();
 
+				template <TLS13_ServerHelloGenStrategy GenStrategy>
+				static std::vector<UByte> generate_object_bytes(GenStrategy&& strategy)
+				{
+					return TLS13_ServerHelloPacketView::generate_object_bytes<GenStrategy>(std::forward<GenStrategy>(strategy));
+				}
+
+				template <TLS13_ServerHelloGenStrategy GenStrategy>
+				static TLS13_ServerHelloPacketLittleEndian generate_object(GenStrategy&& strategy)
+				{
+					return TLS13_ServerHelloPacketLittleEndian::generate_object<GenStrategy>(std::forward<GenStrategy>(strategy));
+				}
+
+
 				UShort get_tls_version() const;
 				TLSRandomView get_tls_random() const;
 				TLSSessionIDView get_tls_session() const;
@@ -2537,13 +2663,16 @@ namespace QVPN {
 				template <std::random_access_iterator Iter>
 				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end)
 				{
-
+					std::vector<UByte> obj_bytes;
+					std::copy(begin, end, std::back_inserter(obj_bytes));
+					return obj_bytes;
 				}
 
 				template <std::random_access_iterator Iter>
 				static TLS13_ApplicationDataLittleEndian generate_object(Iter begin, Iter end)
 				{
-
+					auto obj_bytes = generate_object_bytes<Iter>(begin, end);
+					return TLS13_ApplicationDataLittleEndian(begin, end);
 				}
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_app_data() const;
@@ -2553,7 +2682,41 @@ namespace QVPN {
 
 			class TLS13_ApplicationDataView
 			{
+			public:
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+				using OverlayProtocolType = TLSRecordType;
 
+			private:
+
+				UByte* data_;
+				UShort size_;
+
+			public:
+
+				template <std::random_access_iterator Iter>
+				TLS13_ApplicationDataView(Iter begin, Iter end)
+				{
+					data_ = static_cast<UByte*>(begin);
+					size_ = std::distance(begin, end);
+				}
+
+				static OverlayProtocolType get_overlay_protocol_type();
+
+				template <std::random_access_iterator Iter>
+				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end)
+				{
+					return TLS13_ApplicationDataLittleEndian::generate_object_bytes<Iter>(begin, end);
+				}
+
+				template <std::random_access_iterator Iter>
+				static TLS13_ApplicationDataLittleEndian generate_object(Iter begin, Iter end)
+				{
+					return TLS13_ApplicationDataLittleEndian::generate_object<Iter>(begin, end);
+				}
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_app_data() const;
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
 
 
