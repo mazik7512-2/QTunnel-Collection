@@ -14,6 +14,8 @@
 #include <functional>
 #include <algorithm>
 #include <type_traits>
+#include <stdexcept>
+#include <random>
 
 
 
@@ -1142,6 +1144,44 @@ namespace QVPN {
 					std::copy(first, first + 32, random_bytes_.begin());
 				}
 
+				// generator for qvpn protcol (for net protocol + transport protocol + dest ip)
+				//example: ipv4 (1 byte) + tcp (1 byte) + ip_addr (4 bytes)
+				template <std::random_access_iterator Iter>
+				static std::array<UByte, 32> generate_object_bytes(Iter begin, Iter end)
+				{
+					std::array<UByte, 32> obj_bytes;
+
+					std::random_device rd;
+					std::mt19937 gen(rd());
+					std::uniform_int_distribution<UInt> dist(0, 255);
+
+					int time = std::time(nullptr);
+					obj_bytes.at(0) = (time >> 24 & 0xFF);
+					obj_bytes.at(1) = (time >> 16 & 0xFF);
+					obj_bytes.at(2) = (time >> 8 & 0xFF);
+					obj_bytes.at(3) = (time & 0xFF);
+
+					auto size = std::distance(begin, end);
+					if (size > 28)
+					{
+						throw std::out_of_range("size must be 28 or less");
+					}
+
+					std::copy(begin + 4, end, std::back_inserter(obj_bytes));
+
+					if (size < 28)
+						std::generate(obj_bytes.begin() + size + 4, obj_bytes.end(), [&dist, &gen]() { return dist(gen); });
+
+					return obj_bytes;
+				}
+
+				template <std::random_access_iterator Iter>
+				static TLSRandomLittleEndian generate_object(Iter begin, Iter end)
+				{
+					auto obj_bytes = TLSRandomLittleEndian::generate_object_bytes<Iter>(begin, end);
+					return TLSRandomLittleEndian(begin, end);
+				}
+
 				static std::array<UByte, 32> generate_object_bytes();
 				static TLSRandomLittleEndian generate_object();
 
@@ -1174,6 +1214,19 @@ namespace QVPN {
 					size_ = std::distance(first, first + 32);
 				}
 
+				// generator for qvpn protcol (for net protocol + transport protocol + dest ip)
+				//example: ipv4 (1 byte) + tcp (1 byte) + ip_addr (4 bytes)
+				template <std::random_access_iterator Iter>
+				static std::array<UByte, 32> generate_object_bytes(Iter begin, Iter end)
+				{
+					return TLSRandomLittleEndian::generate_object_bytes<Iter>(begin, end);
+				}
+
+				template <std::random_access_iterator Iter>
+				static TLSRandomLittleEndian generate_object(Iter begin, Iter end)
+				{
+					return TLSRandomLittleEndian::generate_object<Iter>(begin, end);
+				}
 
 				static std::array<UByte, 32> generate_object_bytes();
 				static TLSRandomLittleEndian generate_object();
@@ -1206,6 +1259,22 @@ namespace QVPN {
 					std::copy(first, first + length + 1, std::back_inserter(id_));
 				}
 
+				// generator for qvpn protcol (for cipher key)
+				template <std::random_access_iterator Iter>
+				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end)
+				{
+					std::vector<UByte> obj_bytes;
+					std::copy(begin, end, std::back_inserter(id_));
+					return obj_bytes;
+				}
+
+				template <std::random_access_iterator Iter>
+				static std::vector<UByte> generate_object(Iter begin, Iter end)
+				{
+					auto obj_bytes = generate_object_bytes<Iter>(begin, end);
+					return TLSSessionIDLittleEndian(obj_bytes.begin(), obj_bytes.end());
+				}
+
 				static std::vector<UByte> generate_object_bytes(UByte length = 32);
 				static TLSSessionIDLittleEndian generate_object(UByte length = 32);
 
@@ -1236,6 +1305,19 @@ namespace QVPN {
 					data_ = first;
 					auto length = get_tls_id_full_length();
 					size_ = std::distance(first, first + length);
+				}
+
+				// generator for qvpn protcol (for cipher key)
+				template <std::random_access_iterator Iter>
+				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end)
+				{
+					return TLSSessionIDLittleEndian::generate_object_bytes<Iter>(begin, end);
+				}
+
+				template <std::random_access_iterator Iter>
+				static std::vector<UByte> generate_object(Iter begin, Iter end)
+				{
+					return TLSSessionIDLittleEndian::generate_object<Iter>(begin, end);
 				}
 
 
