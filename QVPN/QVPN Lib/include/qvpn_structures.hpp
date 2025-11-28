@@ -786,6 +786,10 @@ namespace QVPN {
 				UShort get_udp_checksum() const;
 				bool protocol_criteria(UByte protocol) const;
 
+
+				void set_udp_checksum(UShort checksum);
+
+
 				UShort get_src_port() const;
 				UShort get_dst_port() const;
 				void recalculate_transport_checksum(const TransportIpv4PseudoHeader& pseudo_header, ConstDataIterator_t begin, ConstDataIterator_t end);
@@ -821,6 +825,9 @@ namespace QVPN {
 				UShort get_udp_length() const;
 				UShort get_udp_checksum() const;
 				bool protocol_criteria(UByte protocol) const;
+
+
+				void set_udp_checksum(UShort checksum);
 
 				UShort get_src_port() const;
 				UShort get_dst_port() const;

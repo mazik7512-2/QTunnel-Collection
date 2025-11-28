@@ -425,6 +425,12 @@ bool QVPN::Core::DataStructures::UdpPacketLittleEndian::protocol_criteria(UByte 
 	return (protocol == QVPN::Core::DataStructures::TransportProtocols::UDP) ? true : false;
 }
 
+void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_udp_checksum(UShort checksum)
+{
+	header_[6] = checksum >> 8 & 0xFF;
+	header_[7] = checksum & 0xFF;
+}
+
 UShort QVPN::Core::DataStructures::UdpPacketLittleEndian::get_src_port() const
 {
 	return get_udp_src_port();
@@ -447,7 +453,7 @@ void QVPN::Core::DataStructures::UdpPacketLittleEndian::recalculate_transport_ch
 	auto [b, e] = pseudo_header.get_by_bytes();
 
 
-	//set_udp_checksum(0);
+	set_udp_checksum(0);
 	// pseudo-header checksum
 	for (auto i = b; i < e; i += 2)
 	{
@@ -485,7 +491,7 @@ void QVPN::Core::DataStructures::UdpPacketLittleEndian::recalculate_transport_ch
 
 	res = static_cast<UShort>(sum);
 	res = (~res);
-	//set_udp_checksum(res);
+	set_udp_checksum(res);
 }
 
 UShort QVPN::Core::DataStructures::UdpPacketLittleEndian::get_transport_length() const
@@ -940,6 +946,12 @@ bool QVPN::Core::DataStructures::UdpPacketView::protocol_criteria(UByte protocol
 	return (protocol == QVPN::Core::DataStructures::TransportProtocols::UDP) ? true : false;
 }
 
+void QVPN::Core::DataStructures::UdpPacketView::set_udp_checksum(UShort checksum)
+{
+	header_[6] = checksum >> 8 & 0xFF;
+	header_[7] = checksum & 0xFF;
+}
+
 UShort QVPN::Core::DataStructures::UdpPacketView::get_src_port() const
 {
 	return get_udp_src_port();
@@ -962,7 +974,7 @@ void QVPN::Core::DataStructures::UdpPacketView::recalculate_transport_checksum(c
 	auto [b, e] = pseudo_header.get_by_bytes();
 
 
-	//set_udp_checksum(0);
+	set_udp_checksum(0);
 	// pseudo-header checksum
 	for (auto i = b; i < e; i += 2)
 	{
@@ -1000,7 +1012,7 @@ void QVPN::Core::DataStructures::UdpPacketView::recalculate_transport_checksum(c
 
 	res = static_cast<UShort>(sum);
 	res = (~res);
-	//set_udp_checksum(res);
+	set_udp_checksum(res);
 }
 
 UShort QVPN::Core::DataStructures::UdpPacketView::get_transport_length() const
