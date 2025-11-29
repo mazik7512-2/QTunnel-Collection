@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <variant>
 #include <memory>
+#include <qvpn_structures.hpp>
 
 namespace QVPN
 {
@@ -232,6 +233,9 @@ namespace QVPN
 		private:
 
 			QVPNSettings<Iter, Addr> settings_;
+			using TLS13_RecordLittleEndian = QVPN::Core::DataStructures::TLS13_RecordLittleEndian;
+			using TLS13_MessageLittleEndian = QVPN::Core::DataStructures::TLS13_MessageLittleEndian;
+			using TLS13_ClientHello = QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian;
 
 		public:
 
@@ -240,7 +244,7 @@ namespace QVPN
 
 			bool connect() const
 			{
-
+				
 			}
 
 			bool init() const
