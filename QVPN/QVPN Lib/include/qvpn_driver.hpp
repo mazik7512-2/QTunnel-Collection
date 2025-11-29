@@ -154,6 +154,7 @@ namespace QVPN
 		};
 
 
+		template <is_addr AddrType>
 		class QVPNConnectionSettings
 		{
 		public:
@@ -162,21 +163,27 @@ namespace QVPN
 			using Ipv6AddressType = nullptr_t;
 
 		private:
-			std::variant<Ipv4AddressType, Ipv6AddressType> addr_;
+			QVPN::Core::UnifiedNetAddr<AddrType> addr_;
 			BaseTypes::UShort port_;
 
 		public:
 
-			template <class AddrType>
-			requires is_addr<AddrType>
-			QVPNConnectionSettings(AddrType address, BaseTypes::UShort port)
+			
+			QVPNConnectionSettings(QVPN::Core::UnifiedNetAddr<AddrType>& address, BaseTypes::UShort port)
 			{
 				addr_ = address;
 				port_ = port;
 			}
 
-			std::variant<Ipv4AddressType, Ipv6AddressType> get_ip_address() const;
-			BaseTypes::UShort get_port() const;
+			QVPN::Core::UnifiedNetAddr<AddrType> get_ip_address() const
+			{
+				return addr_;
+			}
+
+			BaseTypes::UShort get_port() const
+			{
+				return port_;
+			}
 
 		};
 		
@@ -192,18 +199,18 @@ namespace QVPN
 			std::string_view get_key() const;
 		};
 
-		template <std::random_access_iterator Iter>
-		class QVPNSettings : public QVPNLayersSettings<Iter>, public QVPNConnectionSettings, public QVPNAuthenticationSettings
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr>
+		class QVPNSettings : public QVPNLayersSettings<Iter>, public QVPNConnectionSettings<Addr>, public QVPNAuthenticationSettings
 		{
 		private:
 
 		public:
-			QVPNSettings(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNAuthenticationSettings auth)
-				: QVPNSettings:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNSettings::QVPNConnectionSettings(std::move(connection)), QVPNSettings::QVPNAuthenticationSettings(std::move(auth)) {}
+			QVPNSettings(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings<Addr> connection, QVPNAuthenticationSettings auth)
+				: QVPNSettings:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNSettings:: template QVPNConnectionSettings<Addr>(std::move(connection)), QVPNSettings::QVPNAuthenticationSettings(std::move(auth)) {}
 
 		};
 
-		template <class VPNDriver>
+		template <class VPNDriver, class Addr>
 		concept is_vpn_driver = 
 			requires (VPNDriver d, const BaseTypes::UByte* begin, const BaseTypes::UByte* end) {
 
@@ -215,21 +222,36 @@ namespace QVPN
 				{ d.disconnect() } -> std::same_as<bool>;
 
 				{ d.get_vpn_port() } -> std::same_as<UShort>;
-				{ d.get_vpn_address() };
+				{ d.get_vpn_address() } -> std::same_as<UnifiedNetAddr<Addr>>;
 
 		};
 
-		template <std::random_access_iterator Iter>
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr>
 		class QVPNDriver
 		{
 		private:
 
-			QVPNSettings<Iter> settings_;
+			QVPNSettings<Iter, Addr> settings_;
 
 		public:
 
-			QVPNDriver(QVPNSettings<Iter> settings)
+			QVPNDriver(QVPNSettings<Iter, Addr> settings)
 				: settings_(std::move(settings)) {}
+
+			bool connect() const
+			{
+
+			}
+
+			bool init() const
+			{
+
+			}
+
+			bool disconnect() const
+			{
+
+			}
 
 			UShort get_vpn_port() const
 			{
