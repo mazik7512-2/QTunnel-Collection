@@ -1,5 +1,7 @@
 #include "qvpn_lib.hpp"
 #include <sstream>
+#include <qvpn_defs.hpp>
+
 
 QVPN::Core::IPv4Address::IPv4Address()
 {
@@ -60,6 +62,11 @@ QVPN::Core::IPv4Address& QVPN::Core::IPv4Address::operator=(AddrBytes_t&& other)
 QVPN::Core::IPv4Address::UByte QVPN::Core::IPv4Address::operator[](int elem) const
 {
     return ip_[elem];
+}
+
+constexpr int QVPN::Core::IPv4Address::get_addr_family()
+{
+    return AF_INET;
 }
 
 std::array<QVPN::Core::IPv4Address::UByte, 4> QVPN::Core::IPv4Address::to_bytes() const

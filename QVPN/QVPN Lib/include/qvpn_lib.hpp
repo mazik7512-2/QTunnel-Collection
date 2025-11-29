@@ -3,6 +3,7 @@
 #include <qvpn_general.hpp>
 #include <array>
 
+
 namespace QVPN
 {
 	namespace Core
@@ -26,13 +27,14 @@ namespace QVPN
 			typename AddrType::AddrBytes_t;
 			typename AddrType::AddrInt_t;
 
+			{ AddrType::get_addr_family() } -> std::same_as<int>;
 			{ addr.to_bytes() } -> std::same_as<typename AddrType::AddrBytes_t>;
 			{ addr.to_string() } -> std::same_as<std::string>;
 			{ addr.to_uint() } -> std::same_as<typename AddrType::AddrInt_t>;
 
 		};
 
-		class IPv4Address final
+		class IPv4Address
 		{
 
 		public:
@@ -59,6 +61,8 @@ namespace QVPN
 
 			UByte operator[](int elem) const;
 
+			static constexpr int get_addr_family();
+
 			AddrBytes_t to_bytes() const;
 			std::string to_string() const;
 			AddrInt_t to_uint() const;
@@ -68,6 +72,12 @@ namespace QVPN
 
 		};
 
+
+		template <is_addr Addr>
+		class UnifiedNetAddr : public Addr
+		{
+
+		};
 
 
 		template <typename T>
@@ -140,6 +150,46 @@ namespace QVPN
 			{ f.local_traffic() } -> std::same_as<typename Filter::Filter_t>;
 		};
 
+
+		struct NetStatus
+		{
+			bool success;
+			int status;
+		};
+
+
+		template <class SocketImpl, class Addr, class ... Args>
+		concept is_socket =
+			requires (SocketImpl t, const BaseTypes::UByte* begin, const BaseTypes::UByte* end, const UnifiedNetAddr<Addr>& addr, const BaseTypes::UShort port, int flags, Args&& ... args) {
+
+			SocketImpl::buffer_size;
+
+				{ SocketImpl(args...) };
+
+				{ t.connect(addr, port) } -> std::same_as<NetStatus>;
+				{ t.disconnect() } -> std::same_as<NetStatus>;
+
+				{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
+				{ t.receive(flags) } -> std::same_as<std::array<BaseTypes::UByte, SocketImpl::buffer_size>>;
+		};
+
+
+		template <class SocketImpl, class ... Args>
+		requires is_socket<SocketImpl, Args...>
+		class QVPN_Socket : public SocketImpl
+		{
+		public:
+			QVPN_Socket(Args&& ... args)
+				: SocketImpl(std::forward<Args>(args)...) { }
+		};
+
+		template <class NetToolsImpl, class Socket>
+		concept is_net_tools =
+			requires (NetToolsImpl t, int socket_family, int socket_type, int proto) {
+
+				{ NetToolsImpl::create_socket(socket_family, socket_type, proto) } -> std::same_as<QVPN_Socket<Socket>>;
+
+		};
 
 		template <class PreParserImpl>
 		concept is_preparser =

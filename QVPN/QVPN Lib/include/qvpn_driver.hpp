@@ -210,6 +210,13 @@ namespace QVPN
 				{ d.encode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 				{ d.decode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
+				{ d.connect() } -> std::same_as<bool>;
+				{ d.init() } -> std::same_as<bool>;
+				{ d.disconnect() } -> std::same_as<bool>;
+
+				{ d.get_vpn_port() } -> std::same_as<UShort>;
+				{ d.get_vpn_address() };
+
 		};
 
 		template <std::random_access_iterator Iter>
@@ -224,6 +231,16 @@ namespace QVPN
 			QVPNDriver(QVPNSettings<Iter> settings)
 				: settings_(std::move(settings)) {}
 
+			UShort get_vpn_port() const
+			{
+				return settings_.get_port();
+			}
+
+			auto get_vpn_address() const
+			{
+				return settings_.get_ip_address();
+			}
+
 			std::vector<BaseTypes::UByte> encode_data(Iter begin, Iter end)
 			{
 				return settings_.layers_encode(begin, end);
@@ -235,5 +252,6 @@ namespace QVPN
 			}
 
 		};
+
 }
 }
