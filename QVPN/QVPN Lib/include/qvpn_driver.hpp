@@ -244,7 +244,7 @@ namespace QVPN
 
 			bool connect() const
 			{
-				
+
 			}
 
 			bool init() const

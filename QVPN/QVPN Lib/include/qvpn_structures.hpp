@@ -9,7 +9,9 @@
 #include <variant>
 #include <iostream>
 #include <unordered_map>
-#include "qvpn_driver.hpp"
+#include <concepts>
+#include <ctime>
+#include <utility>
 #include <tuple>
 #include <functional>
 #include <algorithm>
@@ -2260,7 +2262,7 @@ namespace QVPN {
 				}
 
 
-				template <class TLSPacketGenerator, TLSRecordGenerationStrategy TLSRecordGenStrategy, class ... Args>
+				template <TLSRecordGenerationStrategy TLSRecordGenStrategy, class TLSPacketGenerator, class ... Args>
 				static std::vector<UByte> generate_object_bytes(TLSRecordGenStrategy&& rec_strategy, Args&& ... args)
 				{
 					std::vector<UByte> obj_bytes = TLSPacketGenerator:: template generate_object_bytes<Args...>(std::forward<Args>(args)...);
@@ -2279,10 +2281,11 @@ namespace QVPN {
 					return obj_bytes;
 				}
 
-				template <class TLSPacketGenerator, class TLSGenerationStrategy>
-				static TLS13_RecordLittleEndian generate_object(TLSGenerationStrategy&& strategy)
+
+				template <TLSRecordGenerationStrategy TLSRecordGenStrategy, class TLSPacketGenerator, class ... Args>
+				static TLS13_RecordLittleEndian generate_object(TLSRecordGenStrategy&& strategy, Args&& ... args)
 				{
-					auto obj_bytes = generate_object_bytes<TLSPacketGenerator, TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+					auto obj_bytes = generate_object_bytes<TLSRecordGenStrategy, TLSPacketGenerator, Args...>(std::forward<TLSRecordGenStrategy>(strategy), std::forward<Args>(args)...);
 					return TLS13_RecordLittleEndian(obj_bytes.begin(), obj_bytes.end());
 				}
 
@@ -2318,16 +2321,16 @@ namespace QVPN {
 				}
 
 
-				template <class TLSPacketGenerator, class TLSGenerationStrategy, class TLSRecordGenerationStrategy>
-				static std::vector<UByte> generate_object_bytes(TLSGenerationStrategy&& strategy, TLSRecordGenerationStrategy&& rec_strategy)
+				template <TLSRecordGenerationStrategy TLSRecordGenStrategy, class TLSPacketGenerator, class ... Args>
+				static std::vector<UByte> generate_object_bytes(TLSRecordGenStrategy&& strategy, Args&& ... args)
 				{
-					return TLS13_RecordLittleEndian::generate_object_bytes<TLSPacketGenerator, TLSGenerationStrategy, TLSRecordGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy), std::forward<TLSRecordGenerationStrategy>(rec_strategy));
+					return TLS13_RecordLittleEndian::generate_object_bytes<TLSRecordGenStrategy, TLSPacketGenerator, Args...>(std::forward<TLSRecordGenStrategy>(strategy), std::forward<Args>(args)...);
 				}
 
-				template <class TLSPacketGenerator, class TLSGenerationStrategy, class TLSRecordGenerationStrategy>
-				static TLS13_RecordLittleEndian generate_object(TLSGenerationStrategy&& strategy, TLSRecordGenerationStrategy&& rec_strategy)
+				template <TLSRecordGenerationStrategy TLSRecordGenStrategy, class TLSPacketGenerator, class ... Args>
+				static TLS13_RecordLittleEndian generate_object(TLSRecordGenStrategy&& strategy, Args&& ... args)
 				{
-					return TLS13_RecordLittleEndian::generate_object<TLSPacketGenerator, TLSGenerationStrategy, TLSRecordGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy), std::forward<TLSRecordGenerationStrategy>(rec_strategy));
+					return TLS13_RecordLittleEndian::generate_object<TLSRecordGenStrategy, TLSPacketGenerator, Args...>(std::forward<TLSRecordGenStrategy>(strategy), std::forward<Args>(args)...);
 				}
 
 				TLSRecordType get_tls_record_type() const;
