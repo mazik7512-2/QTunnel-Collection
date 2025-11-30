@@ -6,7 +6,7 @@ using UByte = QVPN::Core::BaseTypes::UByte;
 using UShort = QVPN::Core::BaseTypes::UShort;
 
 
-QVPN::NetTools::WinSocket QVPN::NetTools::WinNetTools::create_socket(int socket_family = AF_INET, int socket_type = SOCK_STREAM, int proto = IPPROTO_TCP)
+QVPN::NetTools::WinSocket QVPN::NetTools::WinNetTools::create_socket(int socket_family, int socket_type, int proto)
 {
 	QVPN::NetTools::WinSocket socket(socket_family, socket_type, proto);
 	return socket;

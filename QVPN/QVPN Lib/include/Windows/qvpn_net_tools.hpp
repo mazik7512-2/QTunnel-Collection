@@ -1,7 +1,9 @@
 #pragma once
+
 #include <qvpn_lib.hpp>
-#include <winsock2.h>
-#include <ws2tcpip.h>
+
+#include <winsock2.h>     
+#include <ws2ipdef.h>
 
 
 #pragma comment(lib, "ws2_32.lib")
@@ -17,7 +19,7 @@ namespace QVPN {
 		requires (addr_type == AF_INET)
 		QVPN::Core::NetStatus connect_(SOCKET& socket, const QVPN::Core::UnifiedNetAddr<Addr>& addr, const UShort port)
 		{
-			sockaddr_in serverAddr;
+			sockaddr_in serverAddr{};
 			serverAddr.sin_family = QVPN::Core::UnifiedNetAddr<Addr>::get_addr_family();
 			serverAddr.sin_port = htons(port);
 			serverAddr.sin_addr = addr.to_uint();
@@ -28,7 +30,7 @@ namespace QVPN {
 		requires (addr_type == AF_INET6)
 		QVPN::Core::NetStatus connect_(SOCKET& socket, const QVPN::Core::UnifiedNetAddr<Addr>& addr, const UShort port)
 		{
-			sockaddr_in6 serverAddr;
+			struct sockaddr_in6 serverAddr{};
 			serverAddr.sin6_family = QVPN::Core::UnifiedNetAddr<Addr>::get_addr_family();
 			serverAddr.sin6_port = htons(port);
 			serverAddr.sin6_addr = addr.to_uint();
@@ -74,9 +76,9 @@ namespace QVPN {
 				return status;
 			}
 
-			QVPN::Core::NetStatus send(const UByte* begin, const UByte* end, int flags);
+			QVPN::Core::NetStatus send(const UByte* begin, const UByte* end, int flags = 0);
 
-			std::array<UByte, WinSocket::buffer_size> receive(int flags);
+			std::array<UByte, WinSocket::buffer_size> receive(int flags = 0);
 
 			QVPN::Core::NetStatus disconnect() const;
 
@@ -91,7 +93,7 @@ namespace QVPN {
 
 		public:
 
-			static QVPN::NetTools::WinSocket create_socket(int socket_family, int socket_type, int proto);
+			static QVPN::NetTools::WinSocket create_socket(int socket_family = AF_INET, int socket_type = SOCK_STREAM, int proto = IPPROTO_TCP);
 		};
 
 

@@ -7,7 +7,6 @@
 #include <iostream>
 #include <qvpn_structures.hpp>
 #include <fstream>
-#include <qvpn_driver.hpp>
 #include <qvpn_tools.hpp>
 
 #pragma comment(lib, "windivert.lib")

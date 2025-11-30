@@ -2980,3 +2980,10 @@ std::pair<QVPN::Core::DataStructures::TLS13_ApplicationDataView::ConstDataIterat
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
+
+// TLS 1.3 Default Record Gen Strategy
+
+QVPN::Core::DataStructures::TLSProtocolVersion QVPN::Core::DataStructures::TLS13_DefaultRecordGenerationStrategy::get_legacy_version() const
+{
+	return TLSProtocolVersion::TLS12;
+}

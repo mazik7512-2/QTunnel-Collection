@@ -1195,6 +1195,7 @@ namespace QVPN {
 
 				// generator for qvpn protcol (for net protocol + transport protocol + dest ip)
 				//example: ipv4 (1 byte) + tcp (1 byte) + ip_addr (4 bytes)
+				// no need
 				template <std::random_access_iterator Iter>
 				static std::array<UByte, 32> generate_object_bytes(Iter begin, Iter end)
 				{
@@ -2243,6 +2244,13 @@ namespace QVPN {
 			};
 
 
+			class TLS13_DefaultRecordGenerationStrategy
+			{
+			public:
+
+				TLSProtocolVersion get_legacy_version() const;
+			};
+
 			class TLS13_RecordLittleEndian
 			{
 			public:
@@ -2376,10 +2384,10 @@ namespace QVPN {
 
 				static OverlayProtocolType get_overlay_protocol_type();
 
-				template <class TLSPacketGenerator, class TLSGenerationStrategy>
-				static std::vector<UByte> generate_object_bytes(TLSGenerationStrategy&& strategy)
+				template <class TLSPacketGenerator, class TLSGenerationStrategy, class ... Args>
+				static std::vector<UByte> generate_object_bytes(TLSGenerationStrategy&& strategy, Args&& ... args)
 				{
-					std::vector<UByte> obj_bytes = TLSPacketGenerator:: template generate_object_bytes<TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+					std::vector<UByte> obj_bytes = TLSPacketGenerator:: template generate_object_bytes<TLSGenerationStrategy, Args...>(std::forward<TLSGenerationStrategy>(strategy), std::forward<Args>(args)...);
 					auto size = static_cast<UInt>(obj_bytes.size());
 					TLSMessageType msg_type = TLSPacketGenerator::get_overlay_protocol_type();
 
@@ -2392,10 +2400,10 @@ namespace QVPN {
 					return obj_bytes;
 				}
 
-				template <class TLSGenerator, class TLSGenerationStrategy>
-				static TLS13_MessageLittleEndian generate_object(TLSGenerationStrategy&& strategy)
+				template <class TLSGenerator, class TLSGenerationStrategy, class ... Args>
+				static TLS13_MessageLittleEndian generate_object(TLSGenerationStrategy&& strategy, Args&& ... args)
 				{
-					auto obj_bytes = generate_object_bytes<TLSGenerator, TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+					auto obj_bytes = generate_object_bytes<TLSGenerator, TLSGenerationStrategy, Args...>(std::forward<TLSGenerationStrategy>(strategy), std::forward<Args>(args)...);
 					return TLS13_MessageLittleEndian(obj_bytes.begin(), obj_bytes.end());
 				}
 
@@ -2426,16 +2434,16 @@ namespace QVPN {
 
 				static OverlayProtocolType get_overlay_protocol_type();
 
-				template <class TLSPacketGenerator, class TLSGenerationStrategy>
-				static std::vector<UByte> generate_object_bytes(TLSGenerationStrategy&& strategy)
+				template <class TLSPacketGenerator, class TLSGenerationStrategy, class ... Args>
+				static std::vector<UByte> generate_object_bytes(TLSGenerationStrategy&& strategy, Args&& ... args)
 				{
-					return TLS13_MessageLittleEndian::generate_object_bytes<TLSPacketGenerator, TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+					return TLS13_MessageLittleEndian::generate_object_bytes<TLSPacketGenerator, TLSGenerationStrategy, Args...>(std::forward<TLSGenerationStrategy>(strategy), std::forward<Args>(args)...);
 				}
 
-				template <class TLSGenerator, class TLSGenerationStrategy>
-				static TLS13_MessageLittleEndian generate_object(TLSGenerationStrategy&& strategy)
+				template <class TLSGenerator, class TLSGenerationStrategy, class ... Args>
+				static TLS13_MessageLittleEndian generate_object(TLSGenerationStrategy&& strategy, Args&& ... args)
 				{
-					return TLS13_MessageLittleEndian::generate_object<TLSGenerator, TLSGenerationStrategy>(std::forward<TLSGenerationStrategy>(strategy));
+					return TLS13_MessageLittleEndian::generate_object<TLSGenerator, TLSGenerationStrategy, Args...>(std::forward<TLSGenerationStrategy>(strategy), std::forward<Args>(args)...);
 				}
 
 
@@ -2510,6 +2518,59 @@ namespace QVPN {
 					std::copy(begin, end, std::back_inserter(data_));
 					parse_scheme();
 				}
+
+				// generators for qvpn
+
+				template <TLS13_ClientHelloGenStrategy GenStrategy, std::random_access_iterator Iter>
+				static std::vector<UByte> generate_object_bytes(GenStrategy&& strategy, Iter begin, Iter end)
+				{
+					std::vector<UByte> obj_bytes;
+
+					// legacy version, must be TLS 1.2
+					auto legacy_version = strategy.get_legacy_version();
+
+					obj_bytes.push_back(static_cast<UByte>(legacy_version >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(legacy_version & 0xFF));
+
+					auto random = TLSRandomLittleEndian::generate_object_bytes();
+					std::copy(random.begin(), random.end(), std::back_inserter(obj_bytes));
+
+					auto session = TLSSessionIDLittleEndian::generate_object_bytes<Iter>(strategy.get_session_length(), begin, end);
+					std::copy(session.begin(), session.end(), std::back_inserter(obj_bytes));
+
+					auto cipher = TLSCipherSuitLittleEndian::generate_object_bytes(strategy.get_cipher_length());
+					std::copy(cipher.begin(), cipher.end(), std::back_inserter(obj_bytes));
+
+					auto compres = TLSCompressionLittleEndian::generate_object_bytes(strategy.get_compression_length());
+					std::copy(compres.begin(), compres.end(), std::back_inserter(obj_bytes));
+
+					auto sup_vers = strategy.get_supported_versions();
+					auto key_shares = strategy.get_key_share();
+					auto sni_hosts = strategy.get_sni_hosts();
+
+					std::pair<SupVerIter, SupVerIter> vers_iters = std::make_pair<>(sup_vers.begin(), sup_vers.end());
+					std::pair<KeyShareIter, KeyShareIter> key_shares_iters = std::make_pair<>(key_shares.begin(), key_shares.end());
+					std::pair<SNIIter, SNIIter> hosts_iters = std::make_pair<>(sni_hosts.begin(), sni_hosts.end());
+
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSSupportedVersionsExtensionLittleEndian, UShort, std::pair<SupVerIter, SupVerIter>> sup_ver(strategy.get_supported_versions_length(), vers_iters);
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSKeyShareClientHelloLittleEndian, UShort, std::pair<KeyShareIter, KeyShareIter>> key_share(strategy.get_key_share_length(), key_shares_iters);
+					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSServerNameIndicationExtensionLittleEndian, UShort, std::pair<SNIIter, SNIIter>> sni(strategy.get_sni_length(), hosts_iters);
+
+					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver), std::move(key_share), std::move(sni));
+					//auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver));
+					std::copy(extensions.begin(), extensions.end(), std::back_inserter(obj_bytes));
+
+					return obj_bytes;
+				}
+
+				template <TLS13_ClientHelloGenStrategy GenStrategy, std::random_access_iterator Iter>
+				static TLS13_ClientHelloPacketLittleEndian generate_object(GenStrategy&& strategy, Iter begin, Iter end)
+				{
+					auto obj_bytes = generate_object_bytes<GenStrategy, Iter>(std::forward<GenStrategy>(strategy), begin, end);
+					return TLS13_ClientHelloPacketLittleEndian(obj_bytes.begin(), obj_bytes.end());
+				}
+
+				// defaults generators
 
 				template <TLS13_ClientHelloGenStrategy GenStrategy>
 				static std::vector<UByte> generate_object_bytes(GenStrategy&& strategy)

@@ -1,9 +1,11 @@
 #pragma once
+#include <qvpn_net_tools.hpp>
 #include <qvpn_lib.hpp>
 #include <type_traits>
 #include <variant>
 #include <memory>
 #include <qvpn_structures.hpp>
+
 
 namespace QVPN
 {
@@ -20,6 +22,12 @@ namespace QVPN
 			QUIET_LAYER = 1,
 			OPTIMIZATION_LAYER,
 			DEFENCE_LAYER
+		};
+
+		enum QVPN_Crypto : UShort
+		{
+			NO_CRYPTO = 0,
+
 		};
 
 		template <std::random_access_iterator Iter>
@@ -193,11 +201,13 @@ namespace QVPN
 		{
 		private:
 			std::string key_;
+			QVPN_Crypto crypto_method_;
 
 		public:
-			QVPNAuthenticationSettings(std::string key);
+			QVPNAuthenticationSettings(QVPN_Crypto method, std::string key);
 
 			std::string_view get_key() const;
+			QVPN_Crypto get_crypto_method() const;
 		};
 
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr>
@@ -234,8 +244,12 @@ namespace QVPN
 
 			QVPNSettings<Iter, Addr> settings_;
 			using TLS13_RecordLittleEndian = QVPN::Core::DataStructures::TLS13_RecordLittleEndian;
+			using TLS13_RecordGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultRecordGenerationStrategy;
+
 			using TLS13_MessageLittleEndian = QVPN::Core::DataStructures::TLS13_MessageLittleEndian;
+
 			using TLS13_ClientHello = QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian;
+			using TLS13_ClienthHelloGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy;
 
 		public:
 
@@ -244,7 +258,28 @@ namespace QVPN
 
 			bool connect() const
 			{
+				TLS13_RecordGenStrategy rec_strategy{};
+				TLS13_ClienthHelloGenStrategy client_strategy{};
+				std::vector<UByte> crypto_data{};
+				using Iter = std::vector<UByte>::const_iterator;
 
+				auto m = settings_.get_crypto_method();
+				crypto_data.push_back(static_cast<UByte>(m >> 8 & 0xFF));
+				crypto_data.push_back(static_cast<UByte>(m & 0xFF));
+
+				auto k = settings_.get_key();
+				std::copy(k.begin(), k.end(), std::back_inserter(crypto_data));
+
+				auto tls_data = 
+					TLS13_RecordLittleEndian::generate_object_bytes<TLS13_RecordGenStrategy, TLS13_MessageLittleEndian, TLS13_ClientHello, TLS13_ClienthHelloGenStrategy, Iter, Iter>
+					(rec_strategy, client_strategy, crypto_data.cbegin(), crypto_data.cend());
+
+				auto addr = settings_.get_ip_address();
+				auto port = settings_.get_port();
+
+				auto socket = QVPN::NetTools::WinNetTools::create_socket();
+				socket.connect(addr, port);
+				socket.send(tls_data.begin(), tls_data.end());
 			}
 
 			bool init() const
