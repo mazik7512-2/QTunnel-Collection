@@ -1,3 +1,4 @@
+#include <qvpn_driver.hpp>
 #include <windivert.h>
 #include <string_view>
 #include <string>
@@ -8,6 +9,8 @@
 #include <qvpn_structures.hpp>
 #include <fstream>
 #include <qvpn_tools.hpp>
+
+
 
 #pragma comment(lib, "windivert.lib")
 

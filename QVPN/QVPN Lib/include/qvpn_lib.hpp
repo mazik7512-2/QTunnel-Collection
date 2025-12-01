@@ -158,13 +158,11 @@ namespace QVPN
 		};
 
 
-		template <class SocketImpl, class Addr, class ... Args>
+		template <class SocketImpl, class Addr>
 		concept is_socket =
-			requires (SocketImpl t, const BaseTypes::UByte* begin, const BaseTypes::UByte* end, const UnifiedNetAddr<Addr>& addr, const BaseTypes::UShort port, int flags, Args&& ... args) {
+			requires (SocketImpl t, const BaseTypes::UByte* begin, const BaseTypes::UByte* end, const UnifiedNetAddr<Addr>& addr, const BaseTypes::UShort port, int flags) {
 
 			SocketImpl::buffer_size;
-
-				{ SocketImpl(args...) };
 
 				{ t.connect(addr, port) } -> std::same_as<NetStatus>;
 				{ t.disconnect() } -> std::same_as<NetStatus>;
@@ -174,20 +172,11 @@ namespace QVPN
 		};
 
 
-		template <class SocketImpl, class ... Args>
-		requires is_socket<SocketImpl, Args...>
-		class QVPN_Socket : public SocketImpl
-		{
-		public:
-			QVPN_Socket(Args&& ... args)
-				: SocketImpl(std::forward<Args>(args)...) { }
-		};
-
 		template <class NetToolsImpl, class Socket>
 		concept is_net_tools =
 			requires (NetToolsImpl t, int socket_family, int socket_type, int proto) {
 
-				{ NetToolsImpl::create_socket(socket_family, socket_type, proto) } -> std::same_as<QVPN_Socket<Socket>>;
+				{ NetToolsImpl::create_socket(socket_family, socket_type, proto) } -> std::same_as<Socket>;
 
 		};
 

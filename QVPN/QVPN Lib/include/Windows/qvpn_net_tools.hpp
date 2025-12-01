@@ -37,7 +37,7 @@ namespace QVPN {
 			return connect(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
 		}
 
-		class WinSocket
+		class QVPN_Socket
 		{
 		public:
 			static constexpr int buffer_size = 4096;
@@ -50,7 +50,7 @@ namespace QVPN {
 		public:
 
 			template <class ... Args>
-			WinSocket(Args&& ... args)
+			QVPN_Socket(Args&& ... args)
 			{
 				socket_ = socket(std::forward<Args>(args)...);
 			}
@@ -78,7 +78,7 @@ namespace QVPN {
 
 			QVPN::Core::NetStatus send(const UByte* begin, const UByte* end, int flags = 0);
 
-			std::array<UByte, WinSocket::buffer_size> receive(int flags = 0);
+			std::array<UByte, QVPN_Socket::buffer_size> receive(int flags = 0);
 
 			QVPN::Core::NetStatus disconnect() const;
 
@@ -87,13 +87,11 @@ namespace QVPN {
 		};
 
 
-		class WinNetTools
+		class QVPNNetTools
 		{
-
-
 		public:
 
-			static QVPN::NetTools::WinSocket create_socket(int socket_family = AF_INET, int socket_type = SOCK_STREAM, int proto = IPPROTO_TCP);
+			static QVPN::NetTools::QVPN_Socket create_socket(int socket_family = AF_INET, int socket_type = SOCK_STREAM, int proto = IPPROTO_TCP);
 		};
 
 

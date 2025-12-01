@@ -253,6 +253,18 @@ namespace QVPN {
 				Ipv6ManagedAddressConfigurationSupported = 0x200
 			};
 
+
+			template <QVPN::Core::is_addr Addr>
+			struct QVPNProxyData
+			{
+				NetProtocols net_protocol;
+				TransportProtocols transport_protocol;
+				Addr net_addr;
+				UShort port;
+			};
+
+			using QVPNProxyData_Ipv4 = QVPNProxyData<QVPN::Core::IPv4Address>;
+
 			template <class AdapterHandle>
 			class Adapter final {
 			private:
