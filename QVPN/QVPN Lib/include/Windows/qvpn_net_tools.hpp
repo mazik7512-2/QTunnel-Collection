@@ -17,7 +17,7 @@ namespace QVPN {
 		
 		template <int addr_type, QVPN::Core::is_addr Addr>
 		requires (addr_type == AF_INET)
-		QVPN::Core::NetStatus connect_(SOCKET& socket, const QVPN::Core::UnifiedNetAddr<Addr>& addr, const UShort port)
+		QVPN::Core::NetStatus qvpn_connect_(SOCKET& socket, const QVPN::Core::UnifiedNetAddr<Addr>& addr, const UShort port)
 		{
 			sockaddr_in serverAddr{};
 			serverAddr.sin_family = QVPN::Core::UnifiedNetAddr<Addr>::get_addr_family();
@@ -28,7 +28,7 @@ namespace QVPN {
 
 		template <int addr_type, QVPN::Core::is_addr Addr>
 		requires (addr_type == AF_INET6)
-		QVPN::Core::NetStatus connect_(SOCKET& socket, const QVPN::Core::UnifiedNetAddr<Addr>& addr, const UShort port)
+		QVPN::Core::NetStatus qvpn_connect_(SOCKET& socket, const QVPN::Core::UnifiedNetAddr<Addr>& addr, const UShort port)
 		{
 			struct sockaddr_in6 serverAddr{};
 			serverAddr.sin6_family = QVPN::Core::UnifiedNetAddr<Addr>::get_addr_family();
@@ -66,7 +66,7 @@ namespace QVPN {
 					return status;
 				}
 
-				res = QVPN::NetTools::connect_<QVPN::Core::UnifiedNetAddr<Addr>::get_addr_family(), QVPN::Core::UnifiedNetAddr<Addr>>(socket_, addr, port);
+				res = QVPN::NetTools::qvpn_connect_<QVPN::Core::UnifiedNetAddr<Addr>::get_addr_family(), QVPN::Core::UnifiedNetAddr<Addr>>(socket_, addr, port);
 				if (res == SOCKET_ERROR) {
 					status.status = res;
 					return status;

@@ -171,7 +171,13 @@ namespace QVPN
 
 			std::vector<BaseTypes::UByte> layers_decode(Iter begin, Iter end) const
 			{
-				return std::vector<BaseTypes::UByte>();
+				std::vector<BaseTypes::UByte> res_data(begin, end);
+				for (auto& l : layers_)
+				{
+					if (l.is_active())
+						res_data = l.layer_decode(res_data.begin(), res_data.end());
+				}
+				return res_data;
 			}
 
 		};

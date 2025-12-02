@@ -76,7 +76,12 @@ namespace QVPN
 		template <is_addr Addr>
 		class UnifiedNetAddr : public Addr
 		{
+		public:
 
+			std::shared_ptr<Addr> get_addr() const
+			{
+				return std::make_shared<Addr>(static_cast<Addr*>(this));
+			}
 		};
 
 
@@ -247,8 +252,7 @@ namespace QVPN
 		};
 
 
-		
 
-	}
+}
 
 }
