@@ -38,7 +38,7 @@ namespace QVPN
 			virtual LayerTypes get_layer_type() const = 0;
 			virtual std::string_view get_layer_name() const = 0;
 
-			virtual std::vector<BaseTypes::UByte> layer_encode(Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data) const = 0;
+			virtual std::vector<BaseTypes::UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const = 0;
 			virtual std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const = 0;
 
 			virtual ~BaseLayer() = default;
@@ -77,9 +77,9 @@ namespace QVPN
 				return layer_->get_layer_name();
 			}
 
-			std::vector<BaseTypes::UByte> layer_encode(Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data) const
+			std::vector<BaseTypes::UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const
 			{
-				return layer_->layer_encode(begin, end, data);
+				return layer_->layer_encode(data, begin, end);
 			}
 
 			std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const
@@ -115,9 +115,9 @@ namespace QVPN
 			}
 
 
-			std::vector<UByte> layer_encode(Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data) const override
+			std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const override
 			{
-				std::vector<UByte> data = TLSRecordGenerator::generate_object_bytes<TLSRecordGenerator, TLSAppDataGenerator, Iter, QVPN::Core::DataStructures::QVPNProxyData_Ipv4>(rec_strategy, begin, end, data);
+				std::vector<UByte> data = TLSRecordGenerator::generate_object_bytes<TLSRecordGenerator, TLSAppDataGenerator, Iter, QVPN::Core::DataStructures::QVPNProxyData_Ipv4>(rec_strategy, data, begin, end);
 				return data;
 			}
 
@@ -139,7 +139,7 @@ namespace QVPN
 
 				{ l.get_layer_type() } -> std::same_as<LayerTypes>;
 				{ l.get_layer_name() } -> std::same_as <std::string_view>;
-				{ l.layer_encode(begin, end, data) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+				{ l.layer_encode(data, begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 				{ l.layer_decode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
 		}&& std::is_base_of<BaseLayer<Iter>, Layer>::value;
@@ -158,13 +158,13 @@ namespace QVPN
 				layers_.emplace_back(std::move(l), status);
 			}
 
-			std::vector<BaseTypes::UByte> layers_encode(Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data) const
+			std::vector<BaseTypes::UByte> layers_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const
 			{
-				std::vector<BaseTypes::UByte> res_data(begin, end);
+				std::vector<BaseTypes::UByte> res_data;
 				for (auto& l : layers_)
 				{
 					if (l.is_active())
-						res_data = l.layer_encode(res_data.data(), res_data.data() + res_data.size(), data);
+						res_data = l.layer_encode(data, begin, end);
 				}
 				return res_data;
 			}
@@ -237,9 +237,9 @@ namespace QVPN
 
 		template <class VPNDriver, class Addr>
 		concept is_vpn_driver =
-			requires (VPNDriver d, const BaseTypes::UByte * begin, const BaseTypes::UByte * end) {
+			requires (VPNDriver d, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data) {
 
-				{ d.encode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+				{ d.encode_data(data, begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 				{ d.decode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
 				{ d.connect() } -> std::same_as<bool>;
@@ -323,9 +323,9 @@ namespace QVPN
 				return settings_.get_ip_address();
 			}
 
-			std::vector<BaseTypes::UByte> encode_data(Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data)
+			std::vector<BaseTypes::UByte> encode_data(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end)
 			{
-				return settings_.layers_encode(begin, end, data);
+				return settings_.layers_encode(data, begin, end);
 			}
 
 			std::vector<BaseTypes::UByte> decode_data(Iter begin, Iter end)

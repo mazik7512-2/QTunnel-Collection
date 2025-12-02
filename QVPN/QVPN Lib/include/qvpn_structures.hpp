@@ -1322,28 +1322,18 @@ namespace QVPN {
 				}
 
 				// generator for qvpn protcol (for cipher key)
-				template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr>
-				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end, QVPNProxyData<Addr>& proxy_data)
+				template <std::random_access_iterator Iter>
+				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end)
 				{
 					std::vector<UByte> obj_bytes;
-					obj_bytes.push_back(static_cast<UByte>(proxy_data.net_protocol));
-					obj_bytes.push_back(static_cast<UByte>(proxy_data.transport_protocol));
-
-					auto addr = proxy_data.net_addr.to_bytes();
-					std::copy(addr.begin(), addr.end(), std::back_inserter(id_));
-
-					UShort port = proxy_data.port;
-					obj_bytes.push_back(static_cast<UByte>(port >> 8 & 0xFF));
-					obj_bytes.push_back(static_cast<UByte>(port & 0xFF));
-
 					std::copy(begin, end, std::back_inserter(id_));
 					return obj_bytes;
 				}
 
-				template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr>
-				static std::vector<UByte> generate_object(Iter begin, Iter end, QVPNProxyData<Addr>& proxy_data)
+				template <std::random_access_iterator Iter>
+				static std::vector<UByte> generate_object(Iter begin, Iter end)
 				{
-					auto obj_bytes = generate_object_bytes<Iter, Addr>(begin, end, proxy_data);
+					auto obj_bytes = generate_object_bytes<Iter>(begin, end);
 					return TLSSessionIDLittleEndian(obj_bytes.begin(), obj_bytes.end());
 				}
 
@@ -2882,6 +2872,36 @@ namespace QVPN {
 
 				static OverlayProtocolType get_overlay_protocol_type();
 
+				// generators for qvpn
+
+				template <std::random_access_iterator Iter, is_addr Addr>
+				static std::vector<UByte> generate_object_bytes(QVPNProxyData<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					std::vector<UByte> obj_bytes;
+					obj_bytes.push_back(static_cast<UByte>(proxy_data.net_protocol));
+					obj_bytes.push_back(static_cast<UByte>(proxy_data.transport_protocol));
+
+					auto addr = proxy_data.net_addr.to_bytes();
+					std::copy(addr.begin(), addr.end(), std::back_inserter(data_));
+
+					UShort port = proxy_data.port;
+					obj_bytes.push_back(static_cast<UByte>(port >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(port & 0xFF));
+
+					std::copy(begin, end, std::back_inserter(obj_bytes));
+					return obj_bytes;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr>
+				static TLS13_ApplicationDataLittleEndian generate_object(QVPNProxyData<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto obj_bytes = generate_object_bytes<Iter, Addr>(proxy_data, begin, end);
+					return TLS13_ApplicationDataLittleEndian(begin, end);
+				}
+
+
+				// default generators
+
 				template <std::random_access_iterator Iter>
 				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end)
 				{
@@ -2924,6 +2944,23 @@ namespace QVPN {
 				}
 
 				static OverlayProtocolType get_overlay_protocol_type();
+
+				// generators for qvpn protocol
+
+				template <std::random_access_iterator Iter, is_addr Addr>
+				static std::vector<UByte> generate_object_bytes(QVPNProxyData<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					return TLS13_ApplicationDataLittleEndian::generate_object_bytes<Iter, Addr>(proxy_data, begin, end);
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr>
+				static TLS13_ApplicationDataLittleEndian generate_object(QVPNProxyData<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					return TLS13_ApplicationDataLittleEndian::generate_object<Iter, Addr>(proxy_data, begin, end);
+				}
+
+
+				// default generators
 
 				template <std::random_access_iterator Iter>
 				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end)
