@@ -160,11 +160,11 @@ namespace QVPN
 
 			std::vector<BaseTypes::UByte> layers_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const
 			{
-				std::vector<BaseTypes::UByte> res_data;
+				std::vector<BaseTypes::UByte> res_data(begin, end);
 				for (auto& l : layers_)
 				{
 					if (l.is_active())
-						res_data = l.layer_encode(data, begin, end);
+						res_data = l.layer_encode(data, res_data.begin(), res_data.end());
 				}
 				return res_data;
 			}
