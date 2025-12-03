@@ -188,23 +188,29 @@ namespace QVPN
 		public:
 
 			using Ipv4AddressType = IPv4Address;
-			using Ipv6AddressType = nullptr_t;
+			using Ipv6AddressType = Ipv6Address;
+			using AddrType = std::variant<Ipv4AddressType, Ipv6AddressType>;
 
 		private:
-			NetAddr addr_;
+			AddrType addr_;
 			BaseTypes::UShort port_;
 
 		public:
 
 			QVPNConnectionSettings() = default;
 
-			QVPNConnectionSettings(NetAddr& address, BaseTypes::UShort port)
+			QVPNConnectionSettings(Ipv4AddressType& address, BaseTypes::UShort port)
+				: addr_(address), port_(port)
 			{
-				addr_ = address;
-				port_ = port;
+
 			}
 
-			NetAddr get_ip_address() const
+			QVPNConnectionSettings(Ipv6AddressType& address, BaseTypes::UShort port)
+				: addr_(address), port_(port)
+			{
+			}
+
+			decltype(auto) get_ip_address() const
 			{
 				return addr_;
 			}
@@ -252,6 +258,8 @@ namespace QVPN
 		concept is_vpn_driver =
 			requires (VPNDriver d, typename VPNDriver::DataIterator begin, typename VPNDriver::DataIterator end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data) {
 
+			typename VPNDriver::AddrType;
+
 				{ d.encode_data(data, begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 				{ d.decode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
@@ -260,9 +268,7 @@ namespace QVPN
 				{ d.disconnect() } -> std::same_as<bool>;
 
 				{ d.get_vpn_port() } -> std::same_as<UShort>;
-				{ d.get_vpn_address() } -> std::same_as<NetAddr>;
-
-				{ true };
+				{ d.get_vpn_address() } -> std::same_as<typename VPNDriver::AddrType>;
 
 		};
 
@@ -286,6 +292,7 @@ namespace QVPN
 		public:
 
 			using DataIterator = Iter;
+			using AddrType = QVPNSettings_<Iter>::AddrType;
 
 			QVPNDriver(QVPNSettings_<Iter> settings)
 				: settings_(std::move(settings)), socket_(NetTools::create_socket())
@@ -295,9 +302,9 @@ namespace QVPN
 
 			bool connect()
 			{
-				auto addr = settings_.get_ip_address();
-				auto port = settings_.get_port();
-				auto res = socket_.connect(addr, port);
+				const auto addr = settings_.get_ip_address();
+				const auto port = settings_.get_port();
+				auto res = std::visit([this, port](const auto& a) { return socket_.connect(a, port); }, addr); 
 				return res.success;
 			}
 
@@ -335,7 +342,7 @@ namespace QVPN
 				return settings_.get_port();
 			}
 
-			NetAddr get_vpn_address() const
+			decltype(auto) get_vpn_address() const
 			{
 				return settings_.get_ip_address();
 			}

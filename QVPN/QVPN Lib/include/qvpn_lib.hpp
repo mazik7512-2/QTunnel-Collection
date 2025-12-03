@@ -27,7 +27,8 @@ namespace QVPN
 			typename AddrType::AddrBytes_t;
 			typename AddrType::AddrInt_t;
 
-			{ AddrType::get_addr_family() } -> std::same_as<int>;
+			//{ AddrType::get_addr_family() } -> std::same_as<int>;
+			{ addr.get_addr_family() } -> std::same_as<int>;
 			{ addr.to_bytes() } -> std::same_as<typename AddrType::AddrBytes_t>;
 			{ addr.to_string() } -> std::same_as<std::string>;
 			{ addr.to_uint() } -> std::same_as<typename AddrType::AddrInt_t>;
@@ -62,7 +63,7 @@ namespace QVPN
 
 			UByte operator[](int elem) const;
 
-			static constexpr int get_addr_family();
+			consteval int get_addr_family();
 
 			AddrBytes_t to_bytes() const;
 			std::string to_string() const;
@@ -97,7 +98,8 @@ namespace QVPN
 
 			UByte operator[](int elem) const;
 
-			static constexpr int get_addr_family();
+			//static consteval int get_addr_family();
+			consteval int get_addr_family();
 
 			AddrBytes_t to_bytes() const;
 			std::string to_string() const;
@@ -108,6 +110,28 @@ namespace QVPN
 
 		};
 
+
+		class Ipv6Address
+		{
+		public:
+
+			using UByte = Core::BaseTypes::UByte;
+			using AddrBytes_t = std::array<UByte, 16>;
+			using AddrInt_t = std::array<UByte, 16>;
+
+		private:
+
+			AddrBytes_t ip_{};
+
+		public:
+
+			//static consteval int get_addr_family();
+			consteval int get_addr_family();
+
+			AddrBytes_t to_bytes() const;
+			std::string to_string() const;
+			AddrInt_t to_uint() const;
+		};
 
 		template <is_addr Addr>
 		class UnifiedNetAddr : public Addr
