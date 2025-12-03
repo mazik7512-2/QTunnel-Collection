@@ -68,7 +68,9 @@ int main()
 
     std::cout << ip4.to_string() << std::endl;
     
-    QVPN::VPNClient vpn;
+    QVPN::VPNSettings settings{};
+
+    QVPN::VPNClient vpn(std::move(settings));
     //vpn.create_adapter_ipv4();
     //vpn.capture_adapter();
 

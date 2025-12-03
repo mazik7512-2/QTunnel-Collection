@@ -34,6 +34,42 @@ namespace QVPN
 
 		};
 
+
+		template <class ByteImpl>
+		concept is_byte = std::is_same_v<ByteImpl, BaseTypes::UByte> || std::is_same_v<ByteImpl, BaseTypes::Byte>;
+
+		class NetAddr
+		{
+		public:
+
+			using UByte = Core::BaseTypes::UByte;
+			using AddrBytes_t = std::vector<UByte>;
+			using AddrInt_t = std::pair<BaseTypes::ULong, BaseTypes::ULong>;
+
+		private:
+
+			AddrBytes_t addr_;
+
+		public:
+			
+			NetAddr() = default;
+
+			template <is_byte ... Byte>
+			NetAddr(Byte&& ... bytes)
+			{
+				((addr_.push_back(bytes)), ...);
+			}
+
+			UByte operator[](int elem) const;
+
+			static constexpr int get_addr_family();
+
+			AddrBytes_t to_bytes() const;
+			std::string to_string() const;
+			AddrInt_t to_uint() const;
+		};
+
+
 		class IPv4Address
 		{
 
@@ -215,39 +251,6 @@ namespace QVPN
 			requires is_filter<FilterImpl>
 		class TrafficFilter_ final : public FilterImpl
 		{
-
-		};
-
-
-		template <is_adapter_driver AdapterDriver, is_net_driver NetDriver>
-		class VPNClient_ : public AdapterDriver, public NetDriver
-		{
-		private:
-			QVPN::Core::IPv4Address default_addr;
-		public:
-
-			VPNClient_()
-				: AdapterDriver(), NetDriver() 
-			{
-				default_addr = QVPN::Core::IPv4Address(192, 168, 50, 193);
-			}
-
-			void init_vpn()
-			{
-				auto adapter_ = AdapterDriver::get_ipv4_adapter();
-				auto addr = adapter_->get_addr();
-				NetDriver::init_driver(addr);
-			}
-
-			void start_vpn_client()
-			{
-				auto adapter_ = AdapterDriver::get_ipv4_adapter();
-				auto addr = adapter_->get_addr();
-				auto id = adapter_->get_id();
-				
-				NetDriver::start_capture_outgoing_traffic(addr, id);
-				NetDriver::start_capture_incoming_traffic(default_addr);
-			}
 
 		};
 

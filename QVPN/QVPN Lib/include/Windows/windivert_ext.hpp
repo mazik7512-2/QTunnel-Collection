@@ -140,7 +140,7 @@ namespace QVPN {
 		};
 
 
-		template <QVPN::Core::is_filter Filter>
+		template <QVPN::Core::is_filter Filter, QVPN::Core::is_vpn_driver VPNDriver>
 		class WinDivertClientNetDriver_ : public Filter
 		{
 		public:
@@ -167,6 +167,7 @@ namespace QVPN {
 			QVPN::Core::BaseTypes::ULong new_adapter_id;
 			
 			QVPN::Core::PreParser pp;
+			VPNDriver driver_;
 
 			void calculate_outgoing_filters()
 			{
@@ -228,12 +229,11 @@ namespace QVPN {
 					QVPN::Core::BaseTypes::UByte test[5] = { 't', 'e', 's', 't', '\0' };
 					package.set_data(std::begin(test), std::end(test));
 					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
-					auto [b, e] = package.to_bytes();
-					/*
+					
 					auto package = pp.pre_parse(packet, packet + packet_len);
 					auto to_bytes = [](auto& p) { return p.bytes(); };
 					auto [b, e] = std::visit(to_bytes, package);
-					*/
+					
 					if (!WinDivertSend(out_hDivert_, b, e - b, NULL, &addr)) // <------ addr структура WinDivert которую надо изменять??
 					{
 						fprintf(stderr, "warning: failed to reinject packet (%d)\n",
@@ -306,24 +306,8 @@ namespace QVPN {
 						NULL, nullptr, nullptr, &tcp_header, nullptr, NULL,
 						&payload_len, NULL, NULL);
 
-					/*
-					auto packet_start = packet;
-					auto packet_end = packet + packet_len;
-					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet_start, packet_end);
-					std::cout << "In " << package.ip_to_friendly_view() << std::endl;
-					std::cout << package.tcp_to_friendly_view() << std::endl;
-					auto c = package.get_tcp_checksum();
-					auto d = tcp_header->Checksum;
-					//package.set_ip_dest(adapter_addr); 
-					package.recalculate_checksums();
-					auto c1 = package.get_tcp_checksum();
-					auto d1 = tcp_header->Checksum;
-					*/
 					auto package = pp.pre_parse(packet, packet + packet_len);
-					std::cout << "package" << std::endl;
-					//package.set_data(std::begin(test), std::end(test)); 
 					auto to_bytes = [](auto& p) { return p.bytes(); };
-					//std::visit(to_bytes, package);
 					auto [begin, end] = std::visit(to_bytes, package);
 					
 					//addr.Network.IfIdx = old_adapter_id;
@@ -339,7 +323,12 @@ namespace QVPN {
 
 		public:
 
-			
+			WinDivertClientNetDriver_(QVPN::Core::QVPNSettings settings)
+				: driver_(std::move(settings))
+			{
+
+			}
+
 			void init_driver(const QVPN::Core::IPv4Address& addr)
 			{
 				apply_default_outgoing_filter(addr);
@@ -388,8 +377,10 @@ namespace QVPN {
 
 		};
 
+		using WinQVPNDriver = QVPN::Core::QVPNDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPN::NetTools::QVPN_Socket, QVPN::NetTools::QVPNNetTools>;
+
 		using WinDivertTrafficFilter = WinDivertTrafficFilter_<WinDivertTrafficFilterType>;
-		using WinDivertClientNetDriver = WinDivertClientNetDriver_<WinDivertTrafficFilter>;
+		using WinDivertClientNetDriver = WinDivertClientNetDriver_<WinDivertTrafficFilter, WinQVPNDriver>;
 	}
 
 
