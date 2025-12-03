@@ -458,7 +458,7 @@ namespace QVPN {
 				{ Ip4PacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 				{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 				{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
-				{ t.get_ip_version() } -> std::same_as<UByte>;
+				{ t.get_ip_version() } -> std::same_as<NetProtocols>;
 				{ t.get_ip_header_length() } -> std::same_as<UByte>;
 				{ t.get_ip_dscp() } -> std::same_as<UByte>;
 				{ t.get_ip_ecn() } -> std::same_as<UByte>;
@@ -467,6 +467,7 @@ namespace QVPN {
 				{ t.get_ip_flags() } -> std::same_as<UByte>;
 				{ t.get_ip_offset() } -> std::same_as<UShort>;
 				{ t.get_ip_ttl() } -> std::same_as<UByte>;
+				{ t.get_ip_protocol() } -> std::same_as<TransportProtocols>;
 				{ t.get_ip_checksum() } -> std::same_as<UShort>;
 				{ t.get_ip_source() } -> std::same_as<IPv4Address>;
 				{ t.get_ip_dest() } -> std::same_as<IPv4Address>;
@@ -500,7 +501,7 @@ namespace QVPN {
 
 				UByte* get_next_protocol_byte();
 
-				UByte get_ip_version() const;
+				NetProtocols get_ip_version() const;
 				UByte get_ip_header_length() const;
 
 				UByte get_ip_dscp() const;
@@ -514,7 +515,7 @@ namespace QVPN {
 				UShort get_ip_offset() const;
 
 				UByte get_ip_ttl() const;
-				UByte get_ip_protocol() const;
+				TransportProtocols get_ip_protocol() const;
 
 				UShort get_ip_checksum() const;
 
@@ -565,7 +566,7 @@ namespace QVPN {
 
 				UByte* get_next_protocol_byte();
 
-				UByte get_ip_version() const;
+				NetProtocols get_ip_version() const;
 				UByte get_ip_header_length() const;
 
 				UByte get_ip_dscp() const;
@@ -579,7 +580,7 @@ namespace QVPN {
 				UShort get_ip_offset() const;
 
 				UByte get_ip_ttl() const;
-				UByte get_ip_protocol() const;
+				TransportProtocols get_ip_protocol() const;
 
 				UShort get_ip_checksum() const;
 

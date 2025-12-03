@@ -164,7 +164,7 @@ namespace QVPN
 				for (auto& l : layers_)
 				{
 					if (l.is_active())
-						res_data = l.layer_encode(data, res_data.begin(), res_data.end());
+						res_data = l.layer_encode(data, res_data.data(), res_data.data() + res_data.size());
 				}
 				return res_data;
 			}
@@ -175,7 +175,7 @@ namespace QVPN
 				for (auto& l : layers_)
 				{
 					if (l.is_active())
-						res_data = l.layer_decode(res_data.begin(), res_data.end());
+						res_data = l.layer_decode(res_data.data(), res_data.data() + res_data.size());
 				}
 				return res_data;
 			}
@@ -246,7 +246,7 @@ namespace QVPN
 		};
 
 
-		using QVPNSettings = QVPNSettings_<UByte*>;
+		using QVPNSettings = QVPNSettings_<const UByte*>;
 
 		template <class VPNDriver>
 		concept is_vpn_driver =
@@ -293,7 +293,7 @@ namespace QVPN
 				//socket_ = NetTools::create_socket();
 			}
 
-			bool connect() const
+			bool connect()
 			{
 				auto addr = settings_.get_ip_address();
 				auto port = settings_.get_port();

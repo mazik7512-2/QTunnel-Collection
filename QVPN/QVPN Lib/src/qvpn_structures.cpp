@@ -46,9 +46,9 @@ UByte* QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_next_protocol_byt
 	return next_protocol_;
 }
 
-UByte QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_ip_version() const
+QVPN::Core::DataStructures::NetProtocols QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_ip_version() const
 {
-	return header_[0] >> 4;
+	return static_cast<NetProtocols>(header_[0] >> 4);
 }
 
 UByte QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_ip_header_length() const
@@ -97,9 +97,9 @@ UByte QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_ip_ttl() const
 	return header_[8];
 }
 
-UByte QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_ip_protocol() const
+QVPN::Core::DataStructures::TransportProtocols QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_ip_protocol() const
 {
-	return header_[9];
+	return static_cast<TransportProtocols>(header_[9]);
 }
 
 UShort QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_ip_checksum() const
@@ -541,9 +541,9 @@ UByte* QVPN::Core::DataStructures::Ipv4PacketView::get_next_protocol_byte()
 	return next_protocol_;
 }
 
-UByte QVPN::Core::DataStructures::Ipv4PacketView::get_ip_version() const
+QVPN::Core::DataStructures::NetProtocols QVPN::Core::DataStructures::Ipv4PacketView::get_ip_version() const
 {
-	return header_[0] >> 4;
+	return static_cast<NetProtocols>(header_[0] >> 4);
 }
 
 UByte QVPN::Core::DataStructures::Ipv4PacketView::get_ip_header_length() const
@@ -592,9 +592,9 @@ UByte QVPN::Core::DataStructures::Ipv4PacketView::get_ip_ttl() const
 	return header_[8];
 }
 
-UByte QVPN::Core::DataStructures::Ipv4PacketView::get_ip_protocol() const
+QVPN::Core::DataStructures::TransportProtocols QVPN::Core::DataStructures::Ipv4PacketView::get_ip_protocol() const
 {
-	return header_[9];
+	return static_cast<TransportProtocols>(header_[9]);
 }
 
 UShort QVPN::Core::DataStructures::Ipv4PacketView::get_ip_checksum() const

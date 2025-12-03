@@ -12,7 +12,6 @@ QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(int sock
 	return socket;
 }
 
-
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::send(const UByte* begin, const UByte* end, int flags)
 {
 	QVPN::Core::NetStatus status{};

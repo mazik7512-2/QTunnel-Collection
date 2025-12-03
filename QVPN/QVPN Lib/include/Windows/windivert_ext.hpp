@@ -220,21 +220,21 @@ namespace QVPN {
 						continue;
 					}
 					
-					old_adapter_id = addr.Network.IfIdx;
-					
-					QVPN::Core::DataStructures::Ipv4TcpPacket_View package(packet, packet + packet_len);
 					//package.set_ip_source(adapter_addr);
-					package.recalculate_ip_checksum();
-					std::cout << "Out " << package.ip_to_friendly_view() << std::endl;
-					QVPN::Core::BaseTypes::UByte test[5] = { 't', 'e', 's', 't', '\0' };
-					package.set_data(std::begin(test), std::end(test));
 					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
 					
 					auto package = pp.pre_parse(packet, packet + packet_len);
-					auto to_bytes = [](auto& p) { return p.bytes(); };
-					auto [b, e] = std::visit(to_bytes, package);
+
+					auto ver = std::visit([](auto& p) { return p.get_ip_version(); }, package);
+					auto net_proto = std::visit([](auto& p) { return p.get_ip_protocol(); }, package);
+					auto ip_dest = std::visit([](auto& p) { return p.get_ip_dest(); }, package);
+					auto port_dst = std::visit([](auto& p) { return p.get_dst_port(); }, package);
+
+					QVPN::Core::DataStructures::QVPNProxyData_Ipv4 proxy_data{ ver, net_proto, ip_dest, port_dst };
+					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
+					auto encoded_data = driver_.encode_data(proxy_data, data_b, data_e);
 					
-					if (!WinDivertSend(out_hDivert_, b, e - b, NULL, &addr)) // <------ addr структура WinDivert которую надо изменять??
+					if (!WinDivertSend(out_hDivert_, encoded_data.data(), encoded_data.size(), NULL, &addr)) // <------ addr структура WinDivert которую надо изменять??
 					{
 						fprintf(stderr, "warning: failed to reinject packet (%d)\n",
 							GetLastError());
@@ -301,18 +301,11 @@ namespace QVPN {
 						continue;
 					}
 
-
-					WinDivertHelperParsePacket(packet, packet_len, &ip_header, nullptr,
-						NULL, nullptr, nullptr, &tcp_header, nullptr, NULL,
-						&payload_len, NULL, NULL);
-
 					auto package = pp.pre_parse(packet, packet + packet_len);
-					auto to_bytes = [](auto& p) { return p.bytes(); };
-					auto [begin, end] = std::visit(to_bytes, package);
+					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
+					auto decoded_data = driver_.decode_data(data_b, data_e);
 					
-					//addr.Network.IfIdx = old_adapter_id;
-					
-					if (!WinDivertSend(in_hDivert_, begin, end - begin, NULL, &addr))
+					if (!WinDivertSend(in_hDivert_, decoded_data.data(), decoded_data.size(), NULL, &addr))
 					{
 						printf("warning: failed to reinject packet (%d)\n",
 							GetLastError());
@@ -349,8 +342,10 @@ namespace QVPN {
 
 			void start_capture_outgoing_traffic(const QVPN::Core::IPv4Address& adapter_addr, QVPN::Core::BaseTypes::ULong adapter_id)
 			{
+				driver_.connect();
+				//driver_.init();
 				new_adapter_id = adapter_id;
-				//out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
+				out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
 				//start_capture_outgoing_traffic_(adapter_addr);
 			}
 
@@ -362,6 +357,7 @@ namespace QVPN {
 
 			void stop_capture_traffic()
 			{
+				//driver_.disconnect();
 				WinDivertClose(out_hDivert_);
 				WinDivertClose(in_hDivert_);
 				if (out_worker_.joinable())
@@ -377,7 +373,7 @@ namespace QVPN {
 
 		};
 
-		using WinQVPNDriver = QVPN::Core::QVPNDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPN::NetTools::QVPN_Socket, QVPN::NetTools::QVPNNetTools>;
+		using WinQVPNDriver = QVPN::Core::QVPNDriver<const QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPN::NetTools::QVPN_Socket, QVPN::NetTools::QVPNNetTools>;
 
 		using WinDivertTrafficFilter = WinDivertTrafficFilter_<WinDivertTrafficFilterType>;
 		using WinDivertClientNetDriver = WinDivertClientNetDriver_<WinDivertTrafficFilter, WinQVPNDriver>;
