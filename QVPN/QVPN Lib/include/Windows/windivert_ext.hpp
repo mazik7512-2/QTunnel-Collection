@@ -343,7 +343,7 @@ namespace QVPN {
 			void start_capture_outgoing_traffic(const QVPN::Core::IPv4Address& adapter_addr, QVPN::Core::BaseTypes::ULong adapter_id)
 			{
 				driver_.connect();
-				//driver_.init();
+				driver_.init();
 				new_adapter_id = adapter_id;
 				out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
 				//start_capture_outgoing_traffic_(adapter_addr);
@@ -357,7 +357,7 @@ namespace QVPN {
 
 			void stop_capture_traffic()
 			{
-				//driver_.disconnect();
+				driver_.disconnect();
 				WinDivertClose(out_hDivert_);
 				WinDivertClose(in_hDivert_);
 				if (out_worker_.joinable())

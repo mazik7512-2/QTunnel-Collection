@@ -117,7 +117,7 @@ namespace QVPN
 
 			std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const override
 			{
-				std::vector<UByte> data = TLSRecordGenerator::generate_object_bytes<TLSRecordGenerator, TLSAppDataGenerator, Iter, QVPN::Core::DataStructures::QVPNProxyData_Ipv4>(rec_strategy, data, begin, end);
+				std::vector<UByte> data = TLSRecordGenerator::generate_object_bytes<TLS13_RecordGenStrategy, TLSAppDataGenerator>(std::move(rec_strategy), data, begin, end);
 				return data;
 			}
 
@@ -289,6 +289,9 @@ namespace QVPN
 			using TLS13_ClientHello = QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian;
 			using TLS13_ClienthHelloGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy;
 
+			using TLS13_AppData = QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian;
+			using QVPNProxyData = QVPN::Core::DataStructures::QVPNProxyData_Ipv4;
+
 		public:
 
 			using DataIterator = Iter;
@@ -308,9 +311,9 @@ namespace QVPN
 				return res.success;
 			}
 
-			bool init() const
+			bool init()
 			{
-				using Iter = std::vector<UByte>::const_iterator;
+				using DataIter = std::vector<UByte>::const_iterator;
 				TLS13_RecordGenStrategy rec_strategy{};
 				TLS13_ClienthHelloGenStrategy client_strategy{};
 				std::vector<UByte> crypto_data{};
@@ -324,10 +327,10 @@ namespace QVPN
 				std::copy(k.begin(), k.end(), std::back_inserter(crypto_data));
 
 				auto tls_data =
-					TLS13_RecordLittleEndian::generate_object_bytes<TLS13_RecordGenStrategy, TLS13_MessageLittleEndian, TLS13_ClientHello, TLS13_ClienthHelloGenStrategy, Iter>
-					(rec_strategy, client_strategy, crypto_data.cbegin(), crypto_data.cend());
+					TLS13_RecordLittleEndian::generate_object_bytes<TLS13_RecordGenStrategy, TLS13_MessageLittleEndian, TLS13_ClientHello, TLS13_ClienthHelloGenStrategy, DataIter>
+					(std::move(rec_strategy), std::move(client_strategy), crypto_data.cbegin(), crypto_data.cend());
 
-				auto res = socket_.send(tls_data.begin(), tls_data.end());
+				auto res = socket_.send(tls_data.data(), tls_data.data() + tls_data.size());
 				return res.success;
 			}
 
