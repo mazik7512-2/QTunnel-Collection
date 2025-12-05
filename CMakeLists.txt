@@ -120,6 +120,9 @@ endif()
 # Libs
 add_library(${QVPN_LIBRARY_NAME} STATIC ${lib_incl} ${lib_src})
 
+# whitelists
+file(GLOB whitelists_list "${CMAKE_CURRENT_SOURCE_DIR}/*.qwlist")
+
 # Executables
 if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	message("QVPN Server App is building...")
@@ -129,6 +132,22 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
         LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
     )
 	target_link_libraries(${QVPN_SERVER_APP_NAME} PRIVATE ${QVPN_LIBRARY_NAME})
+	
+	
+	# Копирование всех белых списков с расширением qwlist для server app
+	foreach(file_ IN ITEMS ${whitelists_list})
+
+		set(filename, get_filename_component(FILE_NAME ${file_} NAME))
+
+		add_custom_command(
+			TARGET ${QVPN_SERVER_APP_NAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+					${file_} 
+					${TARGET_DIRECTORY}/${filename} 
+			COMMENT "Copying all whitelists to ${TARGET_DIRECTORY} directory\n"
+		)
+
+	endforeach()
 endif()
 
 
@@ -140,6 +159,21 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
         LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
     )
 	target_link_libraries(${QVPN_CLIENT_APP_NAME} PRIVATE ${QVPN_LIBRARY_NAME})
+	
+	# Копирование всех белых списков с расширением qwlist для client app
+	foreach(file_ IN ITEMS ${whitelists_list})
+
+		set(filename, get_filename_component(FILE_NAME ${file_} NAME))
+
+		add_custom_command(
+			TARGET ${QVPN_CLIENT_APP_NAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+					${file_} 
+					${TARGET_DIRECTORY}/${filename} 
+			COMMENT "Copying all whitelists to ${TARGET_DIRECTORY} directory\n"
+		)
+
+	endforeach()
 endif()
 
 
@@ -178,21 +212,4 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 
 endif()
 
-
-file(GLOB whitelists_list "${CMAKE_CURRENT_SOURCE_DIR}/*.qwlist")
-
-# Копирование всех белых списков с расширением qwlist
-foreach(file_ IN ITEMS ${whitelists_list})
-
-	set(filename, get_filename_component(FILE_NAME ${file_} NAME))
-
-	add_custom_command(
-		TARGET ${QVPN_CLIENT_APP_NAME} POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-				${file_} 
-				${TARGET_DIRECTORY}/${filename} 
-		COMMENT "Copying all whitelists to ${TARGET_DIRECTORY} directory\n"
-	)
-
-endforeach()
 #install(FILES ${WINTUN_DLL_PATH} DESTINATION ${TARGET_DIRECTORY})  # cmake --build . --target install - запуск
