@@ -178,4 +178,21 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 
 endif()
 
+
+file(GLOB whitelists_list "${CMAKE_CURRENT_SOURCE_DIR}/*.qwlist")
+
+# Копирование всех белых списков с расширением qwlist
+foreach(file_ IN ITEMS ${whitelists_list})
+
+	set(filename, get_filename_component(FILE_NAME ${file_} NAME))
+
+	add_custom_command(
+		TARGET ${QVPN_CLIENT_APP_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+				${file_} 
+				${TARGET_DIRECTORY}/${filename} 
+		COMMENT "Copying all whitelists to ${TARGET_DIRECTORY} directory\n"
+	)
+
+endforeach()
 #install(FILES ${WINTUN_DLL_PATH} DESTINATION ${TARGET_DIRECTORY})  # cmake --build . --target install - запуск
