@@ -2,6 +2,7 @@
 
 #include <qvpn_general.hpp>
 #include <array>
+#include <unordered_map>
 
 
 namespace QVPN
@@ -52,7 +53,7 @@ namespace QVPN
 			AddrBytes_t addr_;
 
 		public:
-			
+
 			NetAddr() = default;
 
 			template <is_byte ... Byte>
@@ -75,7 +76,7 @@ namespace QVPN
 		{
 
 		public:
-			
+
 			using UByte = Core::BaseTypes::UByte;
 			using AddrBytes_t = std::array<UByte, 4>;
 			using AddrInt_t = BaseTypes::UInt;
@@ -97,6 +98,8 @@ namespace QVPN
 			IPv4Address& operator=(AddrBytes_t&& other);
 
 			UByte operator[](int elem) const;
+
+			bool operator==(const IPv4Address& other) const;
 
 			//static consteval int get_addr_family();
 			consteval int get_addr_family();
@@ -143,6 +146,25 @@ namespace QVPN
 				return std::make_shared<Addr>(static_cast<Addr*>(this));
 			}
 		};
+	}
+}
+
+// hash impl for whitelist
+namespace std
+{
+	template<>
+	struct hash<QVPN::Core::IPv4Address> {
+		size_t operator()(const QVPN::Core::IPv4Address& obj) const {
+			// Комбинируйте хэши полей
+			return hash<std::string>()(obj.to_string());
+		}
+	};
+}
+
+
+namespace QVPN {
+
+	namespace Core {
 
 
 		template <typename T>
@@ -166,7 +188,7 @@ namespace QVPN
 			requires (T t) {
 
 			typename T::Filter_t;
-			
+
 			{ t.init_driver(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
 			{ t.add_incoming_traffic_filter(std::declval<typename T::Filter_t>()) } -> std::same_as<void>;
 			{ t.add_outgoing_traffic_filter(std::declval<typename T::Filter_t>()) } -> std::same_as<void>;
@@ -225,15 +247,15 @@ namespace QVPN
 
 		template <class SocketImpl, class Addr>
 		concept is_socket =
-			requires (SocketImpl t, const BaseTypes::UByte* begin, const BaseTypes::UByte* end, const UnifiedNetAddr<Addr>& addr, const BaseTypes::UShort port, int flags) {
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const UnifiedNetAddr<Addr>&addr, const BaseTypes::UShort port, int flags) {
 
 			SocketImpl::buffer_size;
 
-				{ t.connect(addr, port) } -> std::same_as<NetStatus>;
-				{ t.disconnect() } -> std::same_as<NetStatus>;
+			{ t.connect(addr, port) } -> std::same_as<NetStatus>;
+			{ t.disconnect() } -> std::same_as<NetStatus>;
 
-				{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
-				{ t.receive(flags) } -> std::same_as<std::array<BaseTypes::UByte, SocketImpl::buffer_size>>;
+			{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
+			{ t.receive(flags) } -> std::same_as<std::array<BaseTypes::UByte, SocketImpl::buffer_size>>;
 		};
 
 
@@ -279,7 +301,101 @@ namespace QVPN
 		};
 
 
+		class QVPNWhitelistElement
+		{
+		public:
+			static constexpr int default_priority = 1;
+
+		private:
+			std::string host_;
+			int priority_;
+
+		public:
+			QVPNWhitelistElement();
+			QVPNWhitelistElement(std::string_view host, int priority = QVPNWhitelistElement::default_priority);
+
+			void set_host(std::string_view host);
+			void set_priority(int priority);
+
+			std::string_view get_host() const;
+			int get_priority() const;
+		};
+
+
+		class QVPNWhitelistElementView
+		{
+		private:
+			std::string_view host_;
+			int priority_;
+
+		public:
+			QVPNWhitelistElementView(const QVPNWhitelistElement& elem);
+
+			std::string_view get_host() const;
+			int get_priority() const;
+		};
+
+
+		template <class WhitelistStrategyImpl, class ... Args>
+		concept is_whitelist_strategy =
+			requires (WhitelistStrategyImpl t, const Args&& ... args) {
+
+				{ WhitelistStrategyImpl() };
+				{ t.get_host_by_params(args...) } -> std::same_as<QVPNWhitelistElementView>;
+
+		};
+
+		template <class WhitelistImpl, class WhitelistStrategy, class ... Args>
+		concept is_whitelist =
+			requires (WhitelistImpl t, size_t i, WhitelistStrategy & strategy, const Args&& ... args) {
+
+				{ t.get_random_host() } -> std::same_as<std::string_view>;
+				{ t.get_host(i) } -> std::same_as<std::string_view>;
+				{ t.get_size() } -> std::same_as<size_t>;
+				{ t.get_by_strategy(strategy, args...) } -> std::same_as<std::string_view>;
+		};
+
+
+		class QVPNWhitelistDefaultStrategy
+		{
+		public:
+
+			using StrategyFilter = IPv4Address;
+
+		private:
+			std::unordered_map<StrategyFilter, QVPNWhitelistElement> map_;
+
+		public:
+			QVPNWhitelistDefaultStrategy();
+
+			QVPNWhitelistElementView get_host_by_params(const StrategyFilter& param);
+		};
+
+		class QVPNWhitelist
+		{
+		private:
+			std::vector<QVPNWhitelistElement> whitelist_;
+
+		public:
+			QVPNWhitelist();
+			QVPNWhitelist(std::string_view path);
+
+			void parse_whitelist(std::string_view path);
+
+			std::string_view get_random_host() const;
+			std::string_view get_host(size_t i) const;
+			size_t get_size() const;
+
+			template <class Strategy, class ... Args>
+				requires is_whitelist_strategy<Strategy, Args...>
+			std::string_view get_by_strategy(Strategy& strategy, const Args&& ... args) const
+			{
+				auto elem = strategy.get_host_by_params(std::forward<const Args>(args)...);
+				return elem.get_host();
+			}
+		};
+
+	}
 
 }
 
-}

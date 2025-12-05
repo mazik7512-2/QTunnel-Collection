@@ -1,6 +1,8 @@
 #include "qvpn_lib.hpp"
 #include <sstream>
 #include <qvpn_defs.hpp>
+#include <fstream>
+#include <random>
 
 
 QVPN::Core::IPv4Address::IPv4Address()
@@ -62,6 +64,11 @@ QVPN::Core::IPv4Address& QVPN::Core::IPv4Address::operator=(AddrBytes_t&& other)
 QVPN::Core::IPv4Address::UByte QVPN::Core::IPv4Address::operator[](int elem) const
 {
     return ip_[elem];
+}
+
+bool QVPN::Core::IPv4Address::operator==(const IPv4Address& other) const
+{
+    return to_uint() == other.to_uint();
 }
 
 consteval int QVPN::Core::IPv4Address::get_addr_family()
@@ -165,4 +172,105 @@ std::string QVPN::Core::Ipv6Address::to_string() const
 QVPN::Core::Ipv6Address::AddrInt_t QVPN::Core::Ipv6Address::to_uint() const
 {
     return ip_;
+}
+
+QVPN::Core::QVPNWhitelistElement::QVPNWhitelistElement()
+    : host_(""), priority_(QVPNWhitelistElement::default_priority)
+{
+}
+
+QVPN::Core::QVPNWhitelistElement::QVPNWhitelistElement(std::string_view host, int priority)
+    : host_(host), priority_(priority)
+{
+}
+
+void QVPN::Core::QVPNWhitelistElement::set_host(std::string_view host)
+{
+    host_ = host;
+}
+
+void QVPN::Core::QVPNWhitelistElement::set_priority(int priority)
+{
+    priority_ = priority;
+}
+
+std::string_view QVPN::Core::QVPNWhitelistElement::get_host() const
+{
+    return host_;
+}
+
+int QVPN::Core::QVPNWhitelistElement::get_priority() const
+{
+    return priority_;
+}
+
+QVPN::Core::QVPNWhitelistDefaultStrategy::QVPNWhitelistDefaultStrategy()
+    : map_{}
+{
+}
+
+QVPN::Core::QVPNWhitelistElementView QVPN::Core::QVPNWhitelistDefaultStrategy::get_host_by_params(const StrategyFilter& param)
+{
+    return map_[param];
+}
+
+QVPN::Core::QVPNWhitelistElementView::QVPNWhitelistElementView(const QVPNWhitelistElement& elem)
+    : host_(elem.get_host()), priority_(elem.get_priority())
+{
+}
+
+std::string_view QVPN::Core::QVPNWhitelistElementView::get_host() const
+{
+    return host_;
+}
+
+int QVPN::Core::QVPNWhitelistElementView::get_priority() const
+{
+    return priority_;
+}
+
+QVPN::Core::QVPNWhitelist::QVPNWhitelist()
+    : whitelist_{}
+{
+}
+
+QVPN::Core::QVPNWhitelist::QVPNWhitelist(std::string_view path)
+    : QVPNWhitelist()
+{
+    parse_whitelist(path);
+}
+
+void QVPN::Core::QVPNWhitelist::parse_whitelist(std::string_view path)
+{
+    std::ifstream wlist(path.data());
+    std::string line;
+
+    if (!wlist.is_open())
+        return;
+
+    std::string host;
+    int priority;
+    while (wlist >> host >> priority)
+        whitelist_.emplace_back(host, priority);
+    
+    wlist.close();
+}
+
+std::string_view QVPN::Core::QVPNWhitelist::get_random_host() const
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dist(0, whitelist_.size());
+
+    return whitelist_[dist(gen)].get_host();
+}
+
+std::string_view QVPN::Core::QVPNWhitelist::get_host(size_t i) const
+{
+    return whitelist_[i].get_host();
+}
+
+size_t QVPN::Core::QVPNWhitelist::get_size() const
+{
+    return whitelist_.size();
 }

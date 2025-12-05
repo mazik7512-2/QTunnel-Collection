@@ -351,8 +351,8 @@ namespace QVPN {
 
 			void start_capture_incoming_traffic(const QVPN::Core::IPv4Address& adapter_addr)
 			{
-				//in_worker_ = std::thread([this, &adapter_addr]() { start_capture_incoming_traffic_(adapter_addr); });
-				start_capture_incoming_traffic_(adapter_addr);
+				in_worker_ = std::thread([this, &adapter_addr]() { start_capture_incoming_traffic_(adapter_addr); });
+				//start_capture_incoming_traffic_(adapter_addr);
 			}
 
 			void stop_capture_traffic()
