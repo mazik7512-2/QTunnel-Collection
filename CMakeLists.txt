@@ -68,21 +68,20 @@ add_subdirectory("${QVPN_LIBRARY_PATH}")
 add_subdirectory("${QVPN_SERVER_APP_PATH}")
 add_subdirectory("${QVPN_CLIENT_APP_PATH}")
 
-
 #Lib files
-file(GLOB_RECURSE _lib_src "${QVPN_LIBRARY_PATH}/*.cpp")
-file(GLOB_RECURSE _lib_incl "${QVPN_LIBRARY_PATH}/*.hpp")
-
+file(GLOB _lib_src "${QVPN_LIBRARY_PATH}/src/*.cpp")
+file(GLOB _lib_incl "${QVPN_LIBRARY_PATH}/include/*.hpp")
 
 
 # OS files
-file(GLOB_RECURSE os_lib_src "${QVPN_LIBRARY_PATH}/${CMAKE_SYSTEM_NAME}/*.cpp")
-file(GLOB_RECURSE os_lib_incl "${QVPN_LIBRARY_PATH}/${CMAKE_SYSTEM_NAME}/*.hpp")
+file(GLOB os_lib_src "${QVPN_LIBRARY_PATH}/src/${CMAKE_SYSTEM_NAME}/*.cpp")
+file(GLOB os_lib_incl "${QVPN_LIBRARY_PATH}/include/${CMAKE_SYSTEM_NAME}/*.hpp")
 
 
 # Concat default lib files + os files
 set(lib_src "${_lib_src};${os_lib_src}")
 set(lib_incl "${_lib_incl};${os_lib_incl}")
+
 
 # Определяем целевую директорию вывода 
 set(TARGET_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE}")
@@ -131,7 +130,6 @@ endif()
 
 # Libs
 add_library(${QVPN_LIBRARY_NAME} STATIC ${lib_incl} ${lib_src})
-
 
 # json подключение
 FetchContent_Declare(
@@ -205,6 +203,18 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
 		)
 
 	endforeach()
+
+	set(client_settings "${CMAKE_CURRENT_SOURCE_DIR}/client_settings.json")
+
+	# Копирование шаблонного файла с настройками
+	add_custom_command(
+		TARGET ${QVPN_CLIENT_APP_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+				${client_settings} 
+				"${TARGET_DIRECTORY}/${filename}" 
+		COMMENT "Copying client settings ${TARGET_DIRECTORY} directory\n"
+		)
+	
 endif()
 
 

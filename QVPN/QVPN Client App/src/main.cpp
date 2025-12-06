@@ -1,7 +1,7 @@
 
 #include <iostream>
 #include <argparse/argparse.hpp>
-#include <qvpn_api.h>
+#include <qvpn_api.hpp>
 
 
 

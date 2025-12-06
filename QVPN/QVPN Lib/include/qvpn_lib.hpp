@@ -90,6 +90,7 @@ namespace QVPN
 		public:
 
 			IPv4Address();
+			IPv4Address(std::string_view data);
 			IPv4Address(AddrInt_t data);
 			IPv4Address(UByte first, UByte second, UByte third, UByte four);
 			IPv4Address(const IPv4Address& other);
@@ -129,6 +130,9 @@ namespace QVPN
 			AddrBytes_t ip_{};
 
 		public:
+
+			Ipv6Address();
+			Ipv6Address(std::string_view data);
 
 			//static consteval int get_addr_family();
 			consteval int get_addr_family();

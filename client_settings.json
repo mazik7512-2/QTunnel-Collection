@@ -1,0 +1,11 @@
+{
+    "addr_type": 4,
+    "addr": "1.1.1.1",
+    "port": 1234,
+
+    // no crypto
+    "crypto_method": 0,
+    "key": "crypto_key",
+
+    "auth_data": "user-key",
+}

@@ -137,7 +137,7 @@ namespace QVPN
 
 		template <class Layer, class Iter>
 		concept is_layer =
-			requires (Layer l, Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data) {
+			requires (Layer l, Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4 & data) {
 
 				{ l.get_layer_type() } -> std::same_as<LayerTypes>;
 				{ l.get_layer_name() } -> std::same_as <std::string_view>;
@@ -201,15 +201,47 @@ namespace QVPN
 
 			QVPNConnectionSettings() = default;
 
-			QVPNConnectionSettings(Ipv4AddressType& address, BaseTypes::UShort port)
+			QVPNConnectionSettings(const Ipv4AddressType& address, BaseTypes::UShort port)
 				: addr_(address), port_(port)
 			{
 
 			}
 
-			QVPNConnectionSettings(Ipv6AddressType& address, BaseTypes::UShort port)
+			QVPNConnectionSettings(const Ipv6AddressType& address, BaseTypes::UShort port)
 				: addr_(address), port_(port)
 			{
+			}
+
+			void set_ip_address(const Ipv4AddressType& address)
+			{
+				addr_ = address;
+			}
+
+			void set_ip_address(const Ipv6AddressType& address)
+			{
+				addr_ = address;
+			}
+
+			void set_ip_address(std::string_view addr, QVPN::Core::DataStructures::NetProtocols addr_type)
+			{
+				switch (addr_type)
+				{
+				case QVPN::Core::DataStructures::IPv4:
+				{
+					addr_ = Ipv4AddressType(addr);
+					break;
+				}
+				case QVPN::Core::DataStructures::IPv6:
+				{
+					addr_ = Ipv6AddressType(addr);
+					break;
+				}
+				}
+			}
+
+			void set_port(UShort port)
+			{
+				port_ = port;
 			}
 
 			decltype(auto) get_ip_address() const
@@ -225,36 +257,86 @@ namespace QVPN
 		};
 
 
-		class QVPNAuthenticationSettings
+		class QVPNCryptoSettings
 		{
 		private:
 			std::string key_;
 			QVPN_Crypto crypto_method_;
 
 		public:
-			QVPNAuthenticationSettings() = default;
-			QVPNAuthenticationSettings(QVPN_Crypto method, std::string key);
+			QVPNCryptoSettings() = default;
+			QVPNCryptoSettings(QVPN_Crypto method, std::string key);
+
+			void set_key(std::string_view key);
+			void set_crypto_method(QVPN_Crypto method);
 
 			std::string_view get_key() const;
 			QVPN_Crypto get_crypto_method() const;
 		};
 
+
+		class QVPNAuthSettings
+		{
+		private:
+			std::string auth_data_;
+
+		public:
+			QVPNAuthSettings() = default;
+			QVPNAuthSettings(std::string_view auth_data);
+
+			void set_auth_data(std::string_view auth_data);
+
+			std::string_view get_auth_data() const;
+		};
+
+
 		template <std::random_access_iterator Iter>
-		class QVPNSettings_ : public QVPNLayersSettings<Iter>, public QVPNConnectionSettings, public QVPNAuthenticationSettings
+		class QVPNSettings_ : public QVPNLayersSettings<Iter>, public QVPNConnectionSettings, public QVPNCryptoSettings, public QVPNAuthSettings
 		{
 		private:
 
 		public:
 
-			QVPNSettings_() = default;
-
-			QVPNSettings_(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNAuthenticationSettings auth)
-				: QVPNSettings_:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNSettings_::QVPNConnectionSettings(std::move(connection)), QVPNSettings_::QVPNAuthenticationSettings(std::move(auth)) {}
-
 			void parse_settings(std::string_view path)
+			{
+				std::ifstream f(path);
+				auto settings = json::parse(f);
+
+				auto addr_type = static_cast<QVPN::Core::DataStructures::NetProtocols>(std::stoi(settings["addr_type"]));
+				auto addr = settings["addr"];
+				auto port = static_cast<UShort>(std::stoi(settings["port"]));
+
+				set_ip_address(addr, addr_type);
+				set_port(port);
+
+				auto crypto_method = static_cast<QVPN_Crypto>(std::stoi(settings["crypto_method"]));
+				auto key = settings["key"];
+
+				set_crypto_method(crypto_method_);
+				set_key(key);
+
+				auto auth_data = settings["auth_data"];
+				set_auth_data(auth_data);
+
+				f.close();
+			}
+
+
+			QVPNSettings_()
+				: QVPNLayersSettings<Iter>(), QVPNConnectionSettings(), QVPNCryptoSettings(), QVPNAuthSettings()
 			{
 
 			}
+
+			QVPNSettings_(std::string_view path)
+				: QVPNLayersSettings<Iter>()
+			{
+				parse_settings(path);
+			}
+
+			QVPNSettings_(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNCryptoSettings crypto, QVPNAuthSettings auth)
+				: QVPNSettings_:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNSettings_::QVPNConnectionSettings(std::move(connection)), QVPNSettings_::QVPNCryptoSettings(std::move(crypto)), QVPNSettings_::QVPNAuthSettings(std::move(auth)) {}
+
 
 		};
 
@@ -263,19 +345,19 @@ namespace QVPN
 
 		template <class VPNDriver>
 		concept is_vpn_driver =
-			requires (VPNDriver d, typename VPNDriver::DataIterator begin, typename VPNDriver::DataIterator end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data) {
+			requires (VPNDriver d, typename VPNDriver::DataIterator begin, typename VPNDriver::DataIterator end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4 & data) {
 
 			typename VPNDriver::AddrType;
 
-				{ d.encode_data(data, begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
-				{ d.decode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+			{ d.encode_data(data, begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+			{ d.decode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
-				{ d.connect() } -> std::same_as<bool>;
-				{ d.init() } -> std::same_as<bool>;
-				{ d.disconnect() } -> std::same_as<bool>;
+			{ d.connect() } -> std::same_as<bool>;
+			{ d.init() } -> std::same_as<bool>;
+			{ d.disconnect() } -> std::same_as<bool>;
 
-				{ d.get_vpn_port() } -> std::same_as<UShort>;
-				{ d.get_vpn_address() } -> std::same_as<typename VPNDriver::AddrType>;
+			{ d.get_vpn_port() } -> std::same_as<UShort>;
+			{ d.get_vpn_address() } -> std::same_as<typename VPNDriver::AddrType>;
 
 		};
 
@@ -314,7 +396,7 @@ namespace QVPN
 			{
 				const auto addr = settings_.get_ip_address();
 				const auto port = settings_.get_port();
-				auto res = std::visit([this, port](const auto& a) { return socket_.connect(a, port); }, addr); 
+				auto res = std::visit([this, port](const auto& a) { return socket_.connect(a, port); }, addr);
 				return res.success;
 			}
 

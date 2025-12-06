@@ -9,6 +9,20 @@ QVPN::Core::IPv4Address::IPv4Address()
 {
 }
 
+QVPN::Core::IPv4Address::IPv4Address(std::string_view data)
+{
+    auto delim = ".";
+    size_t last = 0;
+    for (size_t i = 0; i < 4; i++)
+    {
+        size_t start = data.find(delim, last);
+        size_t end = data.find(delim, start);
+        last = end;
+        auto elem = data.substr(start, end - start);
+        ip_[i] = std::stoi(std::string(elem));
+    }
+}
+
 QVPN::Core::IPv4Address::IPv4Address(AddrInt_t data)
 {
     UByte first = data >> 24 & 0xFF;
@@ -145,6 +159,24 @@ QVPN::Core::NetAddr::AddrInt_t QVPN::Core::NetAddr::to_uint() const
 }
 
 // ipv6
+
+QVPN::Core::Ipv6Address::Ipv6Address()
+{
+}
+
+QVPN::Core::Ipv6Address::Ipv6Address(std::string_view data)
+{
+    auto delim = ".";
+    size_t last = 0;
+    for (size_t i = 0; i < 16; i++)
+    {
+        size_t start = data.find(delim, last);
+        size_t end = data.find(delim, start);
+        last = end;
+        auto elem = data.substr(start, end - start);
+        ip_[i] = std::stoi(std::string(elem));
+    }
+}
 
 consteval int QVPN::Core::Ipv6Address::get_addr_family()
 {
