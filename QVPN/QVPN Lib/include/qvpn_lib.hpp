@@ -1,8 +1,10 @@
 #pragma once
-
 #include <qvpn_general.hpp>
 #include <array>
 #include <unordered_map>
+
+
+//using json = nlohmann::json;
 
 
 namespace QVPN

@@ -6,7 +6,9 @@
 #include <memory>
 #include <qvpn_structures.hpp>
 
+#include <nlohmann/json.hpp>
 
+using json = nlohmann::json;
 namespace QVPN
 {
 	namespace Core
@@ -248,6 +250,11 @@ namespace QVPN
 
 			QVPNSettings_(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNAuthenticationSettings auth)
 				: QVPNSettings_:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNSettings_::QVPNConnectionSettings(std::move(connection)), QVPNSettings_::QVPNAuthenticationSettings(std::move(auth)) {}
+
+			void parse_settings(std::string_view path)
+			{
+
+			}
 
 		};
 

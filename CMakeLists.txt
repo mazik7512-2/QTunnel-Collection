@@ -84,6 +84,8 @@ file(GLOB_RECURSE os_lib_incl "${QVPN_LIBRARY_PATH}/${CMAKE_SYSTEM_NAME}/*.hpp")
 set(lib_src "${_lib_src};${os_lib_src}")
 set(lib_incl "${_lib_incl};${os_lib_incl}")
 
+# Определяем целевую директорию вывода 
+set(TARGET_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE}")
 
 # External libs
 
@@ -93,6 +95,16 @@ set(NPCAP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/npcap") # ваш путь
 add_definitions(-DNPCAP=ON)
 include_directories(${NPCAP_PATH}/Include)
 link_directories(${NPCAP_PATH}/Lib/x64)
+
+
+include(FetchContent)
+
+# Arg parse подключение
+FetchContent_Declare(
+    argparse
+    GIT_REPOSITORY https://github.com/p-ranav/argparse.git
+)
+FetchContent_MakeAvailable(argparse)
 
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
@@ -120,8 +132,20 @@ endif()
 # Libs
 add_library(${QVPN_LIBRARY_NAME} STATIC ${lib_incl} ${lib_src})
 
+
+# json подключение
+FetchContent_Declare(
+	json 
+	URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+)
+FetchContent_MakeAvailable(json)
+
+# link json to QVPN library
+target_link_libraries(${QVPN_LIBRARY_NAME} PUBLIC nlohmann_json::nlohmann_json)
+
 # whitelists
 file(GLOB whitelists_list "${CMAKE_CURRENT_SOURCE_DIR}/*.qwlist")
+
 
 # Executables
 if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
@@ -131,8 +155,11 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	set_target_properties(${QVPN_SERVER_APP_NAME} PROPERTIES
         LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
     )
+	# link QVPN library
 	target_link_libraries(${QVPN_SERVER_APP_NAME} PRIVATE ${QVPN_LIBRARY_NAME})
-	
+	# link arg parse library
+	target_link_libraries(${QVPN_SERVER_APP_NAME} PRIVATE argparse)
+
 	
 	# Копирование всех белых списков с расширением qwlist для server app
 	foreach(file_ IN ITEMS ${whitelists_list})
@@ -158,7 +185,11 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
 	set_target_properties(${QVPN_CLIENT_APP_NAME} PROPERTIES
         LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
     )
+	
+	# link QVPN Library
 	target_link_libraries(${QVPN_CLIENT_APP_NAME} PRIVATE ${QVPN_LIBRARY_NAME})
+	# link arg parse library
+	target_link_libraries(${QVPN_CLIENT_APP_NAME} PRIVATE argparse)
 	
 	# Копирование всех белых списков с расширением qwlist для client app
 	foreach(file_ IN ITEMS ${whitelists_list})
@@ -169,16 +200,12 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
 			TARGET ${QVPN_CLIENT_APP_NAME} POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different 
 					${file_} 
-					${TARGET_DIRECTORY}/${filename} 
+					"${TARGET_DIRECTORY}/${filename}" 
 			COMMENT "Copying all whitelists to ${TARGET_DIRECTORY} directory\n"
 		)
 
 	endforeach()
 endif()
-
-
-# Определяем целевую директорию вывода 
-set(TARGET_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE}")
 
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
