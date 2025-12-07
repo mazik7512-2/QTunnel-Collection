@@ -8,7 +8,6 @@ using VPNSettings = QVPN::VPNSettings;
 using VPNClient = QVPN::VPNClient;
 using VPNLayers = QVPN::VPNLayersStrategy;
 
-
 int main(int argc, char* argv[])
 {
 

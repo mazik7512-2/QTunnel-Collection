@@ -258,10 +258,10 @@ namespace QVPN {
 			concept ProxyDataLike =
 				requires (ProxyDataImpl t) {
 
-					{ t.net_protocol } -> std::same_as<NetProtocols>;
-					{ t.tranport_protocol } -> std::same_as<TransportProtocols>;
-					{ t.net_addr } -> QVPN::Core::is_addr ;
-					{ t.port } -> std::same_as<UShort>;
+					{ t.get_net_proto() } -> std::same_as<NetProtocols>;
+					{ t.get_transport_proto() } -> std::same_as<TransportProtocols>;
+					{ t.get_addr() } -> QVPN::Core::is_addr;
+					{ t.get_port() } -> std::same_as<UShort>;
 			};
 
 			template <QVPN::Core::is_addr Addr>
@@ -463,12 +463,13 @@ namespace QVPN {
 
 			template <class PacketImpl>
 			concept UnifiedPacketLike =
-				requires (PacketImpl t) {
+				requires (PacketImpl t, const PacketImpl ct) {
 
 				typename PacketImpl::DataIterator_t;
 				typename PacketImpl::ConstDataIterator_t;
 
-				{ t.to_bytes() } -> std::same_as<std::pair<typename PacketImpl::ConstDataIterator_t, typename PacketImpl::ConstDataIterator_t>>;
+				{ ct.to_bytes() } -> std::same_as<std::pair<typename PacketImpl::ConstDataIterator_t, typename PacketImpl::ConstDataIterator_t>>;
+				{ t.to_bytes() } -> std::same_as<std::pair<typename PacketImpl::DataIterator_t, typename PacketImpl::DataIterator_t>>;
 			};
 
 			template <class IpPacketImpl>
@@ -572,6 +573,7 @@ namespace QVPN {
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 
 
 			};
@@ -637,6 +639,7 @@ namespace QVPN {
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 
 
 			};
@@ -776,7 +779,7 @@ namespace QVPN {
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
-
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 
 			};
 
@@ -827,7 +830,7 @@ namespace QVPN {
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
-
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 
 			};
 
@@ -895,7 +898,7 @@ namespace QVPN {
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
-
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 			};
 
 
@@ -934,7 +937,7 @@ namespace QVPN {
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
-
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 			};
 
 
@@ -968,16 +971,17 @@ namespace QVPN {
 
 
 			template <class DataPacketImpl>
-			concept DataPacketLike = requires (DataPacketImpl t) {
+			concept DataPacketLike = requires (DataPacketImpl t, const DataPacketImpl ct) {
 
 				typename DataPacketImpl::DataIterator_t;
 				typename DataPacketImpl::ConstDataIterator_t;
 
 				{ DataPacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
-				{ t.get_data() } -> std::same_as<std::pair<typename DataPacketImpl::ConstDataIterator_t, typename DataPacketImpl::ConstDataIterator_t>>;
+				{ t.get_data() } -> std::same_as<std::pair<typename DataPacketImpl::DataIterator_t, typename DataPacketImpl::DataIterator_t>>;
+				{ ct.get_data() } -> std::same_as<std::pair<typename DataPacketImpl::ConstDataIterator_t, typename DataPacketImpl::ConstDataIterator_t>>;
 				{ t.set_data(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 
-			}&& UnifiedPacketLike<DataPacketImpl>;
+			} && UnifiedPacketLike<DataPacketImpl>;
 
 
 
@@ -994,11 +998,13 @@ namespace QVPN {
 
 				DataPacketLittleEndian(UByte* begin, UByte* end);
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_data() const;
+				std::pair<DataIterator_t, DataIterator_t> get_data();
 
 				void set_data(UByte* begin, UByte* end);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 			};
 
 
@@ -1008,7 +1014,7 @@ namespace QVPN {
 			private:
 				UByte* data_;
 
-				int data_size = 0;
+				int data_size_ = 0;
 
 			public:
 
@@ -1017,11 +1023,13 @@ namespace QVPN {
 
 				DataPacketView(UByte* begin, UByte* end);
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_data() const;
+				std::pair<DataIterator_t, DataIterator_t> get_data();
 
 				void set_data(UByte* begin, UByte* end);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 			};
 
 
@@ -2430,6 +2438,7 @@ namespace QVPN {
 				UShort get_tls_record_length() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_record_data() const;
+				std::pair<DataIterator_t, DataIterator_t> get_tls_record_data();
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 			};
 
@@ -2953,13 +2962,13 @@ namespace QVPN {
 				static std::vector<UByte> generate_object_bytes(ProxyData& proxy_data, Iter1 begin, Iter2 end)
 				{
 					std::vector<UByte> obj_bytes;
-					obj_bytes.push_back(static_cast<UByte>(proxy_data.net_protocol));
-					obj_bytes.push_back(static_cast<UByte>(proxy_data.transport_protocol));
+					obj_bytes.push_back(static_cast<UByte>(proxy_data.get_net_proto()));
+					obj_bytes.push_back(static_cast<UByte>(proxy_data.get_transport_proto()));
 
-					auto addr = proxy_data.net_addr.to_bytes();
+					auto addr = proxy_data.get_addr().to_bytes();
 					std::copy(addr.begin(), addr.end(), std::back_inserter(obj_bytes));
 
-					UShort port = proxy_data.port;
+					UShort port = proxy_data.get_port();
 					obj_bytes.push_back(static_cast<UByte>(port >> 8 & 0xFF));
 					obj_bytes.push_back(static_cast<UByte>(port & 0xFF));
 
@@ -3014,7 +3023,7 @@ namespace QVPN {
 				template <std::random_access_iterator Iter>
 				TLS13_ApplicationDataView(Iter begin, Iter end)
 				{
-					data_ = static_cast<UByte*>(begin);
+					data_ = begin;
 					size_ = std::distance(begin, end);
 				}
 

@@ -113,7 +113,7 @@ namespace QVPN
 			using TLSRecordView = QVPN::Core::DataStructures::TLS13_RecordView;
 			using TLSAppDataView = QVPN::Core::DataStructures::TLS13_ApplicationDataView;
 
-			TLS13_RecordGenStrategy rec_strategy{};
+			mutable TLS13_RecordGenStrategy rec_strategy{};
 		public:
 
 			LayerTypes get_layer_type() const override
@@ -129,8 +129,8 @@ namespace QVPN
 
 			std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const override
 			{
-				std::vector<UByte> data = TLSRecordGenerator::generate_object_bytes<TLS13_RecordGenStrategy, TLSAppDataGenerator>(std::move(rec_strategy), data, begin, end);
-				return data;
+				std::vector<UByte> res = TLSRecordGenerator::generate_object_bytes<TLS13_RecordGenStrategy, TLSAppDataGenerator>(std::move(rec_strategy), data, std::move(begin), std::move(end));
+				return res;
 			}
 
 			std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const override
@@ -139,7 +139,7 @@ namespace QVPN
 				auto [b, e] = record.get_tls_record_data();
 				TLSAppDataView app_data(b, e);
 				auto [b1, e1] = app_data.get_app_data();
-				std::vector<UByte> data(b1, e1);
+				std::vector<UByte> data(b, e);
 				return data;
 			}
 		};
@@ -168,7 +168,7 @@ namespace QVPN
 		};
 
 
-		template <std::random_access_iterator Iter >
+		template <std::random_access_iterator Iter>
 		class DefaultLayersStrategy
 		{
 		private:
@@ -176,7 +176,7 @@ namespace QVPN
 
 		public:
 
-			using LayersIterator = std::vector<LayerWrapper<Iter>>::const_iterator;
+			using LayersIterator = std::vector<LayerWrapper<Iter>>::iterator;
 
 			DefaultLayersStrategy()
 			{
@@ -188,7 +188,7 @@ namespace QVPN
 
 			std::pair<LayersIterator, LayersIterator> get_layers()
 			{
-				return std::pair<LayersIterator, LayersIterator>(layers_.cbegin(), layers_.cend());
+				return std::pair<LayersIterator, LayersIterator>(layers_.begin(), layers_.end());
 			}
 		};
 
@@ -401,7 +401,7 @@ namespace QVPN
 		};
 
 
-		using QVPNSettings = QVPNSettings_<const UByte*>;
+		using QVPNSettings = QVPNSettings_<UByte*>;
 
 		template <class VPNDriver>
 		concept is_vpn_driver =
