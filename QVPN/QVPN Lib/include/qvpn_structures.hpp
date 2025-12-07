@@ -2349,7 +2349,7 @@ namespace QVPN {
 
 				// generator for application data
 				template <TLSRecordGenerationStrategy TLSRecordGenStrategy, class TLSPacketGenerator, class ... Args>
-				//requires TLSPacketGeneratorLike<TLSPacketGenerator, Args...>
+				requires TLSPacketGeneratorLike<TLSPacketGenerator, Args...>
 				static std::vector<UByte> generate_object_bytes(TLSRecordGenStrategy&& rec_strategy, Args&& ... args)
 				{
 					std::vector<UByte> obj_bytes = TLSPacketGenerator:: template generate_object_bytes<Args...>(std::forward<Args>(args)...);
