@@ -51,17 +51,27 @@ namespace QVPN
 		class LayerWrapper final
 		{
 		private:
-			std::unique_ptr<BaseLayer<Iter>> layer_;
+			std::shared_ptr<BaseLayer<Iter>> layer_;
 			bool active_;
 
 		public:
-			LayerWrapper(std::unique_ptr<BaseLayer<Iter>> layer, bool active = true)
-				: layer_(std::move(layer)), active_(active) {
+
+			LayerWrapper() = default;
+			
+			LayerWrapper(std::shared_ptr<BaseLayer<Iter>> layer, bool active = true)
+				: layer_(layer), active_(active) 
+			{
+
 			}
 
 			bool is_active() const
 			{
 				return active_;
+			}
+
+			void set_layer(std::unique_ptr<BaseLayer<Iter>> layer)
+			{
+				layer_ = std::move(layer);
 			}
 
 			void set_activity(bool status)
@@ -92,7 +102,7 @@ namespace QVPN
 		};
 
 
-		template <class Generator, std::random_access_iterator Iter>
+		template <std::random_access_iterator Iter>
 		class QLayer : public BaseLayer<Iter>
 		{
 		private:
@@ -147,6 +157,42 @@ namespace QVPN
 		}&& std::is_base_of<BaseLayer<Iter>, Layer>::value;
 
 
+		template <class LayersStrategyImpl>
+		concept is_layers_strategy =
+			requires (LayersStrategyImpl ls) {
+
+			typename LayersStrategyImpl::LayersIterator;
+
+				{ ls.get_layers() } -> std::same_as<std::pair<typename LayersStrategyImpl::LayersIterator, typename LayersStrategyImpl::LayersIterator>>;
+
+		};
+
+
+		template <std::random_access_iterator Iter >
+		class DefaultLayersStrategy
+		{
+		private:
+			std::vector<LayerWrapper<Iter>> layers_;
+
+		public:
+
+			using LayersIterator = std::vector<LayerWrapper<Iter>>::const_iterator;
+
+			DefaultLayersStrategy()
+			{
+				std::shared_ptr<QLayer<Iter>> ql{};
+				LayerWrapper<Iter> lw{ ql };
+
+				layers_.push_back(lw);
+			}
+
+			std::pair<LayersIterator, LayersIterator> get_layers()
+			{
+				return std::pair<LayersIterator, LayersIterator>(layers_.cbegin(), layers_.cend());
+			}
+		};
+
+
 		template <std::random_access_iterator Iter>
 		class QVPNLayersSettings
 		{
@@ -155,9 +201,21 @@ namespace QVPN
 
 		public:
 
-			void add_layer(std::unique_ptr<BaseLayer<Iter>> l, bool status = true)
+			QVPNLayersSettings() = default;
+
+			void add_layer(std::shared_ptr<BaseLayer<Iter>> l, bool status = true)
 			{
-				layers_.emplace_back(std::move(l), status);
+				layers_.emplace_back(l, status);
+			}
+
+			template <is_layers_strategy Strategy>
+			void apply_strategy(Strategy&& strategy)
+			{
+				auto [b, e] = strategy.get_layers();
+				for (auto i = b; i < e; i++)
+				{
+					layers_.emplace_back(*i);
+				}
 			}
 
 			std::vector<BaseTypes::UByte> layers_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const
@@ -299,26 +357,28 @@ namespace QVPN
 
 			void parse_settings(std::string_view path)
 			{
-				std::ifstream f(path);
+				std::ifstream f;
+				f.open(path);
 				auto settings = json::parse(f);
 
-				auto addr_type = static_cast<QVPN::Core::DataStructures::NetProtocols>(std::stoi(settings["addr_type"]));
-				auto addr = settings["addr"];
-				auto port = static_cast<UShort>(std::stoi(settings["port"]));
+				auto addr_type = static_cast<QVPN::Core::DataStructures::NetProtocols>(settings["addr_type"].get<UInt>());
+				auto addr = settings["addr"].get<std::string>();
+				auto port = static_cast<UShort>(settings["port"].get<UShort>());
 
 				set_ip_address(addr, addr_type);
 				set_port(port);
 
-				auto crypto_method = static_cast<QVPN_Crypto>(std::stoi(settings["crypto_method"]));
-				auto key = settings["key"];
+				auto crypto_method = static_cast<QVPN_Crypto>(settings["crypto_method"].get<UInt>());
+				auto key = settings["key"].get<std::string>();
 
-				set_crypto_method(crypto_method_);
+				set_crypto_method(crypto_method);
 				set_key(key);
 
-				auto auth_data = settings["auth_data"];
+				auto auth_data = settings["auth_data"].get<std::string>();
 				set_auth_data(auth_data);
 
 				f.close();
+				
 			}
 
 
