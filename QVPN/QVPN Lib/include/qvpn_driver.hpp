@@ -1,5 +1,4 @@
 #pragma once
-#include <qvpn_net_tools.hpp>
 #include <qvpn_lib.hpp>
 #include <type_traits>
 #include <variant>
@@ -254,7 +253,7 @@ namespace QVPN
 		{
 		public:
 			using Ipv4AddressType = IPv4Address;
-			using Ipv6AddressType = Ipv6Address;
+			using Ipv6AddressType = IPv6Address;
 			using AddrType = std::variant<Ipv4AddressType, Ipv6AddressType>;
 
 		private:

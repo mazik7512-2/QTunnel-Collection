@@ -1,3 +1,4 @@
+#include <qvpn_net_tools.hpp>
 #include <qvpn_driver.hpp>
 #include <windivert.h>
 #include <string_view>

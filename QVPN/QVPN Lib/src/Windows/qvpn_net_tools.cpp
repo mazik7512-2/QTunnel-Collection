@@ -12,6 +12,22 @@ QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(int sock
 	return socket;
 }
 
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address addr, UShort port, SocketMod s_mod)
+{
+	socket_ = socket;
+	addr_ = addr;
+	port_ = port;
+	s_mod_ = s_mod;
+}
+
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address addr, UShort port, SocketMod s_mod)
+{
+	socket_ = socket;
+	addr_ = addr;
+	port_ = port;
+	s_mod_ = s_mod;
+}
+
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::listen(int con_limit)
 {
 	auto res = ::listen(socket_, con_limit);
@@ -47,6 +63,7 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::disconnect() const
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::shutdown()
 {
 	auto res = ::shutdown(socket_, SD_SEND);
+	WSACleanup();
 	bool s = (res == 0) ? true : false;
 	return QVPN::Core::NetStatus{ s, res };
 }

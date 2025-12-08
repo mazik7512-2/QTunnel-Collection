@@ -14,63 +14,68 @@ namespace QVPN {
 
 		using UByte = QVPN::Core::BaseTypes::UByte;
 		using UShort = QVPN::Core::BaseTypes::UShort;
-		
-		// on odr usage
-		inline QVPN::Core::NetStatus qvpn_connect_(SOCKET& socket, const QVPN::Core::IPv4Address& addr, const UShort port)
+
+		namespace details
 		{
-			sockaddr_in serverAddr{};          
-			serverAddr.sin_family = AF_INET;
-			serverAddr.sin_port = htons(port);
-			serverAddr.sin_addr.S_un.S_addr = addr.to_uint();//std::visit([](const auto& address) { return address.to_uint(); }, addr);
-			int res = connect(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-			bool s = (res == 0) ? true : false;
-			return QVPN::Core::NetStatus{ s , res };
+			// no odr usage
+			inline QVPN::Core::NetStatus qvpn_connect_(SOCKET& socket, const QVPN::Core::IPv4Address& addr, const UShort port)
+			{
+				struct sockaddr_in serverAddr {};
+				serverAddr.sin_family = AF_INET;
+				serverAddr.sin_port = htons(port);
+				serverAddr.sin_addr.S_un.S_addr = addr.to_uint();//std::visit([](const auto& address) { return address.to_uint(); }, addr);
+				int res = connect(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+				bool s = (res == 0) ? true : false;
+				return QVPN::Core::NetStatus{ s , res };
+			}
+
+			// no odr usage
+			inline QVPN::Core::NetStatus qvpn_connect_(SOCKET& socket, const QVPN::Core::IPv6Address& addr, const UShort port)
+			{
+				struct sockaddr_in6 serverAddr {};
+				serverAddr.sin6_family = AF_INET6;
+				serverAddr.sin6_port = htons(port);
+				//serverAddr.sin6_addr.u.Byte = addr.to_bytes();//std::visit([](const auto& address) { return address.to_bytes(); }, addr);
+				auto bytes = addr.to_bytes();
+				std::memcpy(&serverAddr.sin6_addr.u.Byte, bytes.data(), bytes.size());
+				int res = connect(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+				bool s = (res == 0) ? true : false;
+				return QVPN::Core::NetStatus{ s , res };
+			}
+
+
+			inline QVPN::Core::NetStatus qvpn_bind_(SOCKET& socket, const QVPN::Core::IPv4Address& addr, const UShort port)
+			{
+				struct sockaddr_in serverAddr {};
+				serverAddr.sin_family = AF_INET;
+				serverAddr.sin_port = htons(port);
+				serverAddr.sin_addr.S_un.S_addr = addr.to_uint();//std::visit([](const auto& address) { return address.to_uint(); }, addr);
+				int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+				bool s = (res == 0) ? true : false;
+				return QVPN::Core::NetStatus{ s , res };
+			}
+
+			inline QVPN::Core::NetStatus qvpn_bind_(SOCKET& socket, const QVPN::Core::IPv6Address& addr, const UShort port)
+			{
+				struct sockaddr_in6 serverAddr {};
+				serverAddr.sin6_family = AF_INET6;
+				serverAddr.sin6_port = htons(port);
+				//serverAddr.sin6_addr.u.Byte = addr.to_bytes();//std::visit([](const auto& address) { return address.to_bytes(); }, addr);
+				auto bytes = addr.to_bytes();
+				std::memcpy(&serverAddr.sin6_addr.u.Byte, bytes.data(), bytes.size());
+				int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+				bool s = (res == 0) ? true : false;
+				return QVPN::Core::NetStatus{ s , res };
+			}
+
 		}
 
-		// no odr usage
-		inline QVPN::Core::NetStatus qvpn_connect_(SOCKET& socket, const QVPN::Core::Ipv6Address& addr, const UShort port)
+		enum SocketMod
 		{
-			struct sockaddr_in6 serverAddr{};
-			serverAddr.sin6_family = AF_INET6;
-			serverAddr.sin6_port = htons(port);
-			//serverAddr.sin6_addr.u.Byte = addr.to_bytes();//std::visit([](const auto& address) { return address.to_bytes(); }, addr);
-			auto bytes = addr.to_bytes();
-			std::memcpy(&serverAddr.sin6_addr.u.Byte, bytes.data(), bytes.size());
-			int res = connect(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-			bool s = (res == 0) ? true : false;
-			return QVPN::Core::NetStatus{ s , res };
-		}
-		
-
-		inline QVPN::Core::NetStatus qvpn_bind_(SOCKET& socket, const QVPN::Core::IPv4Address& addr, const UShort port)
-		{
-			sockaddr_in serverAddr{};
-			serverAddr.sin_family = AF_INET;
-			serverAddr.sin_port = htons(port);
-			serverAddr.sin_addr.S_un.S_addr = addr.to_uint();//std::visit([](const auto& address) { return address.to_uint(); }, addr);
-			int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-			bool s = (res == 0) ? true : false;
-			return QVPN::Core::NetStatus{ s , res };
-		}
-
-		inline QVPN::Core::NetStatus qvpn_bind_(SOCKET& socket, const QVPN::Core::Ipv6Address& addr, const UShort port)
-		{
-			struct sockaddr_in6 serverAddr {};
-			serverAddr.sin6_family = AF_INET6;
-			serverAddr.sin6_port = htons(port);
-			//serverAddr.sin6_addr.u.Byte = addr.to_bytes();//std::visit([](const auto& address) { return address.to_bytes(); }, addr);
-			auto bytes = addr.to_bytes();
-			std::memcpy(&serverAddr.sin6_addr.u.Byte, bytes.data(), bytes.size());
-			int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-			bool s = (res == 0) ? true : false;
-			return QVPN::Core::NetStatus{ s , res };
-		}
-
-		template <QVPN::Core::is_addr Addr> // add port
-		Addr qvpn_accept_()
-		{
-			return Addr{};
-		}
+			SERVER_MOD = 0,
+			CLIENT_MOD = 1,
+			UNDEFINED = 2
+		};
 
 		class QVPN_Socket
 		{
@@ -81,17 +86,29 @@ namespace QVPN {
 			SOCKET socket_;
 			WSADATA wsa_data_{};
 
+			std::variant<QVPN::Core::IPv4Address, QVPN::Core::IPv6Address> addr_;
+			UShort port_;
+
+			SocketMod s_mod_ = UNDEFINED;
+
 		public:
 
 			template <class ... Args>
 			QVPN_Socket(Args&& ... args)
 			{
 				socket_ = socket(std::forward<Args>(args)...);
+				port_ = 0;
+				s_mod_ = UNDEFINED;
 			}
 			
+			QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address addr, UShort port, SocketMod s_mod);
+			QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address addr, UShort port, SocketMod s_mod);
+
 			template <QVPN::Core::is_addr Addr>
 			QVPN::Core::NetStatus connect(const Addr& addr, const UShort port)
 			{
+				if (s_mod_ == SERVER_MOD)
+					return QVPN::Core::NetStatus{ false, 0 };
 				QVPN::Core::NetStatus status{};
 				status.success = false;
 				auto res = WSAStartup(MAKEWORD(2, 2), &wsa_data_);
@@ -99,24 +116,43 @@ namespace QVPN {
 					status.status = res;
 					return status;
 				}
-				status = QVPN::NetTools::qvpn_connect_(socket_, addr, port);
+				status = QVPN::NetTools::details::qvpn_connect_(socket_, addr, port);
+
+				if (status.success) {
+					port_ = port;
+					addr_ = addr;
+					s_mod_ = CLIENT_MOD;
+				}
 				return status;
 			}
 			
 			template <QVPN::Core::is_addr Addr>
 			QVPN::Core::NetStatus bind(const Addr& addr, const UShort port)
 			{
+				if (s_mod_ == CLIENT_MOD)
+					return QVPN::Core::NetStatus{ false, 0 };
 				QVPN::Core::NetStatus status{};
+				auto res = WSAStartup(MAKEWORD(2, 2), &wsa_data_);
+				if (res != 0) {
+					status.success = false;
+					status.status = res;
+					return status;
+				}
+				status = QVPN::NetTools::details::qvpn_bind_(socket_, addr, port);
 
-				status = QVPN::NetTools::qvpn_bind_(socket_, addr, port);
+				if (status.success) {
+					port_ = port;
+					addr_ = addr;
+					s_mod_ = SERVER_MOD;
+				}
 
 				return status;
 			}
 
 			template <QVPN::Core::is_addr Addr>
-			Addr accept()
+			QVPN_Socket accept()
 			{
-				return qvpn_accept_<Addr>();
+				return qvpn_accept_<Addr>(socket_);
 			}
 
 			QVPN::Core::NetStatus listen(int con_limit = SOMAXCONN);
@@ -133,6 +169,39 @@ namespace QVPN {
 		};
 
 
+		namespace details
+		{
+
+			template <QVPN::Core::is_addr Addr>
+			inline QVPN_Socket qvpn_accept_(SOCKET& socket)
+			{
+				return QVPN_Socket{};
+			}
+
+			template <>
+			inline QVPN_Socket qvpn_accept_<QVPN::Core::IPv4Address>(SOCKET& socket)
+			{
+				struct sockaddr_in clientAddr {};
+				int clientAddrLen = sizeof(clientAddr);
+				auto sock = ::accept(socket, (sockaddr*)&clientAddr, &clientAddrLen);
+
+				QVPN::Core::IPv4Address addr(clientAddr.sin_addr.S_un.S_addr);
+				UShort port = clientAddr.sin_port;
+				return QVPN_Socket(sock, addr, port, CLIENT_MOD);
+			}
+
+			template <>
+			inline QVPN_Socket qvpn_accept_<QVPN::Core::IPv6Address>(SOCKET& socket)
+			{
+				struct sockaddr_in6 clientAddr {};
+				int clientAddrLen = sizeof(clientAddr);
+				auto sock = ::accept(socket, (sockaddr*)&clientAddr, &clientAddrLen);
+
+				QVPN::Core::IPv6Address addr(clientAddr.sin6_addr.u.Byte);
+				UShort port = clientAddr.sin6_port;
+				return QVPN_Socket(sock, addr, port, CLIENT_MOD);
+			}
+		}
 		class QVPNNetTools
 		{
 		public:

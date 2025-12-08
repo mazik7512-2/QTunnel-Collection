@@ -4,8 +4,6 @@
 #include <unordered_map>
 
 
-//using json = nlohmann::json;
-
 
 namespace QVPN
 {
@@ -117,7 +115,7 @@ namespace QVPN
 		};
 
 
-		class Ipv6Address
+		class IPv6Address
 		{
 		public:
 
@@ -131,8 +129,10 @@ namespace QVPN
 
 		public:
 
-			Ipv6Address();
-			Ipv6Address(std::string_view data);
+			IPv6Address();
+			IPv6Address(AddrBytes_t data);
+			IPv6Address(UByte data[16]);
+			IPv6Address(std::string_view data);
 
 			//static consteval int get_addr_family();
 			consteval int get_addr_family();
@@ -253,12 +253,16 @@ namespace QVPN {
 
 		template <class SocketImpl, class Addr>
 		concept is_socket =
-			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const UnifiedNetAddr<Addr>&addr, const BaseTypes::UShort port, int flags) {
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr &addr, const BaseTypes::UShort port, int flags, int con_limit) {
 
 			SocketImpl::buffer_size;
 
 			{ t.connect(addr, port) } -> std::same_as<NetStatus>;
 			{ t.disconnect() } -> std::same_as<NetStatus>;
+
+			{ t.bind(addr, port) } -> std::same_as<NetStatus>;
+			{ t.listen(con_limit) } -> std::same_as<NetStatus>;
+			{ t. template accept<Addr>() } -> std::same_as<SocketImpl>;
 
 			{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
 			{ t.receive(flags) } -> std::same_as<std::array<BaseTypes::UByte, SocketImpl::buffer_size>>;
