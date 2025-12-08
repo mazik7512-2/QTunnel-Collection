@@ -162,17 +162,27 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	# Копирование всех белых списков с расширением qwlist для server app
 	foreach(file_ IN ITEMS ${whitelists_list})
 
-		set(filename, get_filename_component(FILE_NAME ${file_} NAME))
-
 		add_custom_command(
 			TARGET ${QVPN_SERVER_APP_NAME} POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different 
 					${file_} 
 					${TARGET_DIRECTORY}/${filename} 
-			COMMENT "Copying all whitelists to ${TARGET_DIRECTORY} directory\n"
+			COMMENT "Copying ${file_} to ${TARGET_DIRECTORY} directory\n"
 		)
 
 	endforeach()
+	
+	
+	set(server_settings "${CMAKE_CURRENT_SOURCE_DIR}/server_settings.json")
+
+	# Копирование шаблонного файла с настройками
+	add_custom_command(
+		TARGET ${QVPN_SERVER_APP_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+				${server_settings} 
+				"${TARGET_DIRECTORY}/server_settings.json" 
+		COMMENT "Copying server settings ${TARGET_DIRECTORY} directory\n"
+		)
 endif()
 
 
@@ -192,14 +202,12 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
 	# Копирование всех белых списков с расширением qwlist для client app
 	foreach(file_ IN ITEMS ${whitelists_list})
 
-		set(filename, get_filename_component(FILE_NAME ${file_} NAME))
-
 		add_custom_command(
 			TARGET ${QVPN_CLIENT_APP_NAME} POST_BUILD
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different 
 					${file_} 
 					"${TARGET_DIRECTORY}/${filename}" 
-			COMMENT "Copying all whitelists to ${TARGET_DIRECTORY} directory\n"
+			COMMENT "Copying ${file_} to ${TARGET_DIRECTORY} directory\n"
 		)
 
 	endforeach()
@@ -211,7 +219,7 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
 		TARGET ${QVPN_CLIENT_APP_NAME} POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different 
 				${client_settings} 
-				"${TARGET_DIRECTORY}/${filename}" 
+				"${TARGET_DIRECTORY}/client_settings.json" 
 		COMMENT "Copying client settings ${TARGET_DIRECTORY} directory\n"
 		)
 	

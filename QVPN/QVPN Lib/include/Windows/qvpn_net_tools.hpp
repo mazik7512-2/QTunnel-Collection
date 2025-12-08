@@ -42,6 +42,36 @@ namespace QVPN {
 		}
 		
 
+		inline QVPN::Core::NetStatus qvpn_bind_(SOCKET& socket, const QVPN::Core::IPv4Address& addr, const UShort port)
+		{
+			sockaddr_in serverAddr{};
+			serverAddr.sin_family = AF_INET;
+			serverAddr.sin_port = htons(port);
+			serverAddr.sin_addr.S_un.S_addr = addr.to_uint();//std::visit([](const auto& address) { return address.to_uint(); }, addr);
+			int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+			bool s = (res == 0) ? true : false;
+			return QVPN::Core::NetStatus{ s , res };
+		}
+
+		inline QVPN::Core::NetStatus qvpn_bind_(SOCKET& socket, const QVPN::Core::Ipv6Address& addr, const UShort port)
+		{
+			struct sockaddr_in6 serverAddr {};
+			serverAddr.sin6_family = AF_INET6;
+			serverAddr.sin6_port = htons(port);
+			//serverAddr.sin6_addr.u.Byte = addr.to_bytes();//std::visit([](const auto& address) { return address.to_bytes(); }, addr);
+			auto bytes = addr.to_bytes();
+			std::memcpy(&serverAddr.sin6_addr.u.Byte, bytes.data(), bytes.size());
+			int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+			bool s = (res == 0) ? true : false;
+			return QVPN::Core::NetStatus{ s , res };
+		}
+
+		template <QVPN::Core::is_addr Addr> // add port
+		Addr qvpn_accept_()
+		{
+			return Addr{};
+		}
+
 		class QVPN_Socket
 		{
 		public:
@@ -49,7 +79,7 @@ namespace QVPN {
 
 		private:
 			SOCKET socket_;
-			WSADATA wsa_data_;
+			WSADATA wsa_data_{};
 
 		public:
 
@@ -73,12 +103,31 @@ namespace QVPN {
 				return status;
 			}
 			
+			template <QVPN::Core::is_addr Addr>
+			QVPN::Core::NetStatus bind(const Addr& addr, const UShort port)
+			{
+				QVPN::Core::NetStatus status{};
+
+				status = QVPN::NetTools::qvpn_bind_(socket_, addr, port);
+
+				return status;
+			}
+
+			template <QVPN::Core::is_addr Addr>
+			Addr accept()
+			{
+				return qvpn_accept_<Addr>();
+			}
+
+			QVPN::Core::NetStatus listen(int con_limit = SOMAXCONN);
+
 			QVPN::Core::NetStatus send(const UByte* begin, const UByte* end, int flags = 0);
 
 			std::array<UByte, QVPN_Socket::buffer_size> receive(int flags = 0);
 
 			QVPN::Core::NetStatus disconnect() const;
 
+			QVPN::Core::NetStatus shutdown();
 
 
 		};

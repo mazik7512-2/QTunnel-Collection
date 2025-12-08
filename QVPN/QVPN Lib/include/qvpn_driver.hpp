@@ -41,6 +41,7 @@ namespace QVPN
 			virtual std::string_view get_layer_name() const = 0;
 
 			virtual std::vector<BaseTypes::UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const = 0;
+			virtual std::vector<BaseTypes::UByte> layer_encode(Iter begin, Iter end) const = 0;
 			virtual std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const = 0;
 
 			virtual ~BaseLayer() = default;
@@ -133,6 +134,12 @@ namespace QVPN
 				return res;
 			}
 
+			std::vector<UByte> layer_encode(Iter begin, Iter end) const override
+			{
+				std::vector<UByte> res = TLSRecordGenerator::generate_object_bytes<TLS13_RecordGenStrategy, TLSAppDataGenerator>(std::move(rec_strategy), std::move(begin), std::move(end));
+				return res;
+			}
+
 			std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const override
 			{
 				TLSRecordView record(begin, end);
@@ -152,6 +159,7 @@ namespace QVPN
 				{ l.get_layer_type() } -> std::same_as<LayerTypes>;
 				{ l.get_layer_name() } -> std::same_as <std::string_view>;
 				{ l.layer_encode(data, begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+				{ l.layer_encode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 				{ l.layer_decode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
 		}&& std::is_base_of<BaseLayer<Iter>, Layer>::value;
@@ -242,11 +250,9 @@ namespace QVPN
 
 		};
 
-
-		class QVPNConnectionSettings
+		class QVPNConnectionElement
 		{
 		public:
-
 			using Ipv4AddressType = IPv4Address;
 			using Ipv6AddressType = Ipv6Address;
 			using AddrType = std::variant<Ipv4AddressType, Ipv6AddressType>;
@@ -257,15 +263,15 @@ namespace QVPN
 
 		public:
 
-			QVPNConnectionSettings() = default;
+			QVPNConnectionElement() = default;
 
-			QVPNConnectionSettings(const Ipv4AddressType& address, BaseTypes::UShort port)
+			QVPNConnectionElement(const Ipv4AddressType& address, BaseTypes::UShort port)
 				: addr_(address), port_(port)
 			{
 
 			}
 
-			QVPNConnectionSettings(const Ipv6AddressType& address, BaseTypes::UShort port)
+			QVPNConnectionElement(const Ipv6AddressType& address, BaseTypes::UShort port)
 				: addr_(address), port_(port)
 			{
 			}
@@ -311,19 +317,88 @@ namespace QVPN
 			{
 				return port_;
 			}
+		};
+
+		class QVPNConnectionSettings
+		{
+		public:
+
+			using Ipv4AddressType = QVPNConnectionElement::Ipv4AddressType;
+			using Ipv6AddressType = QVPNConnectionElement::Ipv6AddressType;
+			using AddrType = QVPNConnectionElement::AddrType;
+
+		private:
+			QVPNConnectionElement data_;
+
+		public:
+
+			QVPNConnectionSettings() = default;
+
+			QVPNConnectionSettings(const Ipv4AddressType& address, BaseTypes::UShort port)
+				: data_(address, port)
+			{
+
+			}
+
+			QVPNConnectionSettings(const Ipv6AddressType& address, BaseTypes::UShort port)
+				: data_(address, port)
+			{
+			}
+
+			void set_ip_address(const Ipv4AddressType& address)
+			{
+				data_.set_ip_address(address);
+			}
+
+			void set_ip_address(const Ipv6AddressType& address)
+			{
+				data_.set_ip_address(address);
+			}
+
+			void set_ip_address(std::string_view addr, QVPN::Core::DataStructures::NetProtocols addr_type)
+			{
+				switch (addr_type)
+				{
+				case QVPN::Core::DataStructures::IPv4:
+				{
+					data_.set_ip_address(Ipv4AddressType(addr));
+					break;
+				}
+				case QVPN::Core::DataStructures::IPv6:
+				{
+					data_.set_ip_address(Ipv6AddressType(addr));
+					break;
+				}
+				}
+			}
+
+			void set_port(UShort port)
+			{
+				data_.set_port(port);
+			}
+
+			decltype(auto) get_ip_address() const
+			{
+				return data_.get_ip_address();
+			}
+
+			BaseTypes::UShort get_port() const
+			{
+				return data_.get_port();
+			}
 
 		};
 
 
-		class QVPNCryptoSettings
+		class QVPNClientCryptoSettings
 		{
 		private:
 			std::string key_;
 			QVPN_Crypto crypto_method_;
 
 		public:
-			QVPNCryptoSettings() = default;
-			QVPNCryptoSettings(QVPN_Crypto method, std::string key);
+			QVPNClientCryptoSettings() = default;
+			QVPNClientCryptoSettings(QVPN_Crypto method, std::string key);
 
 			void set_key(std::string_view key);
 			void set_crypto_method(QVPN_Crypto method);
@@ -333,14 +408,14 @@ namespace QVPN
 		};
 
 
-		class QVPNAuthSettings
+		class QVPNClientAuthSettings
 		{
 		private:
 			std::string auth_data_;
 
 		public:
-			QVPNAuthSettings() = default;
-			QVPNAuthSettings(std::string_view auth_data);
+			QVPNClientAuthSettings() = default;
+			QVPNClientAuthSettings(std::string_view auth_data);
 
 			void set_auth_data(std::string_view auth_data);
 
@@ -349,7 +424,7 @@ namespace QVPN
 
 
 		template <std::random_access_iterator Iter>
-		class QVPNSettings_ : public QVPNLayersSettings<Iter>, public QVPNConnectionSettings, public QVPNCryptoSettings, public QVPNAuthSettings
+		class QVPNClientSettings_ : public QVPNLayersSettings<Iter>, public QVPNConnectionSettings, public QVPNClientCryptoSettings, public QVPNClientAuthSettings
 		{
 		private:
 
@@ -382,29 +457,29 @@ namespace QVPN
 			}
 
 
-			QVPNSettings_()
-				: QVPNLayersSettings<Iter>(), QVPNConnectionSettings(), QVPNCryptoSettings(), QVPNAuthSettings()
+			QVPNClientSettings_()
+				: QVPNLayersSettings<Iter>(), QVPNConnectionSettings(), QVPNClientCryptoSettings(), QVPNClientAuthSettings()
 			{
 
 			}
 
-			QVPNSettings_(std::string_view path)
+			QVPNClientSettings_(std::string_view path)
 				: QVPNLayersSettings<Iter>()
 			{
 				parse_settings(path);
 			}
 
-			QVPNSettings_(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNCryptoSettings crypto, QVPNAuthSettings auth)
-				: QVPNSettings_:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNSettings_::QVPNConnectionSettings(std::move(connection)), QVPNSettings_::QVPNCryptoSettings(std::move(crypto)), QVPNSettings_::QVPNAuthSettings(std::move(auth)) {}
+			QVPNClientSettings_(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNClientCryptoSettings crypto, QVPNClientAuthSettings auth)
+				: QVPNClientSettings_:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNClientSettings_::QVPNConnectionSettings(std::move(connection)), QVPNClientSettings_::QVPNClientCryptoSettings(std::move(crypto)), QVPNClientSettings_::QVPNClientAuthSettings(std::move(auth)) {}
 
 
 		};
 
 
-		using QVPNSettings = QVPNSettings_<UByte*>;
+		using QVPNClientSettings = QVPNClientSettings_<UByte*>;
 
 		template <class VPNDriver>
-		concept is_vpn_driver =
+		concept is_vpn_client_driver =
 			requires (VPNDriver d, typename VPNDriver::DataIterator begin, typename VPNDriver::DataIterator end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4 & data) {
 
 			typename VPNDriver::AddrType;
@@ -423,11 +498,11 @@ namespace QVPN
 
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools>
 			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
-		class QVPNDriver
+		class QVPNClientDriver
 		{
 		private:
 
-			QVPNSettings_<Iter> settings_;
+			QVPNClientSettings_<Iter> settings_;
 			Socket socket_;
 
 			using TLS13_RecordLittleEndian = QVPN::Core::DataStructures::TLS13_RecordLittleEndian;
@@ -444,9 +519,9 @@ namespace QVPN
 		public:
 
 			using DataIterator = Iter;
-			using AddrType = QVPNSettings_<Iter>::AddrType;
+			using AddrType = QVPNClientSettings_<Iter>::AddrType;
 
-			QVPNDriver(QVPNSettings_<Iter> settings)
+			QVPNClientDriver(QVPNClientSettings_<Iter> settings)
 				: settings_(std::move(settings)), socket_(NetTools::create_socket())
 			{
 				//socket_ = NetTools::create_socket();
@@ -519,7 +594,7 @@ namespace QVPN
 			QVPN::Core::IPv4Address default_addr;
 		public:
 
-			VPNClient_(QVPN::Core::QVPNSettings settings)
+			VPNClient_(QVPN::Core::QVPNClientSettings settings)
 				: AdapterDriver(), NetDriver(std::move(settings))
 			{
 				default_addr = QVPN::Core::IPv4Address(192, 168, 50, 193);
@@ -540,6 +615,179 @@ namespace QVPN
 
 				NetDriver::start_capture_outgoing_traffic(addr, id);
 				NetDriver::start_capture_incoming_traffic(default_addr);
+			}
+
+		};
+
+
+		class QVPNDatabaseSettings
+		{
+		private:
+			std::string db_host;
+			std::string db_user;
+			std::string db_password;
+			std::string db_name;
+			UShort db_port;
+
+		public:
+
+			void set_db_host(std::string_view path);
+			void set_db_user(std::string_view user);
+			void set_db_password(std::string_view pass);
+			void set_db_name(std::string_view name);
+			void set_db_port(UShort port);
+
+			std::string_view get_db_host() const;
+			std::string_view get_db_user() const;
+			std::string_view get_db_password() const;
+			std::string_view get_db_name() const;
+			UShort get_db_port() const;
+		};
+
+
+		class QVPNNetSettings
+		{
+		public:
+			using Ipv4AddressType = QVPNConnectionElement::Ipv4AddressType;
+			using Ipv6AddressType = QVPNConnectionElement::Ipv6AddressType;
+			using AddrType = QVPNConnectionElement::AddrType;
+			using DataIterator_t = std::vector<QVPNConnectionElement>::const_iterator;
+
+		private:
+			std::vector<QVPNConnectionElement> data_;
+
+		public:
+
+			void add_addr(const Ipv4AddressType& addr, UShort port);
+			void add_addr(const Ipv6AddressType& addr, UShort port);
+
+			std::pair<DataIterator_t, DataIterator_t> get_addrs() const;
+		};
+
+
+		class QVPNServerCryptoSettings
+		{
+		private:
+			std::vector<QVPN_Crypto> data_;
+			
+		public:
+
+			using DataIterator_t = std::vector<QVPN_Crypto>::const_iterator;
+
+			void add_crypto_method(QVPN_Crypto crypto);
+			std::pair<DataIterator_t, DataIterator_t> get_supported_crypto() const;
+
+		};
+
+		template <std::random_access_iterator Iter>
+		class QVPNServerSettings_ : public QVPNLayersSettings<Iter>, public QVPNNetSettings, public QVPNServerCryptoSettings, public QVPNDatabaseSettings
+		{
+		private:
+
+		public:
+
+			void parse_settings(std::string_view path)
+			{
+				using NetProtocols = QVPN::Core::DataStructures::NetProtocols;
+				std::ifstream f;
+				f.open(path);
+				auto settings = json::parse(f);
+
+				auto& addrs = settings["addrs"];
+
+				for (auto& addr_obj : addrs.items())
+				{
+					auto addr_type = static_cast<NetProtocols>(addr_obj["addr_type"].get<UInt>());
+
+					auto addr = addr_obj["addr"].get<std::string>();
+					auto port = addr_obj["port"].get<UShort>();
+
+					switch (addr_type)
+					{
+					case NetProtocols::IPv4:
+						add_addr(Ipv4AddressType(addr), port);
+						break;
+					case NetProtocols::IPv6:
+						add_addr(Ipv6AddressType(addr), port);
+						break;
+					default:
+						break;
+					}
+				}
+
+
+				auto& sup_crypto = settings["supported_crypto"];
+
+				for (auto& crypto_obj : sup_crypto.items())
+				{
+					auto crypto = crypto_obj.get<UShort>();
+					add_crypto_method(crypto);
+				}
+
+
+				auto& database = settings["database"];
+
+				set_db_host(database["host"].get<std::string>());
+				set_db_user(database["user"].get<std::string>());
+				set_db_password(database["pass"].get<std::string>());
+				set_db_name(database["name"].get<std::string>());
+				set_db_port(database["port"].get<UShort>());
+
+				f.close();
+
+			}
+
+
+			QVPNServerSettings_()
+				: QVPNLayersSettings<Iter>(), QVPNNetSettings(), QVPNServerCryptoSettings(), QVPNDatabaseSettings()
+			{
+
+			}
+
+			QVPNServerSettings_(std::string_view path)
+				: QVPNLayersSettings<Iter>()
+			{
+				parse_settings(path);
+			}
+
+			QVPNServerSettings_(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNClientCryptoSettings crypto, QVPNClientAuthSettings auth)
+				: QVPNServerSettings_:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNServerSettings_::QVPNConnectionSettings(std::move(connection)), QVPNServerSettings_::QVPNClientCryptoSettings(std::move(crypto)), QVPNServerSettings_::QVPNDatabaseSettings(std::move(auth)) {}
+
+
+		};
+
+
+		template <class VPNDriverImpl>
+		concept is_vpn_server_driver =
+			requires (VPNDriverImpl t) {
+				{ true };
+		};
+
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools>
+			requires is_socket<Socket, Addr> && is_net_tools<NetTools, Socket>
+		class QVPNServerDriver
+		{
+		private:
+			QVPNClientSettings_<Iter> settings_;
+			Socket socket_;
+
+		public:
+
+			QVPNServerDriver(QVPNServerSettings_<Iter> settings)
+				: settings_(std::move(settings)), socket_(NetTools::create_socket())
+			{
+
+			}
+
+
+			std::vector<BaseTypes::UByte> encode_data(Iter begin, Iter end)
+			{
+				return settings_.layers_encode(begin, end);
+			}
+
+			std::vector<BaseTypes::UByte> decode_data(Iter begin, Iter end)
+			{
+				return settings_.layers_decode(begin, end);
 			}
 
 		};

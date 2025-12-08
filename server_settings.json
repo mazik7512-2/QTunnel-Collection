@@ -1,0 +1,21 @@
+{
+    "addrs": [{
+            "addr_type": 4,
+            "addr": "0.0.0.0",
+            "port": 1234
+        }
+    ],
+
+    "supported_crypto": [
+        0
+    ],
+
+    "database": {
+        "host": "db.sqlite",
+        "user": "admin",
+        "pass": "password",
+        "name": "database",
+        "port": 1234
+    }
+
+}

@@ -2984,6 +2984,21 @@ namespace QVPN {
 				}
 
 
+				template <std::random_access_iterator Iter1, std::random_access_iterator Iter2>
+				static std::vector<UByte> generate_object_bytes(Iter1 begin, Iter2 end)
+				{
+					std::vector<UByte> obj_bytes;
+					std::copy(begin, end, std::back_inserter(obj_bytes));
+					return obj_bytes;
+				}
+
+				template <std::random_access_iterator Iter1, std::random_access_iterator Iter2>
+				static TLS13_ApplicationDataLittleEndian generate_object(Iter1 begin, Iter2 end)
+				{
+					auto obj_bytes = generate_object_bytes<Iter1, Iter2>(begin, end);
+					return TLS13_ApplicationDataLittleEndian(begin, end);
+				}
+
 				// default generators
 
 				template <std::random_access_iterator Iter>

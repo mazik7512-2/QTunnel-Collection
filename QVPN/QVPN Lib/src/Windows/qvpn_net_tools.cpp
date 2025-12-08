@@ -12,6 +12,13 @@ QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(int sock
 	return socket;
 }
 
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::listen(int con_limit)
+{
+	auto res = ::listen(socket_, con_limit);
+	bool s = (res == 0) ? true : false;
+	return QVPN::Core::NetStatus{ s , res };
+}
+
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::send(const UByte* begin, const UByte* end, int flags)
 {
 	QVPN::Core::NetStatus status{};
@@ -35,4 +42,11 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::disconnect() const
 	closesocket(socket_);
 	WSACleanup();
 	return QVPN::Core::NetStatus{ true, 0 };
+}
+
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::shutdown()
+{
+	auto res = ::shutdown(socket_, SD_SEND);
+	bool s = (res == 0) ? true : false;
+	return QVPN::Core::NetStatus{ s, res };
 }
