@@ -235,6 +235,12 @@ namespace QVPN {
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
 					auto encoded_data = driver_.encode_data(proxy_data, data_b, data_e);
 					
+					auto new_dest_ip = driver_.get_vpn_address();
+					auto new_dest_port = driver_.get_vpn_port();
+
+					//std::visit([](auto& p, auto& ip, auto& port) { p.set_ip_dest(ip); p.set_dst_port(port); p.recalculate_checksums(); }, package, new_dest_ip, new_dest_port);
+					std::visit([](auto& p, const QVPN::Core::IPv4Address& ip) { p.set_ip_dest(ip); }, package, new_dest_ip);
+
 					if (!WinDivertSend(out_hDivert_, encoded_data.data(), encoded_data.size(), NULL, &addr)) // <------ addr структура WinDivert которую надо изменять??
 					{
 						fprintf(stderr, "warning: failed to reinject packet (%d)\n",

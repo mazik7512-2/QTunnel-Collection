@@ -285,16 +285,16 @@ namespace QVPN
 				addr_ = address;
 			}
 
-			void set_ip_address(std::string_view addr, QVPN::Core::DataStructures::NetProtocols addr_type)
+			void set_ip_address(std::string_view addr, QVPN::Core::NetProtocols addr_type)
 			{
 				switch (addr_type)
 				{
-				case QVPN::Core::DataStructures::IPv4:
+				case QVPN::Core::IPv4:
 				{
 					addr_ = Ipv4AddressType(addr);
 					break;
 				}
-				case QVPN::Core::DataStructures::IPv6:
+				case QVPN::Core::IPv6:
 				{
 					addr_ = Ipv6AddressType(addr);
 					break;
@@ -354,16 +354,16 @@ namespace QVPN
 				data_.set_ip_address(address);
 			}
 
-			void set_ip_address(std::string_view addr, QVPN::Core::DataStructures::NetProtocols addr_type)
+			void set_ip_address(std::string_view addr, QVPN::Core::NetProtocols addr_type)
 			{
 				switch (addr_type)
 				{
-				case QVPN::Core::DataStructures::IPv4:
+				case QVPN::Core::IPv4:
 				{
 					data_.set_ip_address(Ipv4AddressType(addr));
 					break;
 				}
-				case QVPN::Core::DataStructures::IPv6:
+				case QVPN::Core::IPv6:
 				{
 					data_.set_ip_address(Ipv6AddressType(addr));
 					break;
@@ -435,7 +435,7 @@ namespace QVPN
 				f.open(path);
 				auto settings = json::parse(f);
 
-				auto addr_type = static_cast<QVPN::Core::DataStructures::NetProtocols>(settings["addr_type"].get<UInt>());
+				auto addr_type = static_cast<QVPN::Core::NetProtocols>(settings["addr_type"].get<UInt>());
 				auto addr = settings["addr"].get<std::string>();
 				auto port = static_cast<UShort>(settings["port"].get<UShort>());
 
@@ -687,7 +687,7 @@ namespace QVPN
 
 			void parse_settings(std::string_view path)
 			{
-				using NetProtocols = QVPN::Core::DataStructures::NetProtocols;
+				using NetProtocols = QVPN::Core::NetProtocols;
 				std::ifstream f;
 				f.open(path);
 				auto settings = json::parse(f);

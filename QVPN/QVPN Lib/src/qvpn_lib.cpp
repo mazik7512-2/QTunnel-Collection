@@ -9,6 +9,14 @@ QVPN::Core::IPv4Address::IPv4Address()
 {
 }
 
+QVPN::Core::IPv4Address::IPv4Address(AddrBytes_t data)
+{
+    ip_[0] = data[0];
+    ip_[1] = data[1];
+    ip_[2] = data[2];
+    ip_[3] = data[3];
+}
+
 QVPN::Core::IPv4Address::IPv4Address(std::string_view data)
 {
     auto delim = ".";
@@ -85,9 +93,9 @@ bool QVPN::Core::IPv4Address::operator==(const IPv4Address& other) const
     return to_uint() == other.to_uint();
 }
 
-consteval int QVPN::Core::IPv4Address::get_addr_family()
+consteval QVPN::Core::NetProtocols QVPN::Core::IPv4Address::get_addr_family()
 {
-    return AF_INET;
+    return NetProtocols::IPv4;
 }
 
 std::array<QVPN::Core::IPv4Address::UByte, 4> QVPN::Core::IPv4Address::to_bytes() const
@@ -112,51 +120,6 @@ QVPN::Core::IPv4Address::~IPv4Address()
 {
 }
 
-// Net Addr
-
-QVPN::Core::BaseTypes::UByte QVPN::Core::NetAddr::operator[](int elem) const
-{
-    return addr_[elem];
-}
-
-consteval int QVPN::Core::NetAddr::get_addr_family()
-{
-    return AF_INET6;
-}
-
-QVPN::Core::NetAddr::AddrBytes_t QVPN::Core::NetAddr::to_bytes() const
-{
-    return addr_;
-}
-
-std::string QVPN::Core::NetAddr::to_string() const
-{
-    std::stringstream ip;
-    for (size_t i = 0; i < addr_.size(); i++)
-    {
-        ip << static_cast<int>(addr_[i]) << ".";
-    }
-    auto temp = ip.str();
-    auto str = temp.substr(0, temp.size() - 2);
-    str.append("\0");
-    return str;
-}
-
-QVPN::Core::NetAddr::AddrInt_t QVPN::Core::NetAddr::to_uint() const
-{
-    std::pair<BaseTypes::ULong, BaseTypes::ULong> res {0ull, 0ull};
-
-    for (size_t i = 0; i < addr_.size() / 2; i++)
-    {
-        res.first += addr_[i];
-    }
-
-    for (size_t i = addr_.size() / 2; i < addr_.size(); i++)
-    {
-        res.second += addr_[i];
-    }
-    return res;
-}
 
 // ipv6
 
@@ -188,9 +151,9 @@ QVPN::Core::IPv6Address::IPv6Address(std::string_view data)
     }
 }
 
-consteval int QVPN::Core::IPv6Address::get_addr_family()
+consteval QVPN::Core::NetProtocols QVPN::Core::IPv6Address::get_addr_family()
 {
-    return AF_INET6;
+    return NetProtocols::IPv6;
 }
 
 QVPN::Core::IPv6Address::AddrBytes_t QVPN::Core::IPv6Address::to_bytes() const
@@ -315,4 +278,96 @@ std::string_view QVPN::Core::QVPNWhitelist::get_host(size_t i) const
 size_t QVPN::Core::QVPNWhitelist::get_size() const
 {
     return whitelist_.size();
+}
+
+// IP Address
+
+QVPN::Core::NetAddr::NetAddr()
+{
+}
+
+QVPN::Core::NetAddr::NetAddr(AddrBytes_t data)
+{
+    std::copy(data.cbegin(), data.cend(), std::back_inserter(ip_));
+}
+
+QVPN::Core::NetAddr::NetAddr(const IPv4Address& data)
+{
+    auto bytes = data.to_bytes();
+    std::copy(bytes.cbegin(), bytes.cend(), std::back_inserter(ip_));
+}
+
+QVPN::Core::NetAddr::NetAddr(const IPv6Address& data)
+{
+    auto bytes = data.to_bytes();
+    std::copy(bytes.cbegin(), bytes.cend(), std::back_inserter(ip_));
+}
+
+QVPN::Core::NetAddr::NetAddr(std::string_view data)
+{
+    auto delim = ".";
+    size_t last = 0;
+    for (size_t i = 0; i < 16; i++)
+    {
+        size_t start = data.find(delim, last);
+        size_t end = data.find(delim, start);
+        last = end;
+        auto elem = data.substr(start, end - start);
+        ip_[i] = std::stoi(std::string(elem));
+    }
+}
+
+size_t QVPN::Core::NetAddr::get_addr_size()
+{
+    return ip_.size();
+}
+
+QVPN::Core::NetProtocols QVPN::Core::NetAddr::get_addr_family()
+{
+    if (ip_.size() == 4)
+        return NetProtocols::IPv4;
+    else if (ip_.size() == 16)
+        return NetProtocols::IPv6;
+    return NetProtocols::UNDEFINED;
+}
+
+QVPN::Core::IPv4Address QVPN::Core::NetAddr::to_ipv4() const
+{
+    std::array<UByte, 4> data { ip_[0], ip_[1], ip_[2], ip_[3]};
+    return IPv4Address(data);
+}
+
+QVPN::Core::IPv6Address QVPN::Core::NetAddr::to_ipv6() const
+{
+    std::array<UByte, 16> data{};
+    std::copy(ip_.cbegin(), ip_.cbegin() + 16, data.begin());
+    return IPv6Address(data);
+}
+
+QVPN::Core::BaseTypes::UByte QVPN::Core::NetAddr::operator[](int elem) const
+{
+    return ip_[elem];
+}
+
+QVPN::Core::NetAddr::AddrBytes_t QVPN::Core::NetAddr::to_bytes() const
+{
+    return ip_;
+}
+
+std::string QVPN::Core::NetAddr::to_string() const
+{
+    std::stringstream ip;
+    for (size_t i = 0; i < ip_.size(); i++)
+    {
+        ip << static_cast<int>(ip_[i]) << ".";
+    }
+    auto temp = ip.str();
+    auto str = temp.substr(0, temp.size() - 2);
+    str.append("\0");
+    return str;
+}
+
+QVPN::Core::NetAddr::AddrInt_t QVPN::Core::NetAddr::to_uint() const
+{
+    return ip_;
 }
