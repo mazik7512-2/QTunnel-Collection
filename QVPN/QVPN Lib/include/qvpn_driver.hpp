@@ -4,6 +4,7 @@
 #include <variant>
 #include <memory>
 #include <qvpn_structures.hpp>
+#include <qvpn_tools.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -187,7 +188,7 @@ namespace QVPN
 
 			DefaultLayersStrategy()
 			{
-				std::shared_ptr<QLayer<Iter>> ql{};
+				std::shared_ptr<QLayer<Iter>> ql = std::make_shared<QLayer<Iter>>();
 				LayerWrapper<Iter> lw{ ql };
 
 				layers_.push_back(lw);
@@ -254,7 +255,7 @@ namespace QVPN
 		public:
 			using Ipv4AddressType = IPv4Address;
 			using Ipv6AddressType = IPv6Address;
-			using AddrType = std::variant<Ipv4AddressType, Ipv6AddressType>;
+			using AddrType = NetAddr;//std::variant<Ipv4AddressType, Ipv6AddressType>;
 
 		private:
 			AddrType addr_;
@@ -273,6 +274,12 @@ namespace QVPN
 			QVPNConnectionElement(const Ipv6AddressType& address, BaseTypes::UShort port)
 				: addr_(address), port_(port)
 			{
+			}
+
+			QVPNConnectionElement(std::string_view data, BaseTypes::UShort port)
+				: addr_(data), port_(port)
+			{
+
 			}
 
 			void set_ip_address(const Ipv4AddressType& address)
@@ -300,6 +307,11 @@ namespace QVPN
 					break;
 				}
 				}
+			}
+
+			void set_ip_address(std::string_view addr)
+			{
+				addr_ = Tools::parse_net_addr(addr);
 			}
 
 			void set_port(UShort port)
@@ -371,6 +383,11 @@ namespace QVPN
 				}
 			}
 
+			void set_ip_address(std::string_view addr)
+			{
+				data_.set_ip_address(addr);
+			}
+
 			void set_port(UShort port)
 			{
 				data_.set_port(port);
@@ -432,14 +449,18 @@ namespace QVPN
 			void parse_settings(std::string_view path)
 			{
 				std::ifstream f;
-				f.open(path);
+				f.open(path.data());
+
+				if (!f.is_open())
+					return;
+
 				auto settings = json::parse(f);
 
 				auto addr_type = static_cast<QVPN::Core::NetProtocols>(settings["addr_type"].get<UInt>());
 				auto addr = settings["addr"].get<std::string>();
 				auto port = static_cast<UShort>(settings["port"].get<UShort>());
 
-				set_ip_address(addr, addr_type);
+				set_ip_address(addr);
 				set_port(port);
 
 				auto crypto_method = static_cast<QVPN_Crypto>(settings["crypto_method"].get<UInt>());
@@ -530,7 +551,7 @@ namespace QVPN
 			{
 				const auto addr = settings_.get_ip_address();
 				const auto port = settings_.get_port();
-				auto res = std::visit([this, port](const auto& a) { return socket_.connect(a, port); }, addr);
+				auto res = socket_.connect(addr, port);//std::visit([this, port](const auto& a) { return socket_.connect(a, port); }, addr);
 				return res.success;
 			}
 

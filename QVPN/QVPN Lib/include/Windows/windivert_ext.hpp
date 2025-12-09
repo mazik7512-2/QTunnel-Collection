@@ -10,6 +10,7 @@
 #include <qvpn_structures.hpp>
 #include <fstream>
 #include <qvpn_tools.hpp>
+#include <variant>
 
 
 
@@ -150,7 +151,9 @@ namespace QVPN {
 
 		private:
 
-			std::string outgoing_default_filter_;
+			// TODO: исправить фильтры
+
+			std::string outgoing_default_filter_ = "tcp";
 			std::string incoming_default_filter_;
 
 			std::vector<Filter_t> filters_;
@@ -202,6 +205,8 @@ namespace QVPN {
 				outgoing_capture_loop(adapter_addr);
 			}
 
+			
+
 			void outgoing_capture_loop(const QVPN::Core::IPv4Address& adapter_addr)
 			{
 				WINDIVERT_ADDRESS addr;
@@ -220,7 +225,7 @@ namespace QVPN {
 							GetLastError());
 						continue;
 					}
-					
+					// TODO: добавить отмену перехвата пакетов на адрес впн
 					//package.set_ip_source(adapter_addr);
 					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
 					
@@ -234,12 +239,35 @@ namespace QVPN {
 					QVPN::Core::DataStructures::QVPNProxyData_Ipv4 proxy_data{ ver, net_proto, ip_dest, port_dst };
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
 					auto encoded_data = driver_.encode_data(proxy_data, data_b, data_e);
-					
-					auto new_dest_ip = driver_.get_vpn_address();
-					auto new_dest_port = driver_.get_vpn_port();
 
-					//std::visit([](auto& p, auto& ip, auto& port) { p.set_ip_dest(ip); p.set_dst_port(port); p.recalculate_checksums(); }, package, new_dest_ip, new_dest_port);
-					std::visit([](auto& p, const QVPN::Core::IPv4Address& ip) { p.set_ip_dest(ip); }, package, new_dest_ip);
+					const auto new_dest_ip = driver_.get_vpn_address();
+					const auto new_dest_port = driver_.get_vpn_port();
+					
+					std::visit([&new_dest_ip, &new_dest_port](auto& p) 
+						{ 
+							p.set_dst_addr(new_dest_ip);
+							p.set_dst_port(new_dest_port);
+							p.recalculate_checksums();
+						}
+					, package);
+
+					// TODO: добавить функцию в FULL PACKET set data для создания нового пакета на основе новых данных
+
+					/*
+					// нужно для того чтобы раскрыть std::variant, через std::visit не работает, т.к. std::variant определяется в рантайме
+					[&package, &proxy_data]<size_t ... i>(std::index_sequence<i...> seq) {
+
+						// аналог switch, через оператор запятая + унарный if через оператор запятая
+						// если условие выполняется, то выполняются все действия и возвращается true (фактически оно не нужно, нужно только как заполнитель)
+						((package.index() == i ? (
+							std::get<i>(package).set_ip_dest(proxy_data.get_addr()),
+							std::get<i>(package).set_dst_port(proxy_data.get_port()),
+							std::get<i>(package).recalculate_checksums(),
+							true
+							) : false), ...);
+
+					}(std::make_index_sequence<std::variant_size_v<decltype(package)>>{});
+					*/
 
 					if (!WinDivertSend(out_hDivert_, encoded_data.data(), encoded_data.size(), NULL, &addr)) // <------ addr структура WinDivert которую надо изменять??
 					{
@@ -352,8 +380,8 @@ namespace QVPN {
 				driver_.connect();
 				driver_.init();
 				new_adapter_id = adapter_id;
-				out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
-				//start_capture_outgoing_traffic_(adapter_addr);
+				//out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
+				start_capture_outgoing_traffic_(adapter_addr);
 			}
 
 			void start_capture_incoming_traffic(const QVPN::Core::IPv4Address& adapter_addr)

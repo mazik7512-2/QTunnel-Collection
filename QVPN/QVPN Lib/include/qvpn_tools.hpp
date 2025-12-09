@@ -155,6 +155,8 @@ namespace QVPN {
 				constexpr size_t tuple_args_count = std::tuple_size_v<std::tuple<Args...>>;
 				return[&] <size_t ... it>(std::index_sequence<it...>) { return F(std::get<it>(tuple)...); }(std::make_index_sequence<tuple_args_count>{});
 			}
+
+			std::vector<QVPN::Core::BaseTypes::UByte> parse_net_addr(std::string_view addr);
 		}
 		
 		class PreParser
@@ -189,8 +191,10 @@ namespace QVPN {
 
 		public:
 
+			using PacketType = std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView>;
+
 			template <std::random_access_iterator Iter>
-			std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> pre_parse(Iter begin, Iter end)
+			PacketType pre_parse(Iter begin, Iter end)
 			{
 				using NetProtocols = QVPN::Core::NetProtocols;
 				//std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> ret;

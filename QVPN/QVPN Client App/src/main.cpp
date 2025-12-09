@@ -8,15 +8,17 @@ using VPNClientSettings = QVPN::VPNClientSettings;
 using VPNClient = QVPN::VPNClient;
 using VPNLayers = QVPN::VPNLayersStrategy;
 
-int main(int argc, char* argv[])
+int main(int argc, const char* argv[])
 {
-
+   
     argparse::ArgumentParser program("QVPN Client App", "0.5");
 
     program.add_argument("-s", "--settings", "-c", "--config")
-        .default_value(std::string("client_settings.json"))
-        .help("”кажите путь до файла с настройками (по умолчанию) client_settings.json");
+        .help("”кажите путь до файла с настройками (по умолчанию) client_settings.json")
+        .default_value(std::string("Z:\\Files\\Projects\\C++\\MaxVPN\\build\\bin\\Windows\\client_settings.json"));
     
+    program.parse_args(argc, argv);
+
     VPNClientSettings settings{};
     std::string path = program.get<std::string>("--settings");
     settings.parse_settings(path);
@@ -28,11 +30,12 @@ int main(int argc, char* argv[])
 
     VPNClient vpn_client(settings);
 
-    vpn_client.add_outgoing_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
-    vpn_client.add_incoming_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
+//    vpn_client.add_outgoing_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
+//    vpn_client.add_incoming_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
+    vpn_client.add_outgoing_traffic_filter(vpn_client.ipv4());
 
-    vpn_client.start_capture_outgoing_traffic(std::get<VPNClientSettings::Ipv4AddressType>(addr), 1);
-    vpn_client.start_capture_incoming_traffic(std::get<VPNClientSettings::Ipv4AddressType>(addr));
+    vpn_client.start_capture_outgoing_traffic(addr.to_ipv4(), 1);
+    vpn_client.start_capture_incoming_traffic(addr.to_ipv4());
     std::cin.get();
     return 0;
 }

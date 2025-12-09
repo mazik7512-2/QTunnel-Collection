@@ -462,10 +462,15 @@ namespace QVPN {
 
 			template <class IpPacketImpl>
 			concept UnifiedIpPacketLike =
-				requires (IpPacketImpl t) {
+				requires (IpPacketImpl t, const NetAddr& net_addr) {
 
-					{ t.get_src() } -> std::same_as<std::pair<const UByte*, const UByte*>>;
-					{ t.get_dst() } -> std::same_as<std::pair<const UByte*, const UByte*>>;
+				// TODO: исправить возвращаемый тип на NetAddr
+
+					{ t.get_src_addr() } -> std::same_as<std::pair<const UByte*, const UByte*>>;
+					{ t.get_dst_addr() } -> std::same_as<std::pair<const UByte*, const UByte*>>;
+
+					{ t.set_src_addr(net_addr) } -> std::same_as<void>;
+					{ t.set_dst_addr(net_addr) } -> std::same_as<void>;
 
 					{ t.recalculate_ip_checksum() } -> std::same_as<void>;
 
@@ -555,9 +560,12 @@ namespace QVPN {
 				void set_ip_checksum(const UShort checksum);
 
 				/* Unified Ip Packet implementaion */
-				std::pair<const UByte*, const UByte*> get_src() const;
-				std::pair<const UByte*, const UByte*> get_dst() const;
+				std::pair<const UByte*, const UByte*> get_src_addr() const;
+				std::pair<const UByte*, const UByte*> get_dst_addr() const;
 				void recalculate_ip_checksum();
+
+				void set_src_addr(const NetAddr& net_addr);
+				void set_dst_addr(const NetAddr& net_addr);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -621,9 +629,12 @@ namespace QVPN {
 				void set_ip_checksum(const UShort checksum);
 
 				/* Unified Ip Packet implementaion */
-				std::pair<const UByte*, const UByte*> get_src() const;
-				std::pair<const UByte*, const UByte*> get_dst() const;
+				std::pair<const UByte*, const UByte*> get_src_addr() const;
+				std::pair<const UByte*, const UByte*> get_dst_addr() const;
 				void recalculate_ip_checksum();
+
+				void set_src_addr(const NetAddr& net_addr);
+				void set_dst_addr(const NetAddr& net_addr);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;

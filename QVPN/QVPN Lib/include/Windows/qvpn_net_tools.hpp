@@ -17,7 +17,7 @@ namespace QVPN {
 
 		namespace details
 		{
-			// no odr usage
+			// inline - no odr usage
 			inline QVPN::Core::NetStatus qvpn_connect_(SOCKET& socket, const QVPN::Core::IPv4Address& addr, const UShort port)
 			{
 				struct sockaddr_in serverAddr {};
@@ -29,7 +29,6 @@ namespace QVPN {
 				return QVPN::Core::NetStatus{ s , res };
 			}
 
-			// no odr usage
 			inline QVPN::Core::NetStatus qvpn_connect_(SOCKET& socket, const QVPN::Core::IPv6Address& addr, const UShort port)
 			{
 				struct sockaddr_in6 serverAddr {};
@@ -41,6 +40,22 @@ namespace QVPN {
 				int res = connect(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
 				bool s = (res == 0) ? true : false;
 				return QVPN::Core::NetStatus{ s , res };
+			}
+
+
+			inline QVPN::Core::NetStatus qvpn_connect_(SOCKET& socket, const QVPN::Core::NetAddr& addr, const UShort port)
+			{
+				auto addr_family = addr.get_addr_family();
+				switch (addr_family)
+				{
+				case QVPN::Core::NetProtocols::IPv4:
+					return qvpn_connect_(socket, addr.to_ipv4(), port);
+				case QVPN::Core::NetProtocols::IPv6:
+					return qvpn_connect_(socket, addr.to_ipv6(), port);
+				default:
+					return QVPN::Core::NetStatus{ false, 0 };
+				}
+				
 			}
 
 
@@ -68,6 +83,20 @@ namespace QVPN {
 				return QVPN::Core::NetStatus{ s , res };
 			}
 
+			inline QVPN::Core::NetStatus qvpn_bind_(SOCKET& socket, const QVPN::Core::NetAddr& addr, const UShort port)
+			{
+				auto addr_family = addr.get_addr_family();
+				switch (addr_family)
+				{
+				case QVPN::Core::NetProtocols::IPv4:
+					return qvpn_bind_(socket, addr.to_ipv4(), port);
+				case QVPN::Core::NetProtocols::IPv6:
+					return qvpn_bind_(socket, addr.to_ipv6(), port);
+				default:
+					return QVPN::Core::NetStatus{ false, 0 };
+				}
+			}
+
 		}
 
 		enum SocketMod
@@ -86,7 +115,7 @@ namespace QVPN {
 			SOCKET socket_;
 			WSADATA wsa_data_{};
 
-			std::variant<QVPN::Core::IPv4Address, QVPN::Core::IPv6Address> addr_;
+			QVPN::Core::NetAddr addr_;
 			UShort port_;
 
 			SocketMod s_mod_ = UNDEFINED;
@@ -172,6 +201,8 @@ namespace QVPN {
 		namespace details
 		{
 
+			// TODO: ¬озможно с заменой std::variant на NetAddr придетс€ переделать accept
+
 			template <QVPN::Core::is_addr Addr>
 			inline QVPN_Socket qvpn_accept_(SOCKET& socket)
 			{
@@ -201,7 +232,9 @@ namespace QVPN {
 				UShort port = clientAddr.sin6_port;
 				return QVPN_Socket(sock, addr, port, CLIENT_MOD);
 			}
+
 		}
+
 		class QVPNNetTools
 		{
 		public:

@@ -3,6 +3,7 @@
 #include <qvpn_defs.hpp>
 #include <fstream>
 #include <random>
+#include <qvpn_tools.hpp>
 
 
 QVPN::Core::IPv4Address::IPv4Address()
@@ -19,16 +20,8 @@ QVPN::Core::IPv4Address::IPv4Address(AddrBytes_t data)
 
 QVPN::Core::IPv4Address::IPv4Address(std::string_view data)
 {
-    auto delim = ".";
-    size_t last = 0;
-    for (size_t i = 0; i < 4; i++)
-    {
-        size_t start = data.find(delim, last);
-        size_t end = data.find(delim, start);
-        last = end;
-        auto elem = data.substr(start, end - start);
-        ip_[i] = std::stoi(std::string(elem));
-    }
+    auto vec = Tools::parse_net_addr(data);
+    std::copy(vec.begin(), vec.end(), ip_.begin());
 }
 
 QVPN::Core::IPv4Address::IPv4Address(AddrInt_t data)
@@ -139,16 +132,8 @@ QVPN::Core::IPv6Address::IPv6Address(UByte data[16])
 
 QVPN::Core::IPv6Address::IPv6Address(std::string_view data)
 {
-    auto delim = ".";
-    size_t last = 0;
-    for (size_t i = 0; i < 16; i++)
-    {
-        size_t start = data.find(delim, last);
-        size_t end = data.find(delim, start);
-        last = end;
-        auto elem = data.substr(start, end - start);
-        ip_[i] = std::stoi(std::string(elem));
-    }
+    auto vec = Tools::parse_net_addr(data);
+    std::copy(vec.begin(), vec.end(), ip_.begin());
 }
 
 consteval QVPN::Core::NetProtocols QVPN::Core::IPv6Address::get_addr_family()
@@ -305,16 +290,7 @@ QVPN::Core::NetAddr::NetAddr(const IPv6Address& data)
 
 QVPN::Core::NetAddr::NetAddr(std::string_view data)
 {
-    auto delim = ".";
-    size_t last = 0;
-    for (size_t i = 0; i < 16; i++)
-    {
-        size_t start = data.find(delim, last);
-        size_t end = data.find(delim, start);
-        last = end;
-        auto elem = data.substr(start, end - start);
-        ip_[i] = std::stoi(std::string(elem));
-    }
+    ip_ = Tools::parse_net_addr(data);
 }
 
 size_t QVPN::Core::NetAddr::get_addr_size()
@@ -322,7 +298,7 @@ size_t QVPN::Core::NetAddr::get_addr_size()
     return ip_.size();
 }
 
-QVPN::Core::NetProtocols QVPN::Core::NetAddr::get_addr_family()
+QVPN::Core::NetProtocols QVPN::Core::NetAddr::get_addr_family() const
 {
     if (ip_.size() == 4)
         return NetProtocols::IPv4;

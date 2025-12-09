@@ -113,3 +113,25 @@ std::pair<std::uniform_int_distribution<QVPN::Core::TLSTools::UInt>, std::mt1993
 	std::uniform_int_distribution<UInt> dist(0, 255);
 	return std::pair<std::uniform_int_distribution<UInt>, std::mt19937>(dist, gen);
 }
+
+std::vector<QVPN::Core::BaseTypes::UByte> QVPN::Core::Tools::parse_net_addr(std::string_view addr)
+{
+	std::vector<QVPN::Core::BaseTypes::UByte> ip_;
+	auto delim = "."; // ipv4
+	size_t start = 0;
+	size_t end = addr.find(delim, start);
+
+	if (end == std::string_view::npos) 
+		delim = "::"; // ipv6
+
+	for (size_t i = 0; i < 16; i++)
+	{
+		end = addr.find(delim, start);
+		auto elem = addr.substr(start, end - start);
+		ip_.push_back(std::stoi(std::string(elem)));
+		start = end + 1;
+		if (end == std::string_view::npos)
+			break;
+	}
+	return ip_;
+}

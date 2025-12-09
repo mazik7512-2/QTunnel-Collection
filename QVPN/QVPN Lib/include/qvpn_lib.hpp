@@ -154,7 +154,7 @@ namespace QVPN
 			NetAddr(std::string_view data);
 
 			size_t get_addr_size();
-			NetProtocols get_addr_family();
+			NetProtocols get_addr_family() const;
 
 			IPv4Address to_ipv4() const;
 			IPv6Address to_ipv6() const;
@@ -305,6 +305,8 @@ namespace QVPN {
 		template <class PreParserImpl>
 		concept is_preparser =
 			requires (PreParserImpl pp) {
+				
+			typename PreParserImpl::PacketType;
 
 				{ pp.pre_parse() };
 

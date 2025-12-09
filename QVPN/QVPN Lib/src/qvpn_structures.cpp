@@ -192,12 +192,12 @@ void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::set_ip_checksum(const U
 	header_[11] = checksum & 0xFF;
 }
 
-std::pair<const UByte*, const UByte*> QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_src() const
+std::pair<const UByte*, const UByte*> QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_src_addr() const
 {
 	return std::make_pair<>(&header_[12], &header_[15]);
 }
 
-std::pair<const UByte*, const UByte*> QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_dst() const
+std::pair<const UByte*, const UByte*> QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_dst_addr() const
 {
 	return std::make_pair<>(&header_[16], &header_[19]);
 }
@@ -217,6 +217,18 @@ void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::recalculate_ip_checksum
 		sum = ((sum >> 16) + (sum & 0xFFFF));
 	res = ~sum;
 	set_ip_checksum(res);
+}
+
+void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::set_src_addr(const NetAddr& net_addr)
+{
+	auto bytes = net_addr.to_bytes();
+	std::copy(bytes.begin(), bytes.end(), header_.begin() + 12);
+}
+
+void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::set_dst_addr(const NetAddr& net_addr)
+{
+	auto bytes = net_addr.to_bytes();
+	std::copy(bytes.begin(), bytes.end(), header_.begin() + 16);
 }
 
 QVPN::Core::DataStructures::TcpPacketLittleEndian::TcpPacketLittleEndian(UByte* begin, UByte* end)
@@ -724,12 +736,12 @@ void QVPN::Core::DataStructures::Ipv4PacketView::set_ip_checksum(const UShort ch
 	header_[11] = checksum & 0xFF;
 }
 
-std::pair<const UByte*, const UByte*> QVPN::Core::DataStructures::Ipv4PacketView::get_src() const
+std::pair<const UByte*, const UByte*> QVPN::Core::DataStructures::Ipv4PacketView::get_src_addr() const
 {
 	return std::make_pair<>(&header_[12], &header_[15]);
 }
 
-std::pair<const UByte*, const UByte*> QVPN::Core::DataStructures::Ipv4PacketView::get_dst() const
+std::pair<const UByte*, const UByte*> QVPN::Core::DataStructures::Ipv4PacketView::get_dst_addr() const
 {
 	return std::make_pair<>(&header_[16], &header_[19]);
 }
@@ -756,6 +768,18 @@ void QVPN::Core::DataStructures::Ipv4PacketView::recalculate_ip_checksum()
 		sum = ((sum >> 16) + (sum & 0xFFFF));
 	res = ~sum;
 	set_ip_checksum(res);
+}
+
+void QVPN::Core::DataStructures::Ipv4PacketView::set_src_addr(const NetAddr& net_addr)
+{
+	auto bytes = net_addr.to_bytes();
+	std::copy(bytes.begin(), bytes.end(), header_ + 12);
+}
+
+void QVPN::Core::DataStructures::Ipv4PacketView::set_dst_addr(const NetAddr& net_addr)
+{
+	auto bytes = net_addr.to_bytes();
+	std::copy(bytes.begin(), bytes.end(), header_ + 16);
 }
 
 
