@@ -32,7 +32,7 @@ namespace QVPN
 
 		};
 
-		template <std::random_access_iterator Iter>
+		template <std::random_access_iterator Iter, is_addr Addr>
 		class BaseLayer
 		{
 		public:
@@ -40,7 +40,7 @@ namespace QVPN
 			virtual LayerTypes get_layer_type() const = 0;
 			virtual std::string_view get_layer_name() const = 0;
 
-			virtual std::vector<BaseTypes::UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const = 0;
+			virtual std::vector<BaseTypes::UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const = 0;
 			virtual std::vector<BaseTypes::UByte> layer_encode(Iter begin, Iter end) const = 0;
 			virtual std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const = 0;
 
@@ -48,18 +48,18 @@ namespace QVPN
 		};
 
 
-		template <std::random_access_iterator Iter>
+		template <std::random_access_iterator Iter, is_addr Addr>
 		class LayerWrapper final
 		{
 		private:
-			std::shared_ptr<BaseLayer<Iter>> layer_;
+			std::shared_ptr<BaseLayer<Iter, Addr>> layer_;
 			bool active_;
 
 		public:
 
 			LayerWrapper() = default;
 			
-			LayerWrapper(std::shared_ptr<BaseLayer<Iter>> layer, bool active = true)
+			LayerWrapper(std::shared_ptr<BaseLayer<Iter, Addr>> layer, bool active = true)
 				: layer_(layer), active_(active) 
 			{
 
@@ -70,7 +70,7 @@ namespace QVPN
 				return active_;
 			}
 
-			void set_layer(std::unique_ptr<BaseLayer<Iter>> layer)
+			void set_layer(std::unique_ptr<BaseLayer<Iter, Addr>> layer)
 			{
 				layer_ = std::move(layer);
 			}
@@ -90,7 +90,7 @@ namespace QVPN
 				return layer_->get_layer_name();
 			}
 
-			std::vector<BaseTypes::UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const
+			std::vector<BaseTypes::UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const
 			{
 				return layer_->layer_encode(data, begin, end);
 			}
@@ -103,8 +103,8 @@ namespace QVPN
 		};
 
 
-		template <std::random_access_iterator Iter>
-		class QLayer : public BaseLayer<Iter>
+		template <std::random_access_iterator Iter, is_addr Addr>
+		class QLayer : public BaseLayer<Iter, Addr>
 		{
 		private:
 			using TLS13_RecordGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultRecordGenerationStrategy;
@@ -128,7 +128,7 @@ namespace QVPN
 			}
 
 
-			std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const override
+			std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const override
 			{
 				std::vector<UByte> res = TLSRecordGenerator::generate_object_bytes<TLS13_RecordGenStrategy, TLSAppDataGenerator>(std::move(rec_strategy), data, std::move(begin), std::move(end));
 				return res;
@@ -152,9 +152,9 @@ namespace QVPN
 		};
 
 
-		template <class Layer, class Iter>
+		template <class Layer, class Iter, class Addr>
 		concept is_layer =
-			requires (Layer l, Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4 & data) {
+			requires (Layer l, Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData<Addr> & data) {
 
 				{ l.get_layer_type() } -> std::same_as<LayerTypes>;
 				{ l.get_layer_name() } -> std::same_as <std::string_view>;
@@ -162,7 +162,7 @@ namespace QVPN
 				{ l.layer_encode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 				{ l.layer_decode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
-		}&& std::is_base_of<BaseLayer<Iter>, Layer>::value;
+		}&& std::is_base_of<BaseLayer<Iter, Addr>, Layer>::value;
 
 
 		template <class LayersStrategyImpl>
@@ -176,20 +176,20 @@ namespace QVPN
 		};
 
 
-		template <std::random_access_iterator Iter>
+		template <std::random_access_iterator Iter, is_addr Addr>
 		class DefaultLayersStrategy
 		{
 		private:
-			std::vector<LayerWrapper<Iter>> layers_;
+			std::vector<LayerWrapper<Iter, Addr>> layers_;
 
 		public:
 
-			using LayersIterator = std::vector<LayerWrapper<Iter>>::iterator;
+			using LayersIterator = std::vector<LayerWrapper<Iter, Addr>>::iterator;
 
 			DefaultLayersStrategy()
 			{
-				std::shared_ptr<QLayer<Iter>> ql = std::make_shared<QLayer<Iter>>();
-				LayerWrapper<Iter> lw{ ql };
+				std::shared_ptr<QLayer<Iter, Addr>> ql = std::make_shared<QLayer<Iter, Addr>>();
+				LayerWrapper<Iter, Addr> lw{ ql };
 
 				layers_.push_back(lw);
 			}
@@ -201,17 +201,17 @@ namespace QVPN
 		};
 
 
-		template <std::random_access_iterator Iter>
+		template <std::random_access_iterator Iter, is_addr Addr>
 		class QVPNLayersSettings
 		{
 		private:
-			std::vector<LayerWrapper<Iter>> layers_;
+			std::vector<LayerWrapper<Iter, Addr>> layers_;
 
 		public:
 
 			QVPNLayersSettings() = default;
 
-			void add_layer(std::shared_ptr<BaseLayer<Iter>> l, bool status = true)
+			void add_layer(std::shared_ptr<BaseLayer<Iter, Addr>> l, bool status = true)
 			{
 				layers_.emplace_back(l, status);
 			}
@@ -226,7 +226,7 @@ namespace QVPN
 				}
 			}
 
-			std::vector<BaseTypes::UByte> layers_encode(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end) const
+			std::vector<BaseTypes::UByte> layers_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const
 			{
 				std::vector<BaseTypes::UByte> res_data(begin, end);
 				for (auto& l : layers_)
@@ -440,7 +440,7 @@ namespace QVPN
 
 
 		template <std::random_access_iterator Iter>
-		class QVPNClientSettings_ : public QVPNLayersSettings<Iter>, public QVPNConnectionSettings, public QVPNClientCryptoSettings, public QVPNClientAuthSettings
+		class QVPNClientSettings_ : public QVPNConnectionSettings, public QVPNLayersSettings<Iter, QVPNConnectionSettings::AddrType>, public QVPNClientCryptoSettings, public QVPNClientAuthSettings
 		{
 		private:
 
@@ -478,7 +478,7 @@ namespace QVPN
 
 
 			QVPNClientSettings_()
-				: QVPNLayersSettings<Iter>(), QVPNConnectionSettings(), QVPNClientCryptoSettings(), QVPNClientAuthSettings()
+				: QVPNLayersSettings<Iter, AddrType>(), QVPNConnectionSettings(), QVPNClientCryptoSettings(), QVPNClientAuthSettings()
 			{
 
 			}
@@ -489,8 +489,8 @@ namespace QVPN
 				parse_settings(path);
 			}
 
-			QVPNClientSettings_(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNClientCryptoSettings crypto, QVPNClientAuthSettings auth)
-				: QVPNClientSettings_:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNClientSettings_::QVPNConnectionSettings(std::move(connection)), QVPNClientSettings_::QVPNClientCryptoSettings(std::move(crypto)), QVPNClientSettings_::QVPNClientAuthSettings(std::move(auth)) {}
+			QVPNClientSettings_(QVPNLayersSettings<Iter, AddrType> layers, QVPNConnectionSettings connection, QVPNClientCryptoSettings crypto, QVPNClientAuthSettings auth)
+				: QVPNClientSettings_:: template QVPNLayersSettings<Iter, AddrType>(std::move(layers)), QVPNClientSettings_::QVPNConnectionSettings(std::move(connection)), QVPNClientSettings_::QVPNClientCryptoSettings(std::move(crypto)), QVPNClientSettings_::QVPNClientAuthSettings(std::move(auth)) {}
 
 
 		};
@@ -500,7 +500,7 @@ namespace QVPN
 
 		template <class VPNDriver>
 		concept is_vpn_client_driver =
-			requires (VPNDriver d, typename VPNDriver::DataIterator begin, typename VPNDriver::DataIterator end, QVPN::Core::DataStructures::QVPNProxyData_Ipv4 & data) {
+			requires (VPNDriver d, typename VPNDriver::DataIterator begin, typename VPNDriver::DataIterator end, QVPN::Core::DataStructures::QVPNProxyData<typename VPNDriver::AddrType> & data) {
 
 			typename VPNDriver::AddrType;
 
@@ -534,12 +534,13 @@ namespace QVPN
 			using TLS13_ClienthHelloGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy;
 
 			using TLS13_AppData = QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian;
-			using QVPNProxyData = QVPN::Core::DataStructures::QVPNProxyData_Ipv4;
+			
 
 		public:
 
 			using DataIterator = Iter;
 			using AddrType = QVPNClientSettings_<Iter>::AddrType;
+			using QVPNProxyData = QVPN::Core::DataStructures::QVPNProxyData<QVPNClientDriver::AddrType>;
 
 			QVPNClientDriver(QVPNClientSettings_<Iter> settings)
 				: settings_(std::move(settings)), socket_(NetTools::create_socket())
@@ -594,7 +595,7 @@ namespace QVPN
 				return settings_.get_ip_address();
 			}
 
-			std::vector<BaseTypes::UByte> encode_data(QVPN::Core::DataStructures::QVPNProxyData_Ipv4& data, Iter begin, Iter end)
+			std::vector<BaseTypes::UByte> encode_data(QVPN::Core::DataStructures::QVPNProxyData<AddrType>& data, Iter begin, Iter end)
 			{
 				return settings_.layers_encode(data, begin, end);
 			}
@@ -700,7 +701,7 @@ namespace QVPN
 		};
 
 		template <std::random_access_iterator Iter>
-		class QVPNServerSettings_ : public QVPNLayersSettings<Iter>, public QVPNNetSettings, public QVPNServerCryptoSettings, public QVPNDatabaseSettings
+		class QVPNServerSettings_ : public QVPNNetSettings, public QVPNLayersSettings<Iter, QVPNNetSettings::AddrType>, public QVPNServerCryptoSettings, public QVPNDatabaseSettings
 		{
 		private:
 
@@ -759,19 +760,19 @@ namespace QVPN
 
 
 			QVPNServerSettings_()
-				: QVPNLayersSettings<Iter>(), QVPNNetSettings(), QVPNServerCryptoSettings(), QVPNDatabaseSettings()
+				: QVPNLayersSettings<Iter, AddrType>(), QVPNNetSettings(), QVPNServerCryptoSettings(), QVPNDatabaseSettings()
 			{
 
 			}
 
 			QVPNServerSettings_(std::string_view path)
-				: QVPNLayersSettings<Iter>()
+				: QVPNLayersSettings<Iter, AddrType>()
 			{
 				parse_settings(path);
 			}
 
-			QVPNServerSettings_(QVPNLayersSettings<Iter> layers, QVPNConnectionSettings connection, QVPNClientCryptoSettings crypto, QVPNClientAuthSettings auth)
-				: QVPNServerSettings_:: template QVPNLayersSettings<Iter>(std::move(layers)), QVPNServerSettings_::QVPNConnectionSettings(std::move(connection)), QVPNServerSettings_::QVPNClientCryptoSettings(std::move(crypto)), QVPNServerSettings_::QVPNDatabaseSettings(std::move(auth)) {}
+			QVPNServerSettings_(QVPNLayersSettings<Iter, AddrType> layers, QVPNConnectionSettings connection, QVPNClientCryptoSettings crypto, QVPNClientAuthSettings auth)
+				: QVPNServerSettings_:: template QVPNLayersSettings<Iter, AddrType>(std::move(layers)), QVPNServerSettings_::QVPNConnectionSettings(std::move(connection)), QVPNServerSettings_::QVPNClientCryptoSettings(std::move(crypto)), QVPNServerSettings_::QVPNDatabaseSettings(std::move(auth)) {}
 
 
 		};
@@ -788,7 +789,7 @@ namespace QVPN
 		class QVPNServerDriver
 		{
 		private:
-			QVPNClientSettings_<Iter> settings_;
+			QVPNServerSettings_<Iter> settings_;
 			Socket socket_;
 
 		public:

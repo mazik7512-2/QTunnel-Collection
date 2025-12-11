@@ -338,7 +338,7 @@ std::string QVPN::Core::NetAddr::to_string() const
         ip << static_cast<int>(ip_[i]) << ".";
     }
     auto temp = ip.str();
-    auto str = temp.substr(0, temp.size() - 2);
+    auto str = temp.substr(0, temp.size() - 1);
     str.append("\0");
     return str;
 }

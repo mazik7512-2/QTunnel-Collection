@@ -410,6 +410,12 @@ void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_dst_port(UShort port
 	header_[3] = static_cast<UByte>(port & 0xFF);
 }
 
+void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_transport_length(UShort length)
+{
+	header_[4] = static_cast<UByte>(length >> 8 & 0xFF);
+	header_[5] = static_cast<UByte>(length & 0xFF);
+}
+
 QVPN::Core::DataStructures::UdpPacketLittleEndian::UdpPacketLittleEndian(UByte* begin, UByte* end)
 {
 	parse_packet(begin, end);
@@ -536,6 +542,12 @@ void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_dst_port(UShort port
 {
 	header_[2] = static_cast<UByte>(port >> 8 & 0xFF);
 	header_[3] = static_cast<UByte>(port & 0xFF);
+}
+
+void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_transport_length(UShort length)
+{
+	header_[4] = static_cast<UByte>(length >> 8 & 0xFF);
+	header_[5] = static_cast<UByte>(length & 0xFF);
 }
 
 
@@ -981,6 +993,12 @@ void QVPN::Core::DataStructures::TcpPacketView::set_dst_port(UShort port)
 	tcp_header_[3] = static_cast<UByte>(port & 0xFF);
 }
 
+void QVPN::Core::DataStructures::TcpPacketView::set_transport_length(UShort length)
+{
+	tcp_header_[4] = static_cast<UByte>(length >> 8 & 0xFF);
+	tcp_header_[5] = static_cast<UByte>(length & 0xFF);
+}
+
 QVPN::Core::DataStructures::UdpPacketView::UdpPacketView(UByte* begin, UByte* end)
 {
 	parse_packet(begin, end);
@@ -1106,6 +1124,12 @@ void QVPN::Core::DataStructures::UdpPacketView::set_dst_port(UShort port)
 {
 	header_[2] = static_cast<UByte>(port >> 8 & 0xFF);
 	header_[3] = static_cast<UByte>(port & 0xFF);
+}
+
+void QVPN::Core::DataStructures::UdpPacketView::set_transport_length(UShort length)
+{
+	header_[4] = static_cast<UByte>(length >> 8 & 0xFF);
+	header_[5] = static_cast<UByte>(length & 0xFF);
 }
 
 

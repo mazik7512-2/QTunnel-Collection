@@ -46,23 +46,32 @@ QVPN::WinDivertExt::WinDivertTrafficFilterType::operator Convertable_to() const
 
 QVPN::WinDivertExt::WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTrafficFilterType::operator&&(const WinDivertTrafficFilterType& t)
 {
+    if (t.filter_.empty())
+        return *this;
+    else if (filter_.empty())
+    {
+        filter_ = t.filter_;
+        return *this;
+    }
+
     std::stringstream f;
-    if (!filter_.empty())
-        f << filter_ << " and " << t.filter_;
-    else
-        f << " " << t.filter_;
+    f << filter_ << " and " << t.filter_;
     filter_ = f.str(); 
     return *this;
 }
 
 WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTrafficFilterType::operator||(const WinDivertTrafficFilterType& t)
 {
+    if (filter_.empty())
+        return *this;
+    else if (t.filter_.empty())
+    {
+        filter_ = t.filter_;
+        return *this;
+    }
+
     std::stringstream f;
-    if (!filter_.empty())
-        f << filter_ << " or " << t.filter_;
-    else
-        f << " " << t.filter_;
-    filter_ = f.str();
+    f << filter_ << " or " << t.filter_;
     return *this;
 }
 

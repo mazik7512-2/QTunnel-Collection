@@ -84,7 +84,17 @@ namespace QVPN {
 				return Filter_t("localAddr = " + addr.to_string());
 			}
 
+			Filter_t source(const QVPN::Core::NetAddr& addr) const noexcept
+			{
+				return Filter_t("localAddr = " + addr.to_string());
+			}
+
 			Filter_t dest(const QVPN::Core::IPv4Address& addr) const noexcept
+			{
+				return Filter_t("remoteAddr = " + addr.to_string());
+			}
+
+			Filter_t dest(const QVPN::Core::NetAddr& addr) const noexcept
 			{
 				return Filter_t("remoteAddr = " + addr.to_string());
 			}
@@ -148,15 +158,13 @@ namespace QVPN {
 		public:
 
 			using Filter_t = Filter::Filter_t;
+			using Addr = VPNDriver::AddrType;
 
 		private:
 
-			// TODO: исправить фильтры
 
-			std::string outgoing_default_filter_ = "tcp";
-			std::string incoming_default_filter_;
-
-			std::vector<Filter_t> filters_;
+			std::vector<Filter_t> filters_out_;
+			std::vector<Filter_t> filters_in_;
 
 			std::string outgoing_filters_data;
 			std::string incoming_filters_data;
@@ -175,18 +183,19 @@ namespace QVPN {
 
 			void calculate_outgoing_filters()
 			{
-				Filter_t temp(outgoing_default_filter_);
-				for (auto& filter : filters_)
+				Filter_t temp("");
+				apply_default_outgoing_filter();
+				for (auto& filter : filters_out_)
 				{
 					temp = temp && filter;
 				}
 				outgoing_filters_data = temp;
 			}
 
-			void apply_default_outgoing_filter(const QVPN::Core::IPv4Address& addr)
+			void apply_default_outgoing_filter()
 			{
-				outgoing_default_filter_ = !Filter::source(addr) && Filter::outgoing_traffic();
-				calculate_outgoing_filters();
+				filters_out_.push_back(!Filter::dest(driver_.get_vpn_address()));
+				filters_out_.push_back(Filter::outgoing_traffic());
 			}
 
 			void start_capture_outgoing_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
@@ -225,7 +234,7 @@ namespace QVPN {
 							GetLastError());
 						continue;
 					}
-					// TODO: добавить отмену перехвата пакетов на адрес впн
+
 					//package.set_ip_source(adapter_addr);
 					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
 					
@@ -236,7 +245,7 @@ namespace QVPN {
 					auto ip_dest = std::visit([](auto& p) { return p.get_ip_dest(); }, package);
 					auto port_dst = std::visit([](auto& p) { return p.get_dst_port(); }, package);
 
-					QVPN::Core::DataStructures::QVPNProxyData_Ipv4 proxy_data{ ver, net_proto, ip_dest, port_dst };
+					QVPN::Core::DataStructures::QVPNProxyData<Addr> proxy_data{ ver, net_proto, ip_dest, port_dst };
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
 					auto encoded_data = driver_.encode_data(proxy_data, data_b, data_e);
 
@@ -251,25 +260,18 @@ namespace QVPN {
 						}
 					, package);
 
-					// TODO: добавить функцию в FULL PACKET set data для создания нового пакета на основе новых данных
 
-					/*
-					// нужно для того чтобы раскрыть std::variant, через std::visit не работает, т.к. std::variant определяется в рантайме
-					[&package, &proxy_data]<size_t ... i>(std::index_sequence<i...> seq) {
+					auto encoded_package = std::visit([&encoded_data](auto& p)
+						{
+							return p.set_data(encoded_data.begin(), encoded_data.end());
+						},
+						package);
+					// TODO: сделать отправку пакета через сокет, а не через WinDivert, либо что-то придумать с вовзращаемым типом set_data
 
-						// аналог switch, через оператор запятая + унарный if через оператор запятая
-						// если условие выполняется, то выполняются все действия и возвращается true (фактически оно не нужно, нужно только как заполнитель)
-						((package.index() == i ? (
-							std::get<i>(package).set_ip_dest(proxy_data.get_addr()),
-							std::get<i>(package).set_dst_port(proxy_data.get_port()),
-							std::get<i>(package).recalculate_checksums(),
-							true
-							) : false), ...);
+					auto [e_b, e_e] = encoded_package.bytes();
+					auto e_size = std::distance(e_b, e_e);
 
-					}(std::make_index_sequence<std::variant_size_v<decltype(package)>>{});
-					*/
-
-					if (!WinDivertSend(out_hDivert_, encoded_data.data(), encoded_data.size(), NULL, &addr)) // <------ addr структура WinDivert которую надо изменять??
+					if (!WinDivertSend(out_hDivert_, e_b, e_size, NULL, &addr)) // <------ addr структура WinDivert которую надо изменять??
 					{
 						fprintf(stderr, "warning: failed to reinject packet (%d)\n",
 							GetLastError());
@@ -281,18 +283,19 @@ namespace QVPN {
 
 			void calculate_incoming_filters()
 			{
-				Filter_t temp(incoming_default_filter_);
-				for (auto& filter : filters_)
+				Filter_t temp("");
+				apply_default_incoming_filter();
+				for (auto& filter : filters_out_)
 				{
 					temp = temp && filter;
 				}
 				incoming_filters_data = temp;
 			}
 
-			void apply_default_incoming_filter(const QVPN::Core::IPv4Address& addr)
+			void apply_default_incoming_filter()
 			{
-				incoming_default_filter_ = Filter::incoming_traffic();
-				calculate_incoming_filters();
+				filters_in_.push_back(Filter::incoming_traffic());
+				filters_in_.push_back(Filter::source(driver_.get_vpn_address()));
 			}
 
 			void start_capture_incoming_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
@@ -365,13 +368,13 @@ namespace QVPN {
 			
 			void add_outgoing_traffic_filter(Filter_t filter)
 			{
-				filters_.push_back(filter);
+				filters_out_.push_back(filter);
 				calculate_outgoing_filters();
 			}
 
 			void add_incoming_traffic_filter(Filter_t filter)
 			{
-				filters_.push_back(filter);
+				filters_out_.push_back(filter);
 				calculate_incoming_filters();
 			}
 

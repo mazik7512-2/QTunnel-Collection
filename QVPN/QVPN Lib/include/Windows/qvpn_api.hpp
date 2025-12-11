@@ -9,6 +9,6 @@ namespace QVPN
 {
 	using VPNClientSettings = QVPN::Core::QVPNClientSettings;
 	using VPNClient = QVPN::Core::VPNClient_<QVPN::WinTunExt::WinTunDriver, QVPN::WinDivertExt::WinDivertClientNetDriver>;
-	using VPNLayersStrategy = QVPN::Core::DefaultLayersStrategy<QVPN::Core::BaseTypes::UByte*>;
+	using VPNLayersStrategy = QVPN::Core::DefaultLayersStrategy<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr>;
 	
 }
