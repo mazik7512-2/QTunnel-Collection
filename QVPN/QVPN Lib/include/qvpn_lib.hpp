@@ -2,7 +2,7 @@
 #include <qvpn_general.hpp>
 #include <array>
 #include <unordered_map>
-
+#include <iterator>
 
 
 namespace QVPN
@@ -146,6 +146,12 @@ namespace QVPN
 			NetAddr(Byte&& ... bytes)
 			{
 				((ip_.push_back(bytes)), ...);
+			}
+
+			template <std::random_access_iterator Iter>
+			NetAddr(Iter begin, Iter end)
+			{
+				std::copy(begin, end, std::back_inserter(ip_));
 			}
 
 			NetAddr(AddrBytes_t data);

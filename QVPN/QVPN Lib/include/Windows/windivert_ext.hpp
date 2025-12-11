@@ -266,7 +266,9 @@ namespace QVPN {
 							return p.set_data(encoded_data.begin(), encoded_data.end());
 						},
 						package);
+					
 					// TODO: сделать отправку пакета через сокет, а не через WinDivert, либо что-то придумать с вовзращаемым типом set_data
+
 
 					auto [e_b, e_e] = encoded_package.bytes();
 					auto e_size = std::distance(e_b, e_e);
