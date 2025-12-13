@@ -260,16 +260,19 @@ namespace QVPN {
 						}
 					, package);
 
+					// TODO: Изменить обратно на set_data, но добавить класс для общих данных (NetPacket, TransportPacket) и возвращать его 
 
+					driver_.send_data(encoded_data.data(), encoded_data.data() + encoded_data.size());
+
+					/*
 					auto encoded_package = std::visit([&encoded_data](auto& p)
 						{
 							return p.set_data(encoded_data.begin(), encoded_data.end());
 						},
 						package);
+					*/
 					
-					// TODO: сделать отправку пакета через сокет, а не через WinDivert, либо что-то придумать с вовзращаемым типом set_data
-
-
+					/*
 					auto [e_b, e_e] = encoded_package.bytes();
 					auto e_size = std::distance(e_b, e_e);
 
@@ -278,6 +281,7 @@ namespace QVPN {
 						fprintf(stderr, "warning: failed to reinject packet (%d)\n",
 							GetLastError());
 					}
+					*/
 
 				}
 			}

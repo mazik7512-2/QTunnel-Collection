@@ -503,6 +503,7 @@ namespace QVPN
 			requires (VPNDriver d, typename VPNDriver::DataIterator begin, typename VPNDriver::DataIterator end, QVPN::Core::DataStructures::QVPNProxyData<typename VPNDriver::AddrType> & data) {
 
 			typename VPNDriver::AddrType;
+			typename VPNDriver::DataIterator;
 
 			{ d.encode_data(data, begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 			{ d.decode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
@@ -510,6 +511,9 @@ namespace QVPN
 			{ d.connect() } -> std::same_as<bool>;
 			{ d.init() } -> std::same_as<bool>;
 			{ d.disconnect() } -> std::same_as<bool>;
+
+			{ d.send_data(begin, end) } -> std::same_as<bool>;
+			{ d.get_data() } -> std::ranges::range;
 
 			{ d.get_vpn_port() } -> std::same_as<UShort>;
 			{ d.get_vpn_address() } -> std::same_as<typename VPNDriver::AddrType>;
@@ -577,6 +581,18 @@ namespace QVPN
 
 				auto res = socket_.send(tls_data.data(), tls_data.data() + tls_data.size());
 				return res.success;
+			}
+
+			bool send_data(const UByte* begin, const UByte* end)
+			{
+				auto res = socket_.send(begin, end);
+				return res.success;
+			}
+
+			decltype(auto) get_data()
+			{
+				auto res = socket_.receive();
+				return res;
 			}
 
 			bool disconnect() const
