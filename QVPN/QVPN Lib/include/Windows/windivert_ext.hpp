@@ -178,7 +178,7 @@ namespace QVPN {
 			QVPN::Core::BaseTypes::ULong old_adapter_id;
 			QVPN::Core::BaseTypes::ULong new_adapter_id;
 			
-			QVPN::Core::PreParser pp;
+			QVPN::Core::PacketPreParser pp;
 			VPNDriver driver_;
 
 			void calculate_outgoing_filters()
@@ -247,8 +247,16 @@ namespace QVPN {
 
 					QVPN::Core::DataStructures::QVPNProxyData<Addr> proxy_data{ ver, net_proto, ip_dest, port_dst };
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
-					auto encoded_data = driver_.encode_data(proxy_data, data_b, data_e);
+					auto splitted_packet = driver_.encode_data(proxy_data, data_b, data_e);
 
+					for (size_t i = 0; i < splitted_packet.size(); i++)
+					{
+						auto [b, e] = splitted_packet.get_raw_data_pointers(i);
+						driver_.send_data(b, e);
+					}
+
+					//driver_.send_data(encoded_data.data(), encoded_data.data() + encoded_data.size());
+					/*
 					const auto new_dest_ip = driver_.get_vpn_address();
 					const auto new_dest_port = driver_.get_vpn_port();
 					
@@ -259,10 +267,11 @@ namespace QVPN {
 							p.recalculate_checksums();
 						}
 					, package);
-
+					*/
 					// TODO: »зменить обратно на set_data, но добавить класс дл€ общих данных (NetPacket, TransportPacket) и возвращать его 
+					// “акже добавить в qvpn_socket возврат подключенных значений из connect (сделать новую структуру net status)
 
-					driver_.send_data(encoded_data.data(), encoded_data.data() + encoded_data.size());
+					
 
 					/*
 					auto encoded_package = std::visit([&encoded_data](auto& p)

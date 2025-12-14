@@ -159,7 +159,7 @@ namespace QVPN {
 			std::vector<QVPN::Core::BaseTypes::UByte> parse_net_addr(std::string_view addr);
 		}
 		
-		class PreParser
+		class PacketPreParser
 		{
 		private:
 

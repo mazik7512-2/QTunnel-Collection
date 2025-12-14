@@ -5,6 +5,7 @@
 #include <memory>
 #include <qvpn_structures.hpp>
 #include <qvpn_tools.hpp>
+#include <algorithm>
 
 #include <nlohmann/json.hpp>
 
@@ -32,6 +33,59 @@ namespace QVPN
 
 		};
 
+
+		class SplittedPacket
+		{
+		private:
+			using SeparatorType = std::pair<size_t, size_t>;
+
+			UByte packet_id_;
+
+			std::vector<UByte> data_{};
+			std::vector<SeparatorType> separators_{};
+
+		public:
+			using DataIterator_t = std::vector<UByte>::iterator;
+
+			SplittedPacket() = default;
+
+			void set_packet_id(UByte id);
+
+			template <std::random_access_iterator Iter>
+			void add_data(Iter begin, Iter end)
+			{
+				auto data_start = data_.size();
+				auto data_end = std::distance(begin, end);
+
+				std::copy(begin, end, std::back_inserter(data_));
+				separators_.emplace_back(std::make_pair<>(data_start, data_end));
+			}
+
+			template <std::ranges::range Range>
+			void add_data(Range&& range)
+			{
+				auto begin = range.begin();
+				auto end = range.end();
+
+				auto data_start = data_.size();
+				auto data_end = std::distance(begin, end);
+
+				std::copy(begin, end, std::back_inserter(data_));
+				separators_.emplace_back(std::make_pair<>(data_start, data_end));
+			}
+
+			std::vector<UByte> get(size_t elem);
+			std::vector<UByte> operator[](size_t elem);
+
+			std::pair<UByte*, UByte*> get_raw_data_pointers(size_t elem);
+
+			size_t size() const;
+
+			std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+		};
+
+
 		template <std::random_access_iterator Iter, is_addr Addr>
 		class BaseLayer
 		{
@@ -40,9 +94,9 @@ namespace QVPN
 			virtual LayerTypes get_layer_type() const = 0;
 			virtual std::string_view get_layer_name() const = 0;
 
-			virtual std::vector<BaseTypes::UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const = 0;
-			virtual std::vector<BaseTypes::UByte> layer_encode(Iter begin, Iter end) const = 0;
-			virtual std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const = 0;
+			virtual std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const = 0;
+			virtual std::vector<UByte> layer_encode(Iter begin, Iter end) const = 0;
+			virtual std::vector<UByte> layer_decode(Iter begin, Iter end) const = 0;
 
 			virtual ~BaseLayer() = default;
 		};
@@ -90,12 +144,17 @@ namespace QVPN
 				return layer_->get_layer_name();
 			}
 
-			std::vector<BaseTypes::UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const
+			std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const
 			{
 				return layer_->layer_encode(data, begin, end);
 			}
 
-			std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const
+			std::vector<UByte> layer_encode(Iter begin, Iter end) const
+			{
+				return layer_->layer_encode(begin, end);
+			}
+
+			std::vector<UByte> layer_decode(Iter begin, Iter end) const
 			{
 				return layer_->layer_decode(begin, end);
 			}
@@ -140,7 +199,7 @@ namespace QVPN
 				return res;
 			}
 
-			std::vector<BaseTypes::UByte> layer_decode(Iter begin, Iter end) const override
+			std::vector<UByte> layer_decode(Iter begin, Iter end) const override
 			{
 				TLSRecordView record(begin, end);
 				auto [b, e] = record.get_tls_record_data();
@@ -158,9 +217,9 @@ namespace QVPN
 
 				{ l.get_layer_type() } -> std::same_as<LayerTypes>;
 				{ l.get_layer_name() } -> std::same_as <std::string_view>;
-				{ l.layer_encode(data, begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
-				{ l.layer_encode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
-				{ l.layer_decode(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+				{ l.layer_encode(data, begin, end) } -> std::same_as<std::vector<UByte>>;
+				{ l.layer_encode(begin, end) } -> std::same_as<std::vector<UByte>>;
+				{ l.layer_decode(begin, end) } -> std::same_as<std::vector<UByte>>;
 
 		}&& std::is_base_of<BaseLayer<Iter, Addr>, Layer>::value;
 
@@ -198,6 +257,109 @@ namespace QVPN
 			{
 				return std::pair<LayersIterator, LayersIterator>(layers_.begin(), layers_.end());
 			}
+		};
+
+
+		class PacketBuilder
+		{
+		private:
+
+			UShort original_size_ = 0;
+			std::vector<UByte> data_{};
+			bool is_full_ = false;
+
+		public:
+
+			PacketBuilder() = default;
+
+			template <std::random_access_iterator Iter>
+			PacketBuilder(Iter begin, Iter end)
+			{
+				auto offset = static_cast<UShort>(begin[0] << 8 | begin[1]);
+				auto orig_size = static_cast<UShort>(begin[2] << 8 | begin[3]);
+				
+				original_size_ = orig_size;
+				data_.reserve(orig_size);
+
+				add_data(begin, end);
+			}
+
+			bool is_full() const;
+
+			template <std::random_access_iterator Iter>
+			void add_data(Iter begin, Iter end)
+			{
+				auto orig_size = static_cast<UShort>(begin[2] << 8 | begin[3]);
+				auto offset = static_cast<UShort>(begin[0] << 8 | begin[1]);
+
+				auto it = std::find(data_.begin(), data_.end(), offset);
+				std::copy(begin + 4, end, std::inserter(data_, it));
+
+				if (data_.size() == original_size_)
+					is_full_ = true;
+			}
+
+			std::vector<UByte>& get_data()
+			{
+				return data_;
+			}
+
+		};
+
+		class QVPNPacketManager
+		{
+		public:
+			// 5 - meta data (package id - 1 byte, data_offset - 2 bytes, original_packet_size - 2 bytes), 5 - size of tls record, 
+			// 20 - size of original packet data (net proto - 1 byte, transport proto - 1 byte, net addr - 16 bytes, port - 2 bytes)
+			constexpr static UShort data_meta_qvpn_size = 5 + 5 + 20; 
+
+		private:
+
+			std::unordered_map<UByte, PacketBuilder> packets_;
+			UInt data_max_size = USHRT_MAX - QVPNPacketManager::data_meta_qvpn_size;
+			UShort data_split_size = data_max_size / 2 + 1;
+
+		public:
+
+			void set_data_max_size(UInt size);
+
+			void set_data_split_size(UShort size);
+
+			template <std::random_access_iterator Iter>
+			SplittedPacket split_packet(Iter begin, Iter end) const
+			{
+				SplittedPacket spacket{};
+				auto size = std::distance(begin, end);
+				if (size >= QVPNPacketManager::data_max_size)
+				{
+					auto p_count = static_cast<UByte>(size / QVPNPacketManager::data_split_size);
+					for (size_t i = 0; i < p_count; i++)
+					{
+						auto start = begin + QVPNPacketManager::data_split_size;
+						auto end_val = ((start) < (end)) ? (start) : (end);
+						spacket.add_data(begin + (i * QVPNPacketManager::data_split_size), end_val);
+					}
+				}
+				return spacket;
+			}
+
+
+			template <std::random_access_iterator Iter>
+			void build_packet(Iter begin, Iter end) const
+			{
+				auto p_id = static_cast<UByte>(begin[0]);
+				auto it = packets_.find(p_id);
+				
+				if (it != packets_.end())
+					it->second.add_data(begin, end);
+				else
+					packets_.emplace(p_id, begin, end);
+			}
+
+			bool have_full_packets() const;
+
+			PacketBuilder get_packet();
+
 		};
 
 
@@ -505,7 +667,7 @@ namespace QVPN
 			typename VPNDriver::AddrType;
 			typename VPNDriver::DataIterator;
 
-			{ d.encode_data(data, begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacket>;
 			{ d.decode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
 
 			{ d.connect() } -> std::same_as<bool>;
@@ -528,6 +690,8 @@ namespace QVPN
 
 			QVPNClientSettings_<Iter> settings_;
 			Socket socket_;
+
+			QVPNPacketManager packet_manager_;
 
 			using TLS13_RecordLittleEndian = QVPN::Core::DataStructures::TLS13_RecordLittleEndian;
 			using TLS13_RecordGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultRecordGenerationStrategy;
@@ -611,9 +775,17 @@ namespace QVPN
 				return settings_.get_ip_address();
 			}
 
-			std::vector<BaseTypes::UByte> encode_data(QVPN::Core::DataStructures::QVPNProxyData<AddrType>& data, Iter begin, Iter end)
+			SplittedPacket encode_data(QVPN::Core::DataStructures::QVPNProxyData<AddrType>& data, Iter begin, Iter end)
 			{
-				return settings_.layers_encode(data, begin, end);
+				
+				SplittedPacket res;
+				auto sp = packet_manager_.split_packet(begin, end);
+				for (size_t i = 0; i < sp.size(); i++)
+				{
+					auto [b, e] = sp.get_raw_data_pointers(i);
+					res.add_data(std::move(settings_.layers_encode(data, b, e)));
+				}
+				return res;
 			}
 
 			std::vector<BaseTypes::UByte> decode_data(Iter begin, Iter end)

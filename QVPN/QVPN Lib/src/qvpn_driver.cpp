@@ -125,3 +125,99 @@ QVPN::Core::BaseTypes::UShort QVPN::Core::QVPNDatabaseSettings::get_db_port() co
 {
     return db_port;
 }
+
+// Splitted Packet
+
+void QVPN::Core::SplittedPacket::set_packet_id(UByte id)
+{
+    packet_id_ = id;
+}
+
+std::vector<UByte> QVPN::Core::SplittedPacket::get(size_t elem)
+{
+    auto [b, e] = separators_[elem];
+    std::vector<UByte> res{};
+    res.push_back(static_cast<UByte>(packet_id_));
+    res.push_back(static_cast<UByte>(b >> 8 & 0xFF));
+    res.push_back(static_cast<UByte>(b & 0xFF));
+    res.push_back(static_cast<UByte>(data_.size()));
+    std::copy(data_.begin() + b, data_.begin() + e, std::back_inserter(res));
+    return res;
+}
+
+std::vector<UByte> QVPN::Core::SplittedPacket::operator[](size_t elem)
+{
+    auto [b, e] = separators_[elem];
+    std::vector<UByte> res{};
+    res.push_back(static_cast<UByte>(packet_id_));
+    res.push_back(static_cast<UByte>(b >> 8 & 0xFF));
+    res.push_back(static_cast<UByte>(b & 0xFF));
+    res.push_back(static_cast<UByte>(data_.size()));
+    std::copy(data_.begin() + b, data_.begin() + e, std::back_inserter(res));
+    return res;
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::SplittedPacket::get_raw_data_pointers(size_t elem)
+{
+    auto [b, e] = separators_[elem];    
+    return std::pair<UByte*, UByte*>(data_.data() + b, data_.data() + e);
+}
+
+size_t QVPN::Core::SplittedPacket::size() const
+{
+    return separators_.size();
+}
+
+std::pair<QVPN::Core::SplittedPacket::DataIterator_t, QVPN::Core::SplittedPacket::DataIterator_t> QVPN::Core::SplittedPacket::to_bytes()
+{
+    return std::pair<DataIterator_t, DataIterator_t>(data_.begin(), data_.end());
+}
+
+
+
+// Packet Builder
+
+bool QVPN::Core::PacketBuilder::is_full() const
+{
+    return is_full_;
+}
+
+
+// Packet Manager
+
+bool QVPN::Core::QVPNPacketManager::have_full_packets() const
+{
+    for (const auto& it : packets_)
+    {
+        if (it.second.is_full())
+            return true;
+    }
+    return false;
+}
+
+QVPN::Core::PacketBuilder QVPN::Core::QVPNPacketManager::get_packet()
+{
+    for (auto& it : packets_)
+    {
+        if (it.second.is_full())
+        {
+            auto packet = std::move(it.second);
+            packets_.erase(it.first);
+            return packet;
+        }
+    }
+}
+
+void QVPN::Core::QVPNPacketManager::set_data_max_size(UInt size)
+{
+    if (size > USHRT_MAX - QVPNPacketManager::data_meta_qvpn_size)
+        return;
+    data_max_size = size - QVPNPacketManager::data_meta_qvpn_size;
+}
+
+void QVPN::Core::QVPNPacketManager::set_data_split_size(UShort size)
+{
+    if (size > data_max_size)
+        return;
+    data_split_size = size;
+}
