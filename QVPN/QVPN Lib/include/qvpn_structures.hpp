@@ -256,10 +256,10 @@ namespace QVPN {
 			struct QVPNProxyData
 			{
 			public:
-				NetProtocols net_protocol;
-				TransportProtocols transport_protocol;
-				Addr net_addr;
-				UShort port;
+				NetProtocols net_protocol{};
+				TransportProtocols transport_protocol{};
+				Addr net_addr{};
+				UShort port{};
 
 			public:
 
@@ -283,6 +283,63 @@ namespace QVPN {
 					return port;
 				}
 
+			};
+
+
+			template <is_addr Addr>
+			class QVPNData : public QVPNProxyData<Addr>
+			{
+				std::vector<UByte> data_;
+				using ProxyData = QVPNProxyData<Addr>;
+			public:
+
+				QVPNData(std::vector<UByte>&& data)
+					: QVPNProxyData<Addr>()
+				{
+					
+
+					data_ = std::move(data);
+					ProxyData::net_protocol = static_cast<NetProtocols>(data_[0]);
+					ProxyData::transport_protocol = static_cast<TransportProtocols>(data_[1]);
+					data_.erase(data_.begin(), data_.begin() + 1);
+					switch (ProxyData::net_protocol)
+					{
+
+					case NetProtocols::IPv4:
+					{
+						ProxyData::net_addr = Addr(data_.begin(), data_.begin() + 4);
+						break;
+					}
+
+					case NetProtocols::IPv6:
+					{
+						ProxyData::net_addr = Addr(data_.begin(), data_.begin() + 16);
+						break;
+					}
+					}
+					
+					auto addr_size = ProxyData::net_addr.get_addr_size();
+					data_.erase(data_.begin(), data_.begin() + addr_size);
+					ProxyData::port = data_[0] << 8 | data_[1];
+					
+				}
+
+				QVPNData(NetProtocols net, TransportProtocols transport, Addr addr, UShort dest_port, std::vector<UByte>&& data)
+					: QVPNProxyData<Addr>()
+				{
+					data_ = std::move(data);
+					ProxyData::net_protocol = net;
+					ProxyData::transport_protocol = transport;
+					ProxyData::net_addr = addr;
+					ProxyData::port = dest_port;
+				}
+
+				std::pair<UByte*, UByte*> get_raw_data()
+				{
+					auto start = data_.data();
+					auto end = data_.data() + data_.size();
+					return std::pair<UByte*, UByte*>(start, end);
+				}
 			};
 
 			using QVPNProxyData_Ipv4 = QVPNProxyData<QVPN::Core::IPv4Address>;

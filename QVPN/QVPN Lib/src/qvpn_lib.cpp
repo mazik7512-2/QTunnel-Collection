@@ -24,6 +24,11 @@ QVPN::Core::IPv4Address::IPv4Address(std::string_view data)
     std::copy(vec.begin(), vec.end(), ip_.begin());
 }
 
+QVPN::Core::IPv4Address::IPv4Address(std::initializer_list<UByte> list)
+{
+    std::copy(list.begin(), list.end(), ip_.begin());
+}
+
 QVPN::Core::IPv4Address::IPv4Address(AddrInt_t data)
 {
     UByte first = data >> 24 & 0xFF;
@@ -91,6 +96,11 @@ consteval QVPN::Core::NetProtocols QVPN::Core::IPv4Address::get_addr_family()
     return NetProtocols::IPv4;
 }
 
+consteval size_t QVPN::Core::IPv4Address::get_addr_size()
+{
+    return 4;
+}
+
 std::array<QVPN::Core::IPv4Address::UByte, 4> QVPN::Core::IPv4Address::to_bytes() const
 {
     return ip_;
@@ -125,6 +135,11 @@ QVPN::Core::IPv6Address::IPv6Address(AddrBytes_t data)
     std::copy(data.begin(), data.end(), ip_.begin());
 }
 
+QVPN::Core::IPv6Address::IPv6Address(std::initializer_list<UByte> list)
+{
+    std::copy(list.begin(), list.end(), ip_.begin());
+}
+
 QVPN::Core::IPv6Address::IPv6Address(UByte data[16])
 {
     std::copy(data, data + 16, ip_.begin());
@@ -139,6 +154,11 @@ QVPN::Core::IPv6Address::IPv6Address(std::string_view data)
 consteval QVPN::Core::NetProtocols QVPN::Core::IPv6Address::get_addr_family()
 {
     return NetProtocols::IPv6;
+}
+
+consteval size_t QVPN::Core::IPv6Address::get_addr_size()
+{
+    return 6;
 }
 
 QVPN::Core::IPv6Address::AddrBytes_t QVPN::Core::IPv6Address::to_bytes() const
@@ -274,6 +294,11 @@ QVPN::Core::NetAddr::NetAddr()
 QVPN::Core::NetAddr::NetAddr(AddrBytes_t data)
 {
     std::copy(data.cbegin(), data.cend(), std::back_inserter(ip_));
+}
+
+QVPN::Core::NetAddr::NetAddr(std::initializer_list<UByte> list)
+{
+    std::copy(list.begin(), list.end(), std::back_inserter(ip_));
 }
 
 QVPN::Core::NetAddr::NetAddr(const IPv4Address& data)

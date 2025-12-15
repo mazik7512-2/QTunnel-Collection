@@ -357,7 +357,9 @@ namespace QVPN {
 
 					if (decoded_data.has_value())
 					{
-						if (!WinDivertSend(in_hDivert_, decoded_data->data(), decoded_data->size(), NULL, &addr))
+						auto [b, e] = decoded_data->get_raw_data();
+						auto size = std::distance(b, e);
+						if (!WinDivertSend(in_hDivert_, b, size, NULL, &addr))
 						{
 							printf("warning: failed to reinject packet (%d)\n",
 								GetLastError());

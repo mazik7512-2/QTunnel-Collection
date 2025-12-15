@@ -49,6 +49,8 @@ namespace QVPN
 			{ addr.to_string() } -> std::same_as<std::string>;
 			{ addr.to_uint() } -> std::same_as<typename AddrType::AddrInt_t>;
 
+			{ addr.get_addr_size() } -> std::same_as<size_t>;
+
 		};
 
 
@@ -71,8 +73,16 @@ namespace QVPN
 		public:
 
 			IPv4Address();
+
+			template<std::random_access_iterator Iter>
+			IPv4Address(Iter begin, Iter end)
+			{
+				std::copy(begin, end, ip_.begin());
+			}
+
 			IPv4Address(AddrBytes_t data);
 			IPv4Address(std::string_view data);
+			IPv4Address(std::initializer_list<UByte> list);
 			IPv4Address(AddrInt_t data);
 			IPv4Address(UByte first, UByte second, UByte third, UByte four);
 			IPv4Address(const IPv4Address& other);
@@ -88,6 +98,7 @@ namespace QVPN
 
 			//static consteval int get_addr_family();
 			consteval NetProtocols get_addr_family();
+			consteval size_t get_addr_size();
 
 			AddrBytes_t to_bytes() const;
 			std::string to_string() const;
@@ -114,12 +125,21 @@ namespace QVPN
 		public:
 
 			IPv6Address();
+
+			template <std::random_access_iterator Iter>
+			IPv6Address(Iter begin, Iter end)
+			{
+				std::copy(begin, end, ip_.begin());
+			}
+
 			IPv6Address(AddrBytes_t data);
+			IPv6Address(std::initializer_list<UByte> list);
 			IPv6Address(UByte data[16]);
 			IPv6Address(std::string_view data);
 
 			//static consteval int get_addr_family();
 			consteval NetProtocols get_addr_family();
+			consteval size_t get_addr_size();
 
 			AddrBytes_t to_bytes() const;
 			std::string to_string() const;
@@ -155,6 +175,7 @@ namespace QVPN
 			}
 
 			NetAddr(AddrBytes_t data);
+			NetAddr(std::initializer_list<UByte> list);
 			NetAddr(const IPv4Address& data);
 			NetAddr(const IPv6Address& data);
 			NetAddr(std::string_view data);

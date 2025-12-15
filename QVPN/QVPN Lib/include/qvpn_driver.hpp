@@ -19,6 +19,9 @@ namespace QVPN
 		using UShort = QVPN::Core::BaseTypes::UShort;
 		using UInt = QVPN::Core::BaseTypes::UInt;
 
+		template <is_addr Addr>
+		using QVPNData = QVPN::Core::DataStructures::QVPNData<Addr>;
+
 		enum class LayerTypes
 		{
 			BASE_LAYER = 0,
@@ -683,7 +686,7 @@ namespace QVPN
 			typename VPNDriver::DataIterator;
 
 			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacket>;
-			{ d.decode_data(begin, end) } -> std::same_as<std::optional<std::vector<BaseTypes::UByte>>>;
+			{ d.decode_data(begin, end) } -> std::same_as<std::optional<QVPNData<typename VPNDriver::AddrType>>>;
 
 			{ d.connect() } -> std::same_as<bool>;
 			{ d.init() } -> std::same_as<bool>;
@@ -803,7 +806,7 @@ namespace QVPN
 				return res;
 			}
 
-			std::optional<std::vector<BaseTypes::UByte>> decode_data(Iter begin, Iter end)
+			std::optional<QVPNData<Addr>> decode_data(Iter begin, Iter end)
 			{
 				packet_manager_.build_packet(begin, end);
 				if (packet_manager_.have_full_packets())
@@ -811,7 +814,8 @@ namespace QVPN
 					auto [b, e] = packet_manager_.get_raw_packet();
 					auto res =  settings_.layers_decode(b, e);
 					packet_manager_.pop_last_packet();
-					return res;
+					QVPNData<Addr> data(std::move(res));
+					return data;
 				}
 				return std::nullopt;
 			}
