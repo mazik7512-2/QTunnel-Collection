@@ -77,7 +77,7 @@ namespace QVPN
 			std::vector<UByte> get(size_t elem);
 			std::vector<UByte> operator[](size_t elem);
 
-			std::pair<UByte*, UByte*> get_raw_data_pointers(size_t elem);
+			std::pair<UByte*, UByte*> get_raw_packet(size_t elem);
 
 			size_t size() const;
 
@@ -304,6 +304,8 @@ namespace QVPN
 				return data_;
 			}
 
+			std::pair<UByte*, UByte*> get_raw_data();
+
 		};
 
 		class QVPNPacketManager
@@ -315,7 +317,17 @@ namespace QVPN
 
 		private:
 
+			struct CachedFullPacket
+			{
+				std::pair<const UByte, PacketBuilder>* cached_full_packet = nullptr;
+				bool cached = false;
+			};
+
 			std::unordered_map<UByte, PacketBuilder> packets_;
+
+			mutable CachedFullPacket cache_{};
+
+
 			UInt data_max_size = USHRT_MAX - QVPNPacketManager::data_meta_qvpn_size;
 			UShort data_split_size = data_max_size / 2 + 1;
 
@@ -345,7 +357,7 @@ namespace QVPN
 
 
 			template <std::random_access_iterator Iter>
-			void build_packet(Iter begin, Iter end) const
+			void build_packet(Iter begin, Iter end)
 			{
 				auto p_id = static_cast<UByte>(begin[0]);
 				auto it = packets_.find(p_id);
@@ -353,12 +365,14 @@ namespace QVPN
 				if (it != packets_.end())
 					it->second.add_data(begin, end);
 				else
-					packets_.emplace(p_id, begin, end);
+					packets_.emplace(std::piecewise_construct, std::forward_as_tuple(p_id), std::forward_as_tuple(begin, end));
 			}
 
-			bool have_full_packets() const;
+			bool have_full_packets();
 
-			PacketBuilder get_packet();
+			PacketBuilder get_and_pop_packet();
+			std::pair<UByte*, UByte*> get_raw_packet();
+			void pop_last_packet();
 
 		};
 
@@ -401,8 +415,9 @@ namespace QVPN
 
 			std::vector<BaseTypes::UByte> layers_decode(Iter begin, Iter end) const
 			{
+				// при декодировании нужен обратный порядок
 				std::vector<BaseTypes::UByte> res_data(begin, end);
-				for (auto& l : layers_)
+				for (auto& l : layers_ | std::views::reverse)
 				{
 					if (l.is_active())
 						res_data = l.layer_decode(res_data.data(), res_data.data() + res_data.size());
@@ -668,7 +683,7 @@ namespace QVPN
 			typename VPNDriver::DataIterator;
 
 			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacket>;
-			{ d.decode_data(begin, end) } -> std::same_as<std::vector<BaseTypes::UByte>>;
+			{ d.decode_data(begin, end) } -> std::same_as<std::optional<std::vector<BaseTypes::UByte>>>;
 
 			{ d.connect() } -> std::same_as<bool>;
 			{ d.init() } -> std::same_as<bool>;
@@ -782,15 +797,23 @@ namespace QVPN
 				auto sp = packet_manager_.split_packet(begin, end);
 				for (size_t i = 0; i < sp.size(); i++)
 				{
-					auto [b, e] = sp.get_raw_data_pointers(i);
+					auto [b, e] = sp.get_raw_packet(i);
 					res.add_data(std::move(settings_.layers_encode(data, b, e)));
 				}
 				return res;
 			}
 
-			std::vector<BaseTypes::UByte> decode_data(Iter begin, Iter end)
+			std::optional<std::vector<BaseTypes::UByte>> decode_data(Iter begin, Iter end)
 			{
-				return settings_.layers_decode(begin, end);
+				packet_manager_.build_packet(begin, end);
+				if (packet_manager_.have_full_packets())
+				{
+					auto [b, e] = packet_manager_.get_raw_packet();
+					auto res =  settings_.layers_decode(b, e);
+					packet_manager_.pop_last_packet();
+					return res;
+				}
+				return std::nullopt;
 			}
 
 		};

@@ -251,7 +251,7 @@ namespace QVPN {
 
 					for (size_t i = 0; i < splitted_packet.size(); i++)
 					{
-						auto [b, e] = splitted_packet.get_raw_data_pointers(i);
+						auto [b, e] = splitted_packet.get_raw_packet(i);
 						driver_.send_data(b, e);
 					}
 
@@ -268,9 +268,6 @@ namespace QVPN {
 						}
 					, package);
 					*/
-					// TODO: »зменить обратно на set_data, но добавить класс дл€ общих данных (NetPacket, TransportPacket) и возвращать его 
-					// “акже добавить в qvpn_socket возврат подключенных значений из connect (сделать новую структуру net status)
-
 					
 
 					/*
@@ -357,11 +354,14 @@ namespace QVPN {
 					auto package = pp.pre_parse(packet, packet + packet_len);
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
 					auto decoded_data = driver_.decode_data(data_b, data_e);
-					
-					if (!WinDivertSend(in_hDivert_, decoded_data.data(), decoded_data.size(), NULL, &addr))
+
+					if (decoded_data.has_value())
 					{
-						printf("warning: failed to reinject packet (%d)\n",
-							GetLastError());
+						if (!WinDivertSend(in_hDivert_, decoded_data->data(), decoded_data->size(), NULL, &addr))
+						{
+							printf("warning: failed to reinject packet (%d)\n",
+								GetLastError());
+						}
 					}
 					
 				}

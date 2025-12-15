@@ -157,7 +157,7 @@ std::vector<UByte> QVPN::Core::SplittedPacket::operator[](size_t elem)
     return res;
 }
 
-std::pair<UByte*, UByte*> QVPN::Core::SplittedPacket::get_raw_data_pointers(size_t elem)
+std::pair<UByte*, UByte*> QVPN::Core::SplittedPacket::get_raw_packet(size_t elem)
 {
     auto [b, e] = separators_[elem];    
     return std::pair<UByte*, UByte*>(data_.data() + b, data_.data() + e);
@@ -182,30 +182,79 @@ bool QVPN::Core::PacketBuilder::is_full() const
     return is_full_;
 }
 
+std::pair<UByte*, UByte*> QVPN::Core::PacketBuilder::get_raw_data()
+{
+    auto start = data_.data();
+    auto end = data_.data() + data_.size();
+    return std::pair<UByte*, UByte*>(start, end);
+}
+
 
 // Packet Manager
 
-bool QVPN::Core::QVPNPacketManager::have_full_packets() const
-{
-    for (const auto& it : packets_)
-    {
-        if (it.second.is_full())
-            return true;
-    }
-    return false;
-}
-
-QVPN::Core::PacketBuilder QVPN::Core::QVPNPacketManager::get_packet()
+bool QVPN::Core::QVPNPacketManager::have_full_packets()
 {
     for (auto& it : packets_)
     {
         if (it.second.is_full())
         {
-            auto packet = std::move(it.second);
-            packets_.erase(it.first);
-            return packet;
+            cache_.cached_full_packet = &it;
+            cache_.cached = true;
+            return true;
         }
     }
+    return false;
+}
+
+QVPN::Core::PacketBuilder QVPN::Core::QVPNPacketManager::get_and_pop_packet()
+{
+    PacketBuilder packet{};
+    if (cache_.cached)
+    {
+        packet = std::move(cache_.cached_full_packet->second);
+        pop_last_packet();
+    }
+    else
+    {
+        for (auto& it : packets_)
+        {
+            if (it.second.is_full())
+            {
+                packet = std::move(it.second);
+                packets_.erase(it.first);
+            }
+        }
+    }
+    return packet;
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::QVPNPacketManager::get_raw_packet()
+{
+    PacketBuilder* packet{};
+    if (cache_.cached)
+    {
+        packet = &cache_.cached_full_packet->second;
+    }
+    else
+    {
+        for (auto& it : packets_)
+        {
+            if (it.second.is_full())
+            {
+                packet = &it.second;
+            }
+        }
+    }
+    return packet->get_raw_data();
+}
+
+void QVPN::Core::QVPNPacketManager::pop_last_packet()
+{
+    if (!cache_.cached)
+        return;
+    packets_.erase(cache_.cached_full_packet->first);
+    cache_.cached = false;
+    cache_.cached_full_packet = nullptr;
 }
 
 void QVPN::Core::QVPNPacketManager::set_data_max_size(UInt size)
