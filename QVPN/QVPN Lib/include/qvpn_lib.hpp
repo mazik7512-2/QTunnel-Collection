@@ -302,6 +302,13 @@ namespace QVPN {
 			int status;
 		};
 
+		struct NetData
+		{
+			bool success;
+			int status;
+			NetAddr addr;
+			BaseTypes::UShort port;
+		};
 
 		template <class SocketImpl, class Addr>
 		concept is_socket =

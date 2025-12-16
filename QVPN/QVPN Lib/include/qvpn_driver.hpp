@@ -6,6 +6,7 @@
 #include <qvpn_structures.hpp>
 #include <qvpn_tools.hpp>
 #include <algorithm>
+#include <thread>
 
 #include <nlohmann/json.hpp>
 
@@ -692,7 +693,8 @@ namespace QVPN
 			{ d.init() } -> std::same_as<bool>;
 			{ d.disconnect() } -> std::same_as<bool>;
 
-			{ d.send_data(begin, end) } -> std::same_as<bool>;
+			{ d.base_send_data(begin, end) } -> std::same_as<bool>;
+			{ d.encode_and_send(data, begin, end) } -> std::same_as<void>;
 			{ d.get_data() } -> std::ranges::range;
 
 			{ d.get_vpn_port() } -> std::same_as<UShort>;
@@ -765,10 +767,20 @@ namespace QVPN
 				return res.success;
 			}
 
-			bool send_data(const UByte* begin, const UByte* end)
+			bool base_send_data(const UByte* begin, const UByte* end)
 			{
 				auto res = socket_.send(begin, end);
 				return res.success;
+			}
+
+			void encode_and_send(QVPN::Core::DataStructures::QVPNProxyData<AddrType>& proxy_data, Iter begin, Iter end)
+			{
+				auto splitted_packet = encode_data(proxy_data, begin, end);
+				for (size_t i = 0; i < splitted_packet.size(); i++)
+				{
+					auto [b, e] = splitted_packet.get_raw_packet(i);
+					base_send_data(begin, end);
+				}
 			}
 
 			decltype(auto) get_data()
@@ -795,7 +807,6 @@ namespace QVPN
 
 			SplittedPacket encode_data(QVPN::Core::DataStructures::QVPNProxyData<AddrType>& data, Iter begin, Iter end)
 			{
-				
 				SplittedPacket res;
 				auto sp = packet_manager_.split_packet(begin, end);
 				for (size_t i = 0; i < sp.size(); i++)
@@ -999,31 +1010,147 @@ namespace QVPN
 				{ true };
 		};
 
+
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools>
 			requires is_socket<Socket, Addr> && is_net_tools<NetTools, Socket>
 		class QVPNServerDriver
 		{
 		private:
+
+			
+			using TLS13_Record = QVPN::Core::DataStructures::TLS13_RecordLittleEndian;
+			using TLS13_RecordGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultRecordGenerationStrategy;
+
+			using TLS13_Message = QVPN::Core::DataStructures::TLS13_MessageLittleEndian;
+
+			using TLS13_ServerHello = QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian;
+			using TLS13_DefaultServerHelloGenStrategy = QVPN::Core::DataStructures::TLS13_DefaultServerHelloGenerationStrategy;
+
+			using TLS13_RecordView = QVPN::Core::DataStructures::TLS13_RecordView;
+			using TLS13_MessageView = QVPN::Core::DataStructures::TLS13_MessageView;
+			using TLS13_ServerHelloView = QVPN::Core::DataStructures::TLS13_ServerHelloPacketView;
+
+			using TLS13_AppData = QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian;
+
 			QVPNServerSettings_<Iter> settings_;
-			Socket socket_;
+
+			std::vector<Socket> vpn_sockets_;
+			std::vector<Socket> client_sockets_{};
+
+			std::vector<std::thread> socket_threads_{};
+			std::vector<std::thread> socket_clients_threads_{};
+
+			QVPNPacketManager packet_manager_;
+
+		private:
+			
+			void process_socket_(Socket& socket)
+			{
+				while (true)
+				{
+					// TODO: доделать обработку сокета и распаковку первых байт из application data внести в декодинг функции как в клиент так и в сервере
+					auto data = socket.receive();
+					auto decoded_data = decode_data(data.begin(), data.end());
+				}
+			}
+
+			void listen_and_connect_socket_(Socket& socket)
+			{
+				
+				while (true)
+				{
+					auto res = socket.listen();
+					if (res.success)
+					{
+						TLS13_RecordGenStrategy rec_strategy{};
+						TLS13_DefaultServerHelloGenStrategy strategy{};
+
+						auto client_socket = socket.accept();
+						client_sockets_.push_back(client_socket);
+						auto data = socket.receive();
+
+						auto [rb, re] = data.to_bytes();
+
+						auto rec = TLS13_RecordView(rb, re);
+						
+						if (rec.get_tls_record_type() != QVPN::Core::DataStructures::TLSRecordType::HANDSHAKE)
+							continue;
+
+						auto [mb, me] = rec.get_tls_record_data();
+						auto mes = TLS13_MessageView(mb, me);
+
+						if (mes.get_tls_msg_type() != QVPN::Core::DataStructures::TLSMessageType::SERVER_HELLO)
+							continue;
+
+						// TODO: сюда вставить проверку ключа авторизации
+
+						auto tls_data = TLS13_Record::generate_object_bytes<TLS13_RecordGenStrategy, TLS13_Message, TLS13_ServerHello>(std::move(rec_strategy), std::move(strategy));
+
+						auto res = socket.send(tls_data.data(), tls_data.data() + tls_data.size());
+
+						if (res.success)
+						{
+							auto t = std::thread([this, &socket]() { process_socket_(socket); });
+							socket_clients_threads_.push_back(t);
+						}
+					}
+				}
+			}
 
 		public:
 
+			using AddrType = Addr;
+
 			QVPNServerDriver(QVPNServerSettings_<Iter> settings)
-				: settings_(std::move(settings)), socket_(NetTools::create_socket())
+				: settings_(std::move(settings))
 			{
+				auto [b, e] = settings_.get_addrs();
+				for (auto& i = b; b < e; ++i)
+				{
+					vpn_sockets_.push_back(NetTools::create_socket());
+					auto& s = vpn_sockets_[vpn_sockets_.size() - 1];
+					s.bind(i->get_ip_address(), i->get_port());
+				}
+				
+			}
 
+			void wait_for_client()
+			{
+				for (auto& s : vpn_sockets_)
+				{
+					auto t = std::thread([this, &s]() { listen_and_connect_socket_(s); });
+					socket_threads_.push_back(t);
+				}
+				
 			}
 
 
-			std::vector<BaseTypes::UByte> encode_data(Iter begin, Iter end)
+			SplittedPacket encode_data(Iter begin, Iter end)
 			{
-				return settings_.layers_encode(begin, end);
+				SplittedPacket res;
+				auto sp = packet_manager_.split_packet(begin, end);
+				for (size_t i = 0; i < sp.size(); i++)
+				{
+					auto [b, e] = sp.get_raw_packet(i);
+					res.add_data(std::move(settings_.layers_encode(b, e)));
+				}
+				return res;
+				//return settings_.layers_encode(begin, end);
 			}
 
-			std::vector<BaseTypes::UByte> decode_data(Iter begin, Iter end)
+			std::optional<QVPNData<Addr>> decode_data(Iter begin, Iter end)
 			{
-				return settings_.layers_decode(begin, end);
+				packet_manager_.build_packet(begin, end);
+				if (packet_manager_.have_full_packets())
+				{
+					auto [b, e] = packet_manager_.get_raw_packet();
+					auto res = settings_.layers_decode(b, e);
+					packet_manager_.pop_last_packet();
+					QVPNData<Addr> data(std::move(res));
+					return data;
+				}
+				return std::nullopt;
+				//return settings_.layers_decode(begin, end);
 			}
 
 		};

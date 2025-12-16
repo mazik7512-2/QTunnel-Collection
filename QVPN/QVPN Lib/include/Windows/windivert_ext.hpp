@@ -247,15 +247,18 @@ namespace QVPN {
 
 					QVPN::Core::DataStructures::QVPNProxyData<Addr> proxy_data{ ver, net_proto, ip_dest, port_dst };
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
+					driver_.encode_and_send(proxy_data, data_b, data_e);
+
+					/*
 					auto splitted_packet = driver_.encode_data(proxy_data, data_b, data_e);
 
 					for (size_t i = 0; i < splitted_packet.size(); i++)
 					{
 						auto [b, e] = splitted_packet.get_raw_packet(i);
-						driver_.send_data(b, e);
+						driver_.base_send_data(b, e);
 					}
-
-					//driver_.send_data(encoded_data.data(), encoded_data.data() + encoded_data.size());
+					*/
+					//driver_.base_send_data(encoded_data.data(), encoded_data.data() + encoded_data.size());
 					/*
 					const auto new_dest_ip = driver_.get_vpn_address();
 					const auto new_dest_port = driver_.get_vpn_port();

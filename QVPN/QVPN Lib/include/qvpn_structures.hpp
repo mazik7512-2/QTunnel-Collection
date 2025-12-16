@@ -2701,6 +2701,8 @@ namespace QVPN {
 					parse_scheme();
 				}
 
+				bool is_valid() const;
+
 				// generators for qvpn
 
 				template <TLS13_ClientHelloGenStrategy GenStrategy, std::random_access_iterator Iter1, std::random_access_iterator Iter2>

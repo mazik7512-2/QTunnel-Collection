@@ -2311,6 +2311,14 @@ void QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::parse_sche
 	unified_parse_client_scheme<size_t, UByte*>(scheme_, data_.data(), data_.data() + data_.size());
 }
 
+bool QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::is_valid() const
+{
+	auto ver = static_cast<TLSProtocolVersion>(get_tls_version());
+	if (ver != TLSProtocolVersion::TLS12)
+		return false;
+	return true;
+}
+
 QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::OverlayProtocolType QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian::get_overlay_protocol_type()
 {
 	return OverlayProtocolType::CLIENT_HELLO;
