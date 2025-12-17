@@ -248,6 +248,25 @@ namespace QVPN {
 
 			QVPN::Core::NetStatus shutdown();
 
+			const QVPN::Core::NetAddr& get_local_addr() const
+			{
+				return local_addr_;
+			}
+
+			UShort get_local_port() const
+			{
+				return local_port_;
+			}
+
+			const QVPN::Core::NetAddr& get_remote_addr() const
+			{
+				return remote_addr_;
+			}
+
+			UShort get_remote_port() const
+			{
+				return remote_port_;
+			}
 
 		};
 

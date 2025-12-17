@@ -18,6 +18,7 @@
 #include <type_traits>
 #include <stdexcept>
 #include <random>
+#include <sstream>
 
 
 
@@ -1028,19 +1029,19 @@ namespace QVPN {
 			};
 
 
-			template <class CustomPacketImpl>
-			concept CustomPacketLike =
-				requires (CustomPacketImpl t) {
+			template <class TransportAndDataImpl>
+			concept TransportAndDataPacketLike =
+				requires (TransportAndDataImpl t) {
 
-				typename CustomPacketImpl::DataIterator_t;
-				typename CustomPacketImpl::ConstDataIterator_t;
+				typename TransportAndDataImpl::DataIterator_t;
+				typename TransportAndDataImpl::ConstDataIterator_t;
 
-				{ CustomPacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
+				{ TransportAndDataImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 				{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
-				{ t.get_custom_data() } -> std::same_as<std::pair<typename CustomPacketImpl::ConstDataIterator_t, typename CustomPacketImpl::ConstDataIterator_t>>;
+				{ t.get_custom_data() } -> std::same_as<std::pair<typename TransportAndDataImpl::ConstDataIterator_t, typename TransportAndDataImpl::ConstDataIterator_t>>;
 				{ t.protocol_criteria(std::declval<UByte>()) } -> std::same_as<bool>;
 
-			}&& UnifiedTransportLike<CustomPacketImpl>&& UnifiedPacketLike<CustomPacketImpl>;
+			}&& UnifiedTransportLike<TransportAndDataImpl>&& UnifiedPacketLike<TransportAndDataImpl>;
 
 
 

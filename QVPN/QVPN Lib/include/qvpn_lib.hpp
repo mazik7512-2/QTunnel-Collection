@@ -213,10 +213,10 @@ namespace std
 	template<>
 	struct hash<QVPN::Core::IPv4Address> {
 		size_t operator()(const QVPN::Core::IPv4Address& obj) const {
-			// Комбинируйте хэши полей
 			return hash<std::string>()(obj.to_string());
 		}
 	};
+
 }
 
 
@@ -325,6 +325,12 @@ namespace QVPN {
 
 			{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
 			{ t.receive(flags) } -> std::same_as<std::array<BaseTypes::UByte, SocketImpl::buffer_size>>;
+
+			{ t.get_local_addr() } -> std::same_as<const Addr&>;
+			{ t.get_local_port() } -> std::same_as<BaseTypes::UShort>;
+
+			{ t.get_remote_addr() } -> std::same_as<const Addr&>;
+			{ t.get_remote_port() } -> std::same_as<BaseTypes::UShort>;
 		};
 
 

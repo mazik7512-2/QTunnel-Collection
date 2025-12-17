@@ -11,6 +11,9 @@
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
+
+
+
 namespace QVPN
 {
 	namespace Core
@@ -463,6 +466,12 @@ namespace QVPN
 
 			}
 
+			QVPNConnectionElement(const AddrType& address, BaseTypes::UShort port)
+				: addr_(address), port_(port)
+			{
+
+			}
+
 			void set_ip_address(const Ipv4AddressType& address)
 			{
 				addr_ = address;
@@ -508,6 +517,16 @@ namespace QVPN
 			BaseTypes::UShort get_port() const
 			{
 				return port_;
+			}
+
+			std::string to_string() const
+			{
+				std::stringstream ss{};
+
+				ss << addr_.to_string() << ":" << port_;
+
+				auto res = ss.str();
+				return res;
 			}
 		};
 
@@ -1044,13 +1063,61 @@ namespace QVPN
 
 		private:
 			
-			void process_socket_(Socket& socket)
+			std::optional<Socket> connect_to_server_impl_(QVPNConnectionElement& key)
 			{
+				auto socket = NetTools::create_socket();
+				auto res = socket.connect(key.get_ip_address(), key.get_port());
+				if (res.success)
+				{
+					return socket;
+				}
+				return std::nullopt;
+			}
+
+			void connect_to_server_(QVPNConnectionElement& key, std::unordered_map<QVPNConnectionElement, Socket>& sock_map)
+			{
+				auto sock = connect_to_server_impl_(key);
+				if (sock.has_value())
+				{
+					sock_map[key] = sock.value;
+				}
+			}
+			
+			void connect_if_not_to_server(QVPNConnectionElement& key, std::unordered_map<QVPNConnectionElement, Socket>& sock_map)
+			{
+				auto it = sock_map.find(key);
+				if (it == sock_map.end())
+				{
+					connect_to_server_(key, sock_map);
+				}
+			}
+
+			void vpn_loop_iteration(Socket& client_socket, std::unordered_map<QVPNConnectionElement, Socket>& sock_map)
+			{
+				auto data = client_socket.receive();
+				auto decoded_data = decode_data(data.data(), data.data() + data.size());
+
+				if (!decoded_data.has_value())
+					return;
+
+				QVPNConnectionElement key(decoded_data->net_addr, decoded_data->port);
+				connect_if_not_to_server(key, sock_map);
+				auto [b, e] = decoded_data->get_raw_data();
+
+				auto& server_socket = sock_map[key];
+
+				server_socket.send(b, e);
+				auto server_data = server_socket.receive();
+				encode_and_send(client_socket, server_data.data(), server_data.data() + server_data.size());
+				
+			}
+
+			void process_socket_(Socket& client_socket)
+			{
+				std::unordered_map<QVPNConnectionElement, Socket> socket_map{};
 				while (true)
 				{
-					// TODO: доделать обработку сокета и распаковку первых байт из application data внести в декодинг функции как в клиент так и в сервере
-					auto data = socket.receive();
-					auto decoded_data = decode_data(data.begin(), data.end());
+					vpn_loop_iteration(client_socket, socket_map);
 				}
 			}
 
@@ -1066,7 +1133,6 @@ namespace QVPN
 						TLS13_DefaultServerHelloGenStrategy strategy{};
 
 						auto client_socket = socket.accept();
-						client_sockets_.push_back(client_socket);
 						auto data = socket.receive();
 
 						auto [rb, re] = data.to_bytes();
@@ -1090,7 +1156,7 @@ namespace QVPN
 
 						if (res.success)
 						{
-							auto t = std::thread([this, &socket]() { process_socket_(socket); });
+							auto t = std::thread([this, &client_socket]() { process_socket_(client_socket); });
 							socket_clients_threads_.push_back(t);
 						}
 					}
@@ -1124,6 +1190,15 @@ namespace QVPN
 				
 			}
 
+			void encode_and_send(Socket& socket, Iter begin, Iter end)
+			{
+				auto splitted_packet = encode_data(begin, end);
+				for (size_t i = 0; i < splitted_packet.size(); i++)
+				{
+					auto [b, e] = splitted_packet.get_raw_packet(i);
+					socket.send(begin, end);
+				}
+			}
 
 			SplittedPacket encode_data(Iter begin, Iter end)
 			{
@@ -1156,4 +1231,18 @@ namespace QVPN
 		};
 
 	}
+}
+
+
+// for server driver
+namespace std
+{
+	template<>
+	struct hash<QVPN::Core::QVPNConnectionElement> {
+
+		size_t operator()(const QVPN::Core::QVPNConnectionElement& data) const {
+			return hash<std::string>()(data.to_string());
+		}
+
+	};
 }
