@@ -202,6 +202,16 @@ QVPN::Core::NetAddr QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_dst_
 	return QVPN::Core::NetAddr(header_.data() + 16, header_.data() + 20); // range [16, 20)
 }
 
+QVPN::Core::NetProtocols QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_protocol_version() const
+{
+	return static_cast<NetProtocols>(get_ip_version());
+}
+
+QVPN::Core::TransportProtocols QVPN::Core::DataStructures::Ipv4PacketLittleEndian::get_transport_protocol() const
+{
+	return static_cast<TransportProtocols>(get_ip_protocol());
+}
+
 void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::recalculate_ip_checksum()
 {
 	unsigned int sum = 0;
@@ -756,6 +766,16 @@ QVPN::Core::NetAddr QVPN::Core::DataStructures::Ipv4PacketView::get_src_addr() c
 QVPN::Core::NetAddr QVPN::Core::DataStructures::Ipv4PacketView::get_dst_addr() const
 {
 	return QVPN::Core::NetAddr(&header_[16], &header_[20]); // range [16, 20)
+}
+
+QVPN::Core::NetProtocols QVPN::Core::DataStructures::Ipv4PacketView::get_protocol_version() const
+{
+	return static_cast<NetProtocols>(get_ip_version());
+}
+
+QVPN::Core::TransportProtocols QVPN::Core::DataStructures::Ipv4PacketView::get_transport_protocol() const
+{
+	return static_cast<TransportProtocols>(get_ip_protocol());
 }
 
 void QVPN::Core::DataStructures::Ipv4PacketView::recalculate_ip_checksum()

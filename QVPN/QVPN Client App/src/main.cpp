@@ -8,9 +8,18 @@ using VPNClientSettings = QVPN::VPNClientSettings;
 using VPNClient = QVPN::VPNClient;
 using VPNLayers = QVPN::VPNLayersStrategy;
 
+
+template <QVPN::Core::DataStructures::ProxyDataLike Proxy>
+void test_func(const Proxy& proxy)
+{
+
+}
+
+
 int main(int argc, const char* argv[])
 {
-   
+    const QVPN::Core::DataStructures::QVPNProxyData<QVPN::Core::NetAddr> test{};
+    test_func(test);
     argparse::ArgumentParser program("QVPN Client App", "0.5");
 
     program.add_argument("-s", "--settings", "-c", "--config")

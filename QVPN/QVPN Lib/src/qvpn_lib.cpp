@@ -372,3 +372,15 @@ QVPN::Core::NetAddr::AddrInt_t QVPN::Core::NetAddr::to_uint() const
 {
     return ip_;
 }
+
+// QVPN Socket Data
+
+std::string QVPN::Core::QVPNSocketData::to_string() const
+{
+    std::stringstream ss{};
+
+    ss << local_addr.to_string() << ":" << local_port << "-" << remote_addr.to_string() << ":" << remote_port;
+
+    auto str = ss.str();
+    return str;
+}

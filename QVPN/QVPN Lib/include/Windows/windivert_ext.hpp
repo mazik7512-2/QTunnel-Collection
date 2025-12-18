@@ -242,10 +242,12 @@ namespace QVPN {
 
 					auto ver = std::visit([](auto& p) { return p.get_ip_version(); }, package);
 					auto net_proto = std::visit([](auto& p) { return p.get_ip_protocol(); }, package);
-					auto ip_dest = std::visit([](auto& p) { return p.get_ip_dest(); }, package);
+					auto ip_src = std::visit([](auto& p) { return p.get_src_addr(); }, package);
+					auto port_src = std::visit([](auto& p) { return p.get_src_port(); }, package);
+					auto ip_dest = std::visit([](auto& p) { return p.get_dst_addr(); }, package);
 					auto port_dst = std::visit([](auto& p) { return p.get_dst_port(); }, package);
 
-					QVPN::Core::DataStructures::QVPNProxyData<Addr> proxy_data{ ver, net_proto, ip_dest, port_dst };
+					QVPN::Core::DataStructures::QVPNProxyData<Addr> proxy_data{ ver, net_proto, ip_src, port_src, ip_dest, port_dst };
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
 

@@ -245,12 +245,18 @@ namespace QVPN {
 
 			template <class ProxyDataImpl>
 			concept ProxyDataLike =
-				requires (ProxyDataImpl t) {
+				requires (ProxyDataImpl t, const ProxyDataImpl& cr_proxy_data) {
 
 					{ t.get_net_proto() } -> std::same_as<NetProtocols>;
 					{ t.get_transport_proto() } -> std::same_as<TransportProtocols>;
-					{ t.get_addr() } -> QVPN::Core::is_addr;
-					{ t.get_port() } -> std::same_as<UShort>;
+					{ t.get_src_addr() } -> QVPN::Core::is_addr;
+					{ t.get_src_port() } -> std::same_as<UShort>;
+					{ t.get_dst_addr() } -> QVPN::Core::is_addr;
+					{ t.get_dst_port() } -> std::same_as<UShort>;
+
+					//ProxyDataImpl::create_and_inverse_addrs(cr_proxy_data);
+
+					{ std::remove_const_t<std::remove_reference_t<ProxyDataImpl>>::create_and_inverse_addrs(cr_proxy_data) } -> std::same_as<std::remove_const_t<std::remove_reference_t<ProxyDataImpl>>>;
 			};
 
 			template <QVPN::Core::is_addr Addr>
@@ -259,8 +265,11 @@ namespace QVPN {
 			public:
 				NetProtocols net_protocol{};
 				TransportProtocols transport_protocol{};
-				Addr net_addr{};
-				UShort port{};
+				Addr source_addr{};
+				UShort source_port{};
+
+				Addr dst_addr{};
+				UShort dst_port{};
 
 			public:
 
@@ -274,14 +283,30 @@ namespace QVPN {
 					return transport_protocol;
 				}
 
-				Addr get_addr() const
+				Addr get_src_addr() const
 				{
-					return net_addr;
+					return source_addr;
 				}
 
-				UShort get_port() const
+				UShort get_src_port() const
 				{
-					return port;
+					return source_port;
+				}
+
+				Addr get_dst_addr() const
+				{
+					return dst_addr;
+				}
+
+				UShort get_dst_port() const
+				{
+					return dst_port;
+				}
+
+				static inline QVPNProxyData create_and_inverse_addrs(const QVPNProxyData<Addr>& proxy_data)
+				{
+					return QVPNProxyData{ proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_src_addr(), proxy_data.get_src_port() };
+					//return res;
 				}
 
 			};
@@ -308,20 +333,20 @@ namespace QVPN {
 
 					case NetProtocols::IPv4:
 					{
-						ProxyData::net_addr = Addr(data_.begin(), data_.begin() + 4);
+						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 4);
 						break;
 					}
 
 					case NetProtocols::IPv6:
 					{
-						ProxyData::net_addr = Addr(data_.begin(), data_.begin() + 16);
+						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 16);
 						break;
 					}
 					}
 					
-					auto addr_size = ProxyData::net_addr.get_addr_size();
+					auto addr_size = ProxyData::source_addr.get_addr_size();
 					data_.erase(data_.begin(), data_.begin() + addr_size);
-					ProxyData::port = data_[0] << 8 | data_[1];
+					ProxyData::source_port = data_[0] << 8 | data_[1];
 					
 				}
 
@@ -331,8 +356,8 @@ namespace QVPN {
 					data_ = std::move(data);
 					ProxyData::net_protocol = net;
 					ProxyData::transport_protocol = transport;
-					ProxyData::net_addr = addr;
-					ProxyData::port = dest_port;
+					ProxyData::source_addr = addr;
+					ProxyData::source_port = dest_port;
 				}
 
 				std::pair<UByte*, UByte*> get_raw_data()
@@ -528,6 +553,9 @@ namespace QVPN {
 					{ t.set_src_addr(net_addr) } -> std::same_as<void>;
 					{ t.set_dst_addr(net_addr) } -> std::same_as<void>;
 
+					{ t.get_protocol_version() } -> std::same_as<NetProtocols>;
+					{ t.get_transport_protocol() } -> std::same_as<TransportProtocols>;
+
 					{ t.recalculate_ip_checksum() } -> std::same_as<void>;
 
 			};
@@ -618,6 +646,10 @@ namespace QVPN {
 				/* Unified Ip Packet implementaion */
 				NetAddr get_src_addr() const;
 				NetAddr get_dst_addr() const;
+
+				NetProtocols get_protocol_version() const;
+				TransportProtocols get_transport_protocol() const;
+
 				void recalculate_ip_checksum();
 
 				void set_src_addr(const NetAddr& net_addr);
@@ -687,6 +719,10 @@ namespace QVPN {
 				/* Unified Ip Packet implementaion */
 				NetAddr get_src_addr() const;
 				NetAddr get_dst_addr() const;
+
+				NetProtocols get_protocol_version() const;
+				TransportProtocols get_transport_protocol() const;
+
 				void recalculate_ip_checksum();
 
 				void set_src_addr(const NetAddr& net_addr);
@@ -1490,16 +1526,16 @@ namespace QVPN {
 				}
 
 				// generator for qvpn protcol (for cipher key)
-				template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr>
-				static std::vector<UByte> generate_object_bytes(Iter begin, Iter end, QVPNProxyData<Addr>& proxy_data)
+				template <std::random_access_iterator Iter1, std::random_access_iterator Iter2>
+				static std::vector<UByte> generate_object_bytes(Iter1 begin, Iter2 end)
 				{
-					return TLSSessionIDLittleEndian::generate_object_bytes<Iter, Addr>(begin, end, proxy_data);
+					return TLSSessionIDLittleEndian::generate_object_bytes<Iter1, Iter2>(begin, end);
 				}
 
-				template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr>
-				static std::vector<UByte> generate_object(Iter begin, Iter end, QVPNProxyData<Addr>& proxy_data)
+				template <std::random_access_iterator Iter1, std::random_access_iterator Iter2>
+				static std::vector<UByte> generate_object(Iter1 begin, Iter2 end)
 				{
-					return TLSSessionIDLittleEndian::generate_object<Iter, Addr>(begin, end, proxy_data);
+					return TLSSessionIDLittleEndian::generate_object<Iter1, Iter2>(begin, end);
 				}
 
 
@@ -3065,25 +3101,32 @@ namespace QVPN {
 
 				template <ProxyDataLike ProxyData, std::random_access_iterator Iter1, std::random_access_iterator Iter2>
 					requires std::is_same_v<Iter1, Iter2>
-				static std::vector<UByte> generate_object_bytes(ProxyData& proxy_data, Iter1 begin, Iter2 end)
+				static std::vector<UByte> generate_object_bytes(const ProxyData& proxy_data, Iter1 begin, Iter2 end)
 				{
 					std::vector<UByte> obj_bytes;
 					obj_bytes.push_back(static_cast<UByte>(proxy_data.get_net_proto()));
 					obj_bytes.push_back(static_cast<UByte>(proxy_data.get_transport_proto()));
 
-					auto addr = proxy_data.get_addr().to_bytes();
-					std::copy(addr.begin(), addr.end(), std::back_inserter(obj_bytes));
+					auto src_addr = proxy_data.get_src_addr().to_bytes();
+					std::copy(src_addr.begin(), src_addr.end(), std::back_inserter(obj_bytes));
 
-					UShort port = proxy_data.get_port();
-					obj_bytes.push_back(static_cast<UByte>(port >> 8 & 0xFF));
-					obj_bytes.push_back(static_cast<UByte>(port & 0xFF));
+					UShort src_port = proxy_data.get_src_port();
+					obj_bytes.push_back(static_cast<UByte>(src_port >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(src_port & 0xFF));
+
+					auto dst_addr = proxy_data.get_dst_addr().to_bytes();
+					std::copy(dst_addr.begin(), dst_addr.end(), std::back_inserter(obj_bytes));
+
+					UShort dst_port = proxy_data.get_dst_port();
+					obj_bytes.push_back(static_cast<UByte>(dst_port >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(dst_port & 0xFF));
 
 					std::copy(begin, end, std::back_inserter(obj_bytes));
 					return obj_bytes;
 				}
 
 				template <ProxyDataLike ProxyData, std::random_access_iterator Iter1, std::random_access_iterator Iter2>
-				static TLS13_ApplicationDataLittleEndian generate_object(ProxyData& proxy_data, Iter1 begin, Iter2 end)
+				static TLS13_ApplicationDataLittleEndian generate_object(const ProxyData& proxy_data, Iter1 begin, Iter2 end)
 				{
 					auto obj_bytes = generate_object_bytes<ProxyData, Iter1, Iter2>(proxy_data, begin, end);
 					return TLS13_ApplicationDataLittleEndian(begin, end);
@@ -3153,13 +3196,13 @@ namespace QVPN {
 				// generators for qvpn protocol
 
 				template <ProxyDataLike ProxyData, std::random_access_iterator Iter>
-				static std::vector<UByte> generate_object_bytes(ProxyData& proxy_data, Iter begin, Iter end)
+				static std::vector<UByte> generate_object_bytes(const ProxyData& proxy_data, Iter begin, Iter end)
 				{
 					return TLS13_ApplicationDataLittleEndian::generate_object_bytes<ProxyData, Iter>(proxy_data, begin, end);
 				}
 
 				template <ProxyDataLike ProxyData, std::random_access_iterator Iter>
-				static TLS13_ApplicationDataLittleEndian generate_object(ProxyData& proxy_data, Iter begin, Iter end)
+				static TLS13_ApplicationDataLittleEndian generate_object(const ProxyData& proxy_data, Iter begin, Iter end)
 				{
 					return TLS13_ApplicationDataLittleEndian::generate_object<ProxyData, Iter>(proxy_data, begin, end);
 				}

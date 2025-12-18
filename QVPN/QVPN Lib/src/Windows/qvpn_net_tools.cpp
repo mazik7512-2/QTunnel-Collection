@@ -20,30 +20,30 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket()
 QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, SocketMod s_mod)
 {
 	socket_ = socket;
-	remote_addr_ = remote_addr;
-	remote_port_ = remote_port;
-	local_addr_ = local_addr;
-	local_port_ = local_port;
+	socket_data_.remote_addr = remote_addr;
+	socket_data_.remote_port = remote_port;
+	socket_data_.local_addr = local_addr;
+	socket_data_.local_port = local_port;
 	s_mod_ = s_mod;
 }
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, SocketMod s_mod)
 {
 	socket_ = socket;
-	remote_addr_ = remote_addr;
-	remote_port_ = remote_port;
-	local_addr_ = local_addr;
-	local_port_ = local_port;
+	socket_data_.remote_addr = remote_addr;
+	socket_data_.remote_port = remote_port;
+	socket_data_.local_addr = local_addr;
+	socket_data_.local_port = local_port;
 	s_mod_ = s_mod;
 }
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, SocketMod s_mod)
 {
 	socket_ = socket;
-	remote_addr_ = remote_addr;
-	remote_port_ = remote_port;
-	local_addr_ = local_addr;
-	local_port_ = local_port;
+	socket_data_.remote_addr = remote_addr;
+	socket_data_.remote_port = remote_port;
+	socket_data_.local_addr = local_addr;
+	socket_data_.local_port = local_port;
 	s_mod_ = s_mod;
 }
 

@@ -14,6 +14,7 @@ namespace QVPN {
 
 		using UByte = QVPN::Core::BaseTypes::UByte;
 		using UShort = QVPN::Core::BaseTypes::UShort;
+		using QVPNSocketData = QVPN::Core::QVPNSocketData;
 
 		namespace details
 		{
@@ -145,11 +146,7 @@ namespace QVPN {
 			SOCKET socket_;
 			WSADATA wsa_data_{};
 
-			QVPN::Core::NetAddr remote_addr_;
-			UShort remote_port_;
-
-			QVPN::Core::NetAddr local_addr_;
-			UShort local_port_;
+			QVPNSocketData socket_data_{};
 
 			SocketMod s_mod_ = UNDEFINED;
 
@@ -161,8 +158,8 @@ namespace QVPN {
 			QVPN_Socket(Args&& ... args)
 			{
 				socket_ = socket(std::forward<Args>(args)...);
-				remote_port_ = 0;
-				local_port_ = 0;
+				socket_data_.remote_port = 0;
+				socket_data_.local_port = 0;
 				s_mod_ = UNDEFINED;
 			}
 			
@@ -194,10 +191,10 @@ namespace QVPN {
 				status.success = data.success;
 
 				if (status.success) {
-					remote_port_ = port;
-					remote_addr_ = addr;
-					local_port_ = data.port;
-					local_addr_ = data.addr;
+					socket_data_.remote_port = port;
+					socket_data_.remote_addr = addr;
+					socket_data_.local_port = data.port;
+					socket_data_.local_addr = data.addr;
 					s_mod_ = CLIENT_MOD;
 				}
 				return status;
@@ -222,10 +219,10 @@ namespace QVPN {
 				status.success = data.success;
 
 				if (status.success) {
-					remote_port_ = port;
-					remote_addr_ = addr;
-					local_port_ = data.port;
-					local_addr_ = data.addr;
+					socket_data_.remote_port = port;
+					socket_data_.remote_addr = addr;
+					socket_data_.local_port = data.port;
+					socket_data_.local_addr = data.addr;
 					s_mod_ = SERVER_MOD;
 				}
 
@@ -250,22 +247,22 @@ namespace QVPN {
 
 			const QVPN::Core::NetAddr& get_local_addr() const
 			{
-				return local_addr_;
+				return socket_data_.local_addr;
 			}
 
 			UShort get_local_port() const
 			{
-				return local_port_;
+				return socket_data_.local_port;
 			}
 
 			const QVPN::Core::NetAddr& get_remote_addr() const
 			{
-				return remote_addr_;
+				return socket_data_.remote_addr;
 			}
 
 			UShort get_remote_port() const
 			{
-				return remote_port_;
+				return socket_data_.remote_port;
 			}
 
 		};

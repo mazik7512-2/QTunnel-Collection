@@ -41,58 +41,6 @@ namespace QVPN
 		};
 
 
-		class SplittedPacket
-		{
-		private:
-			using SeparatorType = std::pair<size_t, size_t>;
-
-			UByte packet_id_;
-
-			std::vector<UByte> data_{};
-			std::vector<SeparatorType> separators_{};
-
-		public:
-			using DataIterator_t = std::vector<UByte>::iterator;
-
-			SplittedPacket() = default;
-
-			void set_packet_id(UByte id);
-
-			template <std::random_access_iterator Iter>
-			void add_data(Iter begin, Iter end)
-			{
-				auto data_start = data_.size();
-				auto data_end = std::distance(begin, end);
-
-				std::copy(begin, end, std::back_inserter(data_));
-				separators_.emplace_back(std::make_pair<>(data_start, data_end));
-			}
-
-			template <std::ranges::range Range>
-			void add_data(Range&& range)
-			{
-				auto begin = range.begin();
-				auto end = range.end();
-
-				auto data_start = data_.size();
-				auto data_end = std::distance(begin, end);
-
-				std::copy(begin, end, std::back_inserter(data_));
-				separators_.emplace_back(std::make_pair<>(data_start, data_end));
-			}
-
-			std::vector<UByte> get(size_t elem);
-			std::vector<UByte> operator[](size_t elem);
-
-			std::pair<UByte*, UByte*> get_raw_packet(size_t elem);
-
-			size_t size() const;
-
-			std::pair<DataIterator_t, DataIterator_t> to_bytes();
-
-		};
-
-
 		template <std::random_access_iterator Iter, is_addr Addr>
 		class BaseLayer
 		{
@@ -101,7 +49,7 @@ namespace QVPN
 			virtual LayerTypes get_layer_type() const = 0;
 			virtual std::string_view get_layer_name() const = 0;
 
-			virtual std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const = 0;
+			virtual std::vector<UByte> layer_encode(const QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const = 0;
 			virtual std::vector<UByte> layer_encode(Iter begin, Iter end) const = 0;
 			virtual std::vector<UByte> layer_decode(Iter begin, Iter end) const = 0;
 
@@ -151,7 +99,7 @@ namespace QVPN
 				return layer_->get_layer_name();
 			}
 
-			std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const
+			std::vector<UByte> layer_encode(const QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const
 			{
 				return layer_->layer_encode(data, begin, end);
 			}
@@ -194,7 +142,7 @@ namespace QVPN
 			}
 
 
-			std::vector<UByte> layer_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const override
+			std::vector<UByte> layer_encode(const QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const override
 			{
 				std::vector<UByte> res = TLSRecordGenerator::generate_object_bytes<TLS13_RecordGenStrategy, TLSAppDataGenerator>(std::move(rec_strategy), data, std::move(begin), std::move(end));
 				return res;
@@ -267,6 +215,104 @@ namespace QVPN
 		};
 
 
+		class SplittedPacket
+		{
+		private:
+			using SeparatorType = std::pair<size_t, size_t>;
+
+			UByte packet_id_;
+
+			std::vector<UByte> data_{};
+			std::vector<SeparatorType> separators_{};
+
+		public:
+			using DataIterator_t = std::vector<UByte>::iterator;
+
+			SplittedPacket() = default;
+
+			void set_packet_id(UByte id);
+
+			template <std::random_access_iterator Iter>
+			void add_data(Iter begin, Iter end)
+			{
+				auto data_start = data_.size();
+				auto data_end = std::distance(begin, end);
+
+				std::copy(begin, end, std::back_inserter(data_));
+				separators_.emplace_back(std::make_pair<>(data_start, data_end));
+			}
+
+			template <std::ranges::range Range>
+			void add_data(Range&& range)
+			{
+				auto begin = range.begin();
+				auto end = range.end();
+				add_data<decltype(begin)>(begin, end);
+			}
+
+			std::vector<UByte> get(size_t elem);
+			std::vector<UByte> operator[](size_t elem);
+
+			std::pair<UByte*, UByte*> get_raw_packet(size_t elem);
+
+			size_t size() const;
+
+			std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+		};
+
+
+		class SplittedPacketView
+		{
+		private:
+			using SeparatorType = std::pair<size_t, size_t>;
+
+			UByte packet_id_;
+
+			UByte* data_ = nullptr;
+			UShort data_size_ = 0;
+			std::vector<SeparatorType> separators_{};
+
+		public:
+			using DataIterator_t = UByte*;
+
+			SplittedPacketView() = default;
+
+			void set_packet_id(UByte id);
+
+			template <std::random_access_iterator Iter>
+			void add_data(Iter begin, Iter end)
+			{
+				auto data_start = data_size_;
+				auto data_end = std::distance(begin, end);
+				data_size_ += data_end;
+
+				//std::copy(begin, end, std::back_inserter(data_));
+				if (data_ == nullptr)
+					data_ = begin;
+
+				separators_.emplace_back(std::make_pair<>(data_start, data_end));
+			}
+
+			template <std::ranges::range Range>
+			void add_data(Range&& range)
+			{
+				auto begin = range.begin();
+				auto end = range.end();
+				add_data(begin, end);
+			}
+
+			std::vector<UByte> get(size_t elem);
+			std::vector<UByte> operator[](size_t elem);
+
+			std::pair<UByte*, UByte*> get_raw_packet(size_t elem);
+
+			size_t size() const;
+
+			std::pair<DataIterator_t, DataIterator_t> to_bytes();
+		};
+
+
 		class PacketBuilder
 		{
 		private:
@@ -318,9 +364,9 @@ namespace QVPN
 		class QVPNPacketManager
 		{
 		public:
-			// 5 - meta data (package id - 1 byte, data_offset - 2 bytes, original_packet_size - 2 bytes), 5 - size of tls record, 
-			// 20 - size of original packet data (net proto - 1 byte, transport proto - 1 byte, net addr - 16 bytes, port - 2 bytes)
-			constexpr static UShort data_meta_qvpn_size = 5 + 5 + 20; 
+			// 5 - packet builder data (package id - 1 byte, data_offset - 2 bytes, original_packet_size - 2 bytes), 5 - size of tls record, 
+			// 38 - size of qtunnel data (net proto - 1 byte, transport proto - 1 byte, src_net addr - 16 bytes, src_port - 2 bytes, dst_net_addr - 16 bytes, dst_port - 2 bytes)
+			constexpr static UShort data_meta_qvpn_size = 5 + 5 + 38; 
 
 		private:
 
@@ -331,6 +377,7 @@ namespace QVPN
 			};
 
 			std::unordered_map<UByte, PacketBuilder> packets_;
+			mutable UByte last_packet_id_ = 0; // при переполнении должен обнуляться
 
 			mutable CachedFullPacket cache_{};
 
@@ -345,18 +392,21 @@ namespace QVPN
 			void set_data_split_size(UShort size);
 
 			template <std::random_access_iterator Iter>
-			SplittedPacket split_packet(Iter begin, Iter end) const
+			SplittedPacketView split_packet(Iter begin, Iter end) const
 			{
-				SplittedPacket spacket{};
+				SplittedPacketView spacket{};
+				spacket.set_packet_id(last_packet_id_++);
 				auto size = std::distance(begin, end);
 				if (size >= QVPNPacketManager::data_max_size)
 				{
 					auto p_count = static_cast<UByte>(size / QVPNPacketManager::data_split_size);
+					auto start_split = begin;
+					auto end_split = begin + QVPNPacketManager::data_split_size;
 					for (size_t i = 0; i < p_count; i++)
-					{
-						auto start = begin + QVPNPacketManager::data_split_size;
-						auto end_val = ((start) < (end)) ? (start) : (end);
-						spacket.add_data(begin + (i * QVPNPacketManager::data_split_size), end_val);
+					{ 
+						start_split = start_split + (i * QVPNPacketManager::data_split_size);
+						end_split = (end < end_split) ? end : (start_split + QVPNPacketManager::data_split_size);
+						spacket.add_data(start_split, end_split);
 					}
 				}
 				return spacket;
@@ -370,9 +420,9 @@ namespace QVPN
 				auto it = packets_.find(p_id);
 				
 				if (it != packets_.end())
-					it->second.add_data(begin, end);
+					it->second.add_data(begin + 1, end);
 				else
-					packets_.emplace(std::piecewise_construct, std::forward_as_tuple(p_id), std::forward_as_tuple(begin, end));
+					packets_.emplace(std::piecewise_construct, std::forward_as_tuple(p_id), std::forward_as_tuple(begin + 1, end));
 			}
 
 			bool have_full_packets();
@@ -797,8 +847,9 @@ namespace QVPN
 				auto splitted_packet = encode_data(proxy_data, begin, end);
 				for (size_t i = 0; i < splitted_packet.size(); i++)
 				{
-					auto [b, e] = splitted_packet.get_raw_packet(i);
-					base_send_data(begin, end);
+					//auto [b, e] = splitted_packet.get_raw_packet(i);
+					auto data = splitted_packet.get(i);
+					base_send_data(data.data(), data.data() + data.size());
 				}
 			}
 
@@ -830,8 +881,9 @@ namespace QVPN
 				auto sp = packet_manager_.split_packet(begin, end);
 				for (size_t i = 0; i < sp.size(); i++)
 				{
-					auto [b, e] = sp.get_raw_packet(i);
-					res.add_data(std::move(settings_.layers_encode(data, b, e)));
+					//auto [b, e] = sp.get_raw_packet(i);
+					auto s_packet = sp.get(i);
+					res.add_data(std::move(settings_.layers_encode(data, s_packet.data(), s_packet.data() + s_packet.size())));
 				}
 				return res;
 			}
@@ -1074,7 +1126,7 @@ namespace QVPN
 				return std::nullopt;
 			}
 
-			void connect_to_server_(QVPNConnectionElement& key, std::unordered_map<QVPNConnectionElement, Socket>& sock_map)
+			void connect_to_server_(QVPNSocketData& key, std::unordered_map<QVPNSocketData, Socket>& sock_map)
 			{
 				auto sock = connect_to_server_impl_(key);
 				if (sock.has_value())
@@ -1083,7 +1135,7 @@ namespace QVPN
 				}
 			}
 			
-			void connect_if_not_to_server(QVPNConnectionElement& key, std::unordered_map<QVPNConnectionElement, Socket>& sock_map)
+			void connect_if_not_to_server(QVPNSocketData& key, std::unordered_map<QVPNSocketData, Socket>& sock_map)
 			{
 				auto it = sock_map.find(key);
 				if (it == sock_map.end())
@@ -1092,15 +1144,18 @@ namespace QVPN
 				}
 			}
 
-			void vpn_loop_iteration(Socket& client_socket, std::unordered_map<QVPNConnectionElement, Socket>& sock_map)
+			void vpn_loop_iteration(Socket& client_socket, std::unordered_map<QVPNSocketData, Socket>& sock_map)
 			{
 				auto data = client_socket.receive();
 				auto decoded_data = decode_data(data.data(), data.data() + data.size());
+				const auto p_data = static_cast<QVPN::Core::DataStructures::QVPNProxyData<Addr>>(decoded_data);
+				
+				QVPN::Core::DataStructures::QVPNProxyData<Addr> proxy_data = std::move(p_data.create_and_inverse_addrs(p_data));
 
 				if (!decoded_data.has_value())
 					return;
 
-				QVPNConnectionElement key(decoded_data->net_addr, decoded_data->port);
+				QVPNSocketData key{ decoded_data->get_src_addr(), decoded_data->get_src_port(), decoded_data->get_dst_addr(), decoded_data->get_dst_port() };
 				connect_if_not_to_server(key, sock_map);
 				auto [b, e] = decoded_data->get_raw_data();
 
@@ -1108,13 +1163,14 @@ namespace QVPN
 
 				server_socket.send(b, e);
 				auto server_data = server_socket.receive();
-				encode_and_send(client_socket, server_data.data(), server_data.data() + server_data.size());
+				encode_and_send(client_socket, proxy_data, server_data.data(), server_data.data() + server_data.size());
 				
 			}
 
 			void process_socket_(Socket& client_socket)
 			{
-				std::unordered_map<QVPNConnectionElement, Socket> socket_map{};
+				std::unordered_map<QVPNSocketData, Socket> socket_map{};
+
 				while (true)
 				{
 					vpn_loop_iteration(client_socket, socket_map);
@@ -1190,24 +1246,27 @@ namespace QVPN
 				
 			}
 
-			void encode_and_send(Socket& socket, Iter begin, Iter end)
+			void encode_and_send(Socket& socket, const QVPN::Core::DataStructures::QVPNProxyData<Addr>& proxy_data, Iter begin, Iter end)
 			{
-				auto splitted_packet = encode_data(begin, end);
+				auto splitted_packet = encode_data(proxy_data, begin, end);
 				for (size_t i = 0; i < splitted_packet.size(); i++)
 				{
-					auto [b, e] = splitted_packet.get_raw_packet(i);
-					socket.send(begin, end);
+					//auto [b, e] = splitted_packet.get_raw_packet(i);
+					auto data = splitted_packet.get(i);
+
+					socket.send(data.data(), data.data() + data.size());
 				}
 			}
 
-			SplittedPacket encode_data(Iter begin, Iter end)
+			SplittedPacket encode_data(const QVPN::Core::DataStructures::QVPNProxyData<Addr>& proxy_data, Iter begin, Iter end)
 			{
 				SplittedPacket res;
 				auto sp = packet_manager_.split_packet(begin, end);
 				for (size_t i = 0; i < sp.size(); i++)
 				{
-					auto [b, e] = sp.get_raw_packet(i);
-					res.add_data(std::move(settings_.layers_encode(b, e)));
+					//auto [b, e] = sp.get_raw_packet(i);
+					auto data = sp.get(i);
+					res.add_data(std::move(settings_.layers_encode(proxy_data, data.data(), data.data() + data.size())));
 				}
 				return res;
 				//return settings_.layers_encode(begin, end);
@@ -1238,9 +1297,9 @@ namespace QVPN
 namespace std
 {
 	template<>
-	struct hash<QVPN::Core::QVPNConnectionElement> {
+	struct hash<QVPN::Core::QVPNSocketData> {
 
-		size_t operator()(const QVPN::Core::QVPNConnectionElement& data) const {
+		size_t operator()(const QVPN::Core::QVPNSocketData& data) const {
 			return hash<std::string>()(data.to_string());
 		}
 
