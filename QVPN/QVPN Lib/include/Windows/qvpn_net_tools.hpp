@@ -239,7 +239,7 @@ namespace QVPN {
 
 			QVPN::Core::NetStatus send(const UByte* begin, const UByte* end, int flags = 0);
 
-			std::array<UByte, QVPN_Socket::buffer_size> receive(int flags = 0);
+			std::pair<QVPN::Core::NetStatus, std::array<UByte, QVPN_Socket::buffer_size>> receive(int flags = 0);
 
 			QVPN::Core::NetStatus disconnect() const;
 
@@ -340,7 +340,6 @@ namespace QVPN {
 
 			static QVPN::NetTools::QVPN_Socket create_socket(int socket_family = AF_INET, int socket_type = SOCK_STREAM, int proto = IPPROTO_TCP);
 		};
-
 
 	}
 

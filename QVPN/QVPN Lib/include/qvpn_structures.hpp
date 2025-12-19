@@ -254,8 +254,6 @@ namespace QVPN {
 					{ t.get_dst_addr() } -> QVPN::Core::is_addr;
 					{ t.get_dst_port() } -> std::same_as<UShort>;
 
-					//ProxyDataImpl::create_and_inverse_addrs(cr_proxy_data);
-
 					{ std::remove_const_t<std::remove_reference_t<ProxyDataImpl>>::create_and_inverse_addrs(cr_proxy_data) } -> std::same_as<std::remove_const_t<std::remove_reference_t<ProxyDataImpl>>>;
 			};
 

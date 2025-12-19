@@ -251,49 +251,6 @@ namespace QVPN {
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
 
-					/*
-					auto splitted_packet = driver_.encode_data(proxy_data, data_b, data_e);
-
-					for (size_t i = 0; i < splitted_packet.size(); i++)
-					{
-						auto [b, e] = splitted_packet.get_raw_packet(i);
-						driver_.base_send_data(b, e);
-					}
-					*/
-					//driver_.base_send_data(encoded_data.data(), encoded_data.data() + encoded_data.size());
-					/*
-					const auto new_dest_ip = driver_.get_vpn_address();
-					const auto new_dest_port = driver_.get_vpn_port();
-					
-					std::visit([&new_dest_ip, &new_dest_port](auto& p) 
-						{ 
-							p.set_dst_addr(new_dest_ip);
-							p.set_dst_port(new_dest_port);
-							p.recalculate_checksums();
-						}
-					, package);
-					*/
-					
-
-					/*
-					auto encoded_package = std::visit([&encoded_data](auto& p)
-						{
-							return p.set_data(encoded_data.begin(), encoded_data.end());
-						},
-						package);
-					*/
-					
-					/*
-					auto [e_b, e_e] = encoded_package.bytes();
-					auto e_size = std::distance(e_b, e_e);
-
-					if (!WinDivertSend(out_hDivert_, e_b, e_size, NULL, &addr)) // <------ addr структура WinDivert которую надо изменять??
-					{
-						fprintf(stderr, "warning: failed to reinject packet (%d)\n",
-							GetLastError());
-					}
-					*/
-
 				}
 			}
 

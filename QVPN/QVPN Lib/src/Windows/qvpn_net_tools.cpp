@@ -66,11 +66,14 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::send(const UByte* begin, cons
 	return status;
 }
 
-std::array<UByte, QVPN::NetTools::QVPN_Socket::buffer_size> QVPN::NetTools::QVPN_Socket::receive(int flags)
+std::pair<QVPN::Core::NetStatus, std::array<UByte, QVPN::NetTools::QVPN_Socket::buffer_size>> QVPN::NetTools::QVPN_Socket::receive(int flags)
 {
+	QVPN::Core::NetStatus status{};
 	std::array<UByte, QVPN_Socket::buffer_size> buff{};
-	recv(socket_, reinterpret_cast<char *>(buff.data()), QVPN_Socket::buffer_size, flags);
-	return buff;
+	auto res = recv(socket_, reinterpret_cast<char *>(buff.data()), QVPN_Socket::buffer_size, flags);
+	status.status = res;
+	status.success = (res > 0) ? true : false;
+	return std::pair<QVPN::Core::NetStatus, std::array<UByte, QVPN_Socket::buffer_size>>(status, std::move(buff));
 }
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::disconnect() const

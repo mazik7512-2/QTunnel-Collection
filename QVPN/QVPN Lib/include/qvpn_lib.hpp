@@ -336,7 +336,7 @@ namespace QVPN {
 			{ t. template accept<Addr>() } -> std::same_as<SocketImpl>;
 
 			{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
-			{ t.receive(flags) } -> std::same_as<std::array<BaseTypes::UByte, SocketImpl::buffer_size>>;
+			{ t.receive(flags) } -> std::same_as<std::pair<NetStatus, std::array<BaseTypes::UByte, SocketImpl::buffer_size>>>;
 
 			{ t.get_local_addr() } -> std::same_as<const Addr&>;
 			{ t.get_local_port() } -> std::same_as<BaseTypes::UShort>;

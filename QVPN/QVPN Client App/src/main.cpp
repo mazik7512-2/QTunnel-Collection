@@ -4,9 +4,9 @@
 #include <qvpn_api.hpp>
 
 
-using VPNClientSettings = QVPN::VPNClientSettings;
-using VPNClient = QVPN::VPNClient;
-using VPNLayers = QVPN::VPNLayersStrategy;
+using QVPNClientSettings = QVPN::QVPNClientSettings;
+using QVPNClient = QVPN::QVPNClient;
+using VPNLayers = QVPN::QVPNLayersStrategy;
 
 
 template <QVPN::Core::DataStructures::ProxyDataLike Proxy>
@@ -28,7 +28,7 @@ int main(int argc, const char* argv[])
     
     program.parse_args(argc, argv);
 
-    VPNClientSettings settings{};
+    QVPNClientSettings settings{};
     std::string path = program.get<std::string>("--settings");
     settings.parse_settings(path);
 
@@ -37,7 +37,7 @@ int main(int argc, const char* argv[])
 
     auto addr = settings.get_ip_address();
 
-    VPNClient vpn_client(settings);
+    QVPNClient vpn_client(settings);
 
 //    vpn_client.add_outgoing_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
 //    vpn_client.add_incoming_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
