@@ -26,14 +26,15 @@ namespace QVPN
 		{
 			IPv4 = 4,
 			IPv6 = 6,
-			UNDEFINED = 255
+			NET_UNDEFINED = 255
 		};
 
 		// only tcp and udp
 		enum TransportProtocols : BaseTypes::UByte
 		{
 			TCP = 6,
-			UDP = 17
+			UDP = 17,
+			TRANSPORT_UNDEFINED = 255,
 		};
 
 		template <class AddrType>

@@ -338,6 +338,11 @@ std::pair<QVPN::Core::SplittedPacketView::DataIterator_t, QVPN::Core::SplittedPa
 
 // User statistic data
 
+QVPN::Core::UserStatisticData::UserStatisticData()
+    : user_("Anonymous"), transport_proto_(TransportProtocols::TRANSPORT_UNDEFINED), net_proto_(NetProtocols::NET_UNDEFINED), traffic_size_(0), user_conn_("0.0.0.0", 0), dest_conn_("0.0.0.0", 0)
+{
+}
+
 QVPN::Core::UserStatisticData::UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size)
     : user_(user), user_conn_(user_conn), dest_conn_(dest_conn), transport_proto_(t_proto), traffic_size_(traffic_size)
 {
@@ -372,4 +377,28 @@ QVPN::Core::TransportProtocols QVPN::Core::UserStatisticData::get_transport_prot
 size_t QVPN::Core::UserStatisticData::get_traffic_size() const
 {
     return traffic_size_;
+}
+
+// Default no database adapter
+
+void QVPN::Core::NoDatabaseAdapter::init(std::shared_ptr<QVPNConnectionSettings> conn_data)
+{
+    // empty
+}
+
+bool QVPN::Core::NoDatabaseAdapter::check_user(std::string_view data)
+{
+    return true;
+}
+
+// Default no statistic adapter
+
+void QVPN::Core::NoStatisticAdapter::add_user_stats(const UserStatisticData& data)
+{
+    // empty
+}
+
+QVPN::Core::UserStatisticData QVPN::Core::NoStatisticAdapter::get_user_stats(std::string_view user)
+{
+    return UserStatisticData();
 }

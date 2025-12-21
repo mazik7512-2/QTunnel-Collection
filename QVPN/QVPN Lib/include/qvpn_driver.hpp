@@ -1056,6 +1056,11 @@ namespace QVPN
 			}
 
 
+			std::shared_ptr<QVPNConnectionSettings> get_connection_data()
+			{
+				return std::make_shared<QVPNConnectionSettings>(dynamic_cast<QVPNConnectionSettings*>(this));
+			}
+
 			QVPNServerSettings_()
 				: QVPNLayersSettings<Iter, AddrType>(), QVPNNetSettings(), QVPNServerCryptoSettings(), QVPNDatabaseSettings()
 			{
@@ -1094,6 +1099,7 @@ namespace QVPN
 
 		public:
 
+			UserStatisticData();
 			UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size);
 
 			std::string_view get_user() const;
@@ -1111,8 +1117,9 @@ namespace QVPN
 
 		template <class DatabaseAdapterImpl>
 		concept is_database_adapter =
-			requires (DatabaseAdapterImpl d, std::string_view user) {
-
+			requires (DatabaseAdapterImpl d, std::string_view user, std::shared_ptr<QVPNConnectionSettings> conn_data) {
+				
+				{ d.init(conn_data) } -> std::same_as<void>;
 				{ d.check_user(user) } -> std::same_as<bool>;
 
 		};
@@ -1120,17 +1127,18 @@ namespace QVPN
 
 		template <class StatisticsAdapterImpl>
 		concept is_statistic_adapter =
-			requires (StatisticsAdapterImpl s, std::string_view user, UserStatisticData data) {
+			requires (StatisticsAdapterImpl s, std::string_view user, const UserStatisticData& data) {
 
 				{ s.add_user_stats(data) }-> std::same_as<void>;
 				{ s.get_user_stats(user) } -> std::same_as<UserStatisticData>;
 
 		};
 
-		template <class VPNDriverImpl>
+		template <class VPNDriverImpl, class DatabaseAdapter, class StatsAdapter>
 		concept is_vpn_server_driver =
 			requires (VPNDriverImpl d, typename VPNDriverImpl::DataIterator begin, typename VPNDriverImpl::DataIterator end,
-		QVPN::Core::DataStructures::QVPNProxyData<typename VPNDriverImpl::AddrType> &data, VPNDriverImpl::SocketType& socket) {
+		QVPN::Core::DataStructures::QVPNProxyData<typename VPNDriverImpl::AddrType> &data, VPNDriverImpl::SocketType& socket,
+			DatabaseAdapter& database, StatsAdapter& stats) {
 
 			typename VPNDriverImpl::DataIterator;
 			typename VPNDriverImpl::AddrType;
@@ -1139,7 +1147,7 @@ namespace QVPN
 			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacket>;
 			{ d.decode_data(begin, end) } -> std::same_as<std::optional<QVPNData<typename VPNDriverImpl::AddrType>>>;
 
-			{ d.init() } -> std::same_as<void>;
+			{ d.init(database, stats) } -> std::same_as<void>;
 
 			{ d.base_send_data(socket, begin, end) } -> std::same_as<bool>;
 			{ d.encode_and_send(socket, data, begin, end) } -> std::same_as<void>;
@@ -1147,10 +1155,31 @@ namespace QVPN
 		};
 
 
-		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools>
+		class NoDatabaseAdapter
+		{
+		public:
+
+			void init(std::shared_ptr<QVPNConnectionSettings> conn_data);
+
+			bool check_user(std::string_view data);
+
+		};
+
+		class NoStatisticAdapter
+		{
+		public:
+
+			void add_user_stats(const UserStatisticData& data);
+			UserStatisticData get_user_stats(std::string_view user);
+
+		};
+
+
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats>
 			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
 		class QVPNServerDriver
 		{
+
 		private:
 
 
@@ -1165,6 +1194,7 @@ namespace QVPN
 			using TLS13_RecordView = QVPN::Core::DataStructures::TLS13_RecordView;
 			using TLS13_MessageView = QVPN::Core::DataStructures::TLS13_MessageView;
 			using TLS13_ServerHelloView = QVPN::Core::DataStructures::TLS13_ServerHelloPacketView;
+			using TLS13_ClientHelloView = QVPN::Core::DataStructures::TLS13_ClientHelloPacketView;
 
 			using TLS13_AppData = QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian;
 
@@ -1220,7 +1250,7 @@ namespace QVPN
 				}
 			}
 
-			bool vpn_loop_iteration(Socket& client_socket, std::unordered_map<QVPNSocketData, Socket>& sock_map)
+			bool vpn_loop_iteration(Socket& client_socket, std::unordered_map<QVPNSocketData, Socket>& sock_map, Stats& stats, std::string_view user)
 			{
 				auto [status, data] = client_socket.receive();
 				if (!status.success)
@@ -1242,20 +1272,29 @@ namespace QVPN
 				server_socket.send(b, e);
 				auto server_data = server_socket.receive();
 				encode_and_send(client_socket, proxy_data, server_data.data(), server_data.data() + server_data.size());
+
+				QVPNConnectionElement user_conn(proxy_data.get_src_addr(), proxy_data.get_src_port());
+				QVPNConnectionElement dest_conn(proxy_data.get_dst_addr(), proxy_data.get_dst_port());
+				NetProtocols net_proto = proxy_data.get_net_proto();
+				TransportProtocols transport_proto = proxy_data.get_transport_proto();
+				size_t data_size = std::distance(b, e);
+
+				UserStatisticData stats_data(user, user_conn, dest_conn, transport_proto, data_size);
+				stats.add_user_stats(stats_data);
 				return true;
 			}
 
-			void process_socket_(Socket& client_socket)
+			void process_socket_(Socket& client_socket, Stats& stats, std::string_view user)
 			{
 				std::unordered_map<QVPNSocketData, Socket> socket_map{};
 				bool status = true;
 				while (status)
 				{
-					status = vpn_loop_iteration(client_socket, socket_map);
+					status = vpn_loop_iteration(client_socket, socket_map, stats, user);
 				}
 			}
 
-			void listen_and_connect_socket_(Socket& socket)
+			void listen_and_connect_socket_(Socket& socket, Database& database, Stats& stats)
 			{
 				while (true)
 				{
@@ -1281,7 +1320,18 @@ namespace QVPN
 						if (mes.get_tls_msg_type() != QVPN::Core::DataStructures::TLSMessageType::SERVER_HELLO)
 							continue;
 
-						// TODO: сюда вставить проверку ключа авторизации
+						auto [h_b, h_e] = mes.get_tls_msg_data();
+						
+						TLS13_ClientHelloView client_hello(h_b, h_e);
+						auto key = client_hello.get_tls_session();
+						auto [k_b, k_e] = key.get_tls_id();
+						std::string_view user(k_b, k_e);
+
+						if (!database.check_user(user))
+						{
+							client_socket.disconnect();
+							return;
+						}
 
 						auto tls_data = TLS13_Record::generate_object_bytes<TLS13_RecordGenStrategy, TLS13_Message, TLS13_ServerHello>(std::move(rec_strategy), std::move(strategy));
 
@@ -1289,7 +1339,7 @@ namespace QVPN
 
 						if (res.success)
 						{
-							auto t = std::thread([this, &client_socket]() { process_socket_(client_socket); });
+							auto t = std::thread([this, &client_socket, &stats, &user]() { process_socket_(client_socket, stats, user); });
 							socket_clients_threads_.push_back(t);
 						}
 					}
@@ -1316,11 +1366,12 @@ namespace QVPN
 
 			}
 
-			void init()
+			template <is_database_adapter Database>
+			void init(Database& database, Stats& stats)
 			{
 				for (auto& s : vpn_sockets_)
 				{
-					auto t = std::thread([this, &s]() { listen_and_connect_socket_(s); });
+					auto t = std::thread([this, &s, &database, &stats]() { listen_and_connect_socket_(s, database, stats); });
 					socket_threads_.push_back(t);
 				}
 			}
@@ -1376,9 +1427,14 @@ namespace QVPN
 		};
 
 
-		template <std::random_access_iterator Iter, is_vpn_server_driver VPNServerDriver>
+		template <std::random_access_iterator Iter, is_vpn_server_driver VPNServerDriver, is_database_adapter Database, is_statistic_adapter Stats>
 		class VPNServer_ : public VPNServerDriver
 		{
+		private:
+
+			Database database_;
+			Stats stats_;
+
 		public:
 
 			VPNServer_(QVPN::Core::QVPNServerSettings_<Iter> settings)

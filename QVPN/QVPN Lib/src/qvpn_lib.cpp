@@ -329,7 +329,7 @@ QVPN::Core::NetProtocols QVPN::Core::NetAddr::get_addr_family() const
         return NetProtocols::IPv4;
     else if (ip_.size() == 16)
         return NetProtocols::IPv6;
-    return NetProtocols::UNDEFINED;
+    return NetProtocols::NET_UNDEFINED;
 }
 
 QVPN::Core::IPv4Address QVPN::Core::NetAddr::to_ipv4() const
