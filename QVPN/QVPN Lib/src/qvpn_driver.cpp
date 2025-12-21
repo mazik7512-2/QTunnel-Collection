@@ -334,3 +334,42 @@ std::pair<QVPN::Core::SplittedPacketView::DataIterator_t, QVPN::Core::SplittedPa
 {
     return std::pair<DataIterator_t, DataIterator_t>(data_, data_ + data_size_);
 }
+
+
+// User statistic data
+
+QVPN::Core::UserStatisticData::UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size)
+    : user_(user), user_conn_(user_conn), dest_conn_(dest_conn), transport_proto_(t_proto), traffic_size_(traffic_size)
+{
+    net_proto_ = user_conn_.get_ip_address().get_addr_family();
+}
+
+std::string_view QVPN::Core::UserStatisticData::get_user() const
+{
+    return user_;
+}
+
+const QVPN::Core::QVPNConnectionElement& QVPN::Core::UserStatisticData::get_user_con() const
+{
+    return user_conn_;
+}
+
+const QVPN::Core::QVPNConnectionElement& QVPN::Core::UserStatisticData::get_dest_con() const
+{
+    return dest_conn_;
+}
+
+QVPN::Core::NetProtocols QVPN::Core::UserStatisticData::get_net_proto() const
+{
+    return net_proto_;
+}
+
+QVPN::Core::TransportProtocols QVPN::Core::UserStatisticData::get_transport_proto() const
+{
+    return transport_proto_;
+}
+
+size_t QVPN::Core::UserStatisticData::get_traffic_size() const
+{
+    return traffic_size_;
+}

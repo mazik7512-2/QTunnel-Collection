@@ -1078,6 +1078,55 @@ namespace QVPN
 		using QVPNServerSettings = QVPNServerSettings_<UByte*>;
 
 
+		class UserStatisticData
+		{
+		private:
+
+			std::string user_;
+
+			QVPNConnectionElement user_conn_;
+			QVPNConnectionElement dest_conn_;
+
+			NetProtocols net_proto_;
+			TransportProtocols transport_proto_;
+
+			size_t traffic_size_;
+
+		public:
+
+			UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size);
+
+			std::string_view get_user() const;
+
+			const QVPNConnectionElement& get_user_con() const;
+			const QVPNConnectionElement& get_dest_con() const;
+
+			NetProtocols get_net_proto() const;
+			TransportProtocols get_transport_proto() const;
+
+			size_t get_traffic_size() const;
+
+		};
+
+
+		template <class DatabaseAdapterImpl>
+		concept is_database_adapter =
+			requires (DatabaseAdapterImpl d, std::string_view user) {
+
+				{ d.check_user(user) } -> std::same_as<bool>;
+
+		};
+
+
+		template <class StatisticsAdapterImpl>
+		concept is_statistic_adapter =
+			requires (StatisticsAdapterImpl s, std::string_view user, UserStatisticData data) {
+
+				{ s.add_user_stats(data) }-> std::same_as<void>;
+				{ s.get_user_stats(user) } -> std::same_as<UserStatisticData>;
+
+		};
+
 		template <class VPNDriverImpl>
 		concept is_vpn_server_driver =
 			requires (VPNDriverImpl d, typename VPNDriverImpl::DataIterator begin, typename VPNDriverImpl::DataIterator end,
@@ -1338,7 +1387,7 @@ namespace QVPN
 				
 			}
 
-			void init_vpn_server()
+			void start_vpn_server()
 			{
 				VPNServerDriver::init();
 			}
