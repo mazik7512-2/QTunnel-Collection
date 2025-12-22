@@ -1427,13 +1427,12 @@ namespace QVPN
 		};
 
 
-		template <std::random_access_iterator Iter, is_vpn_server_driver VPNServerDriver, is_database_adapter Database, is_statistic_adapter Stats>
+		template <std::random_access_iterator Iter, class VPNServerDriver, is_database_adapter Database, is_statistic_adapter Stats>
+		requires is_vpn_server_driver<VPNServerDriver, Database, Stats>
 		class VPNServer_ : public VPNServerDriver
 		{
 		private:
 
-			Database database_;
-			Stats stats_;
 
 		public:
 

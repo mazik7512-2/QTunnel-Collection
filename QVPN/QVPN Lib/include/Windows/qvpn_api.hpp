@@ -24,9 +24,14 @@ namespace QVPN
 
 	using QVPNServerSettings = QVPN::Core::QVPNServerSettings;
 
+	using NoDatabaseAdapter = QVPN::Core::NoDatabaseAdapter;
+	using NoStatsAdapter = QVPN::Core::NoStatisticAdapter;
 
 	template <QVPN::Core::is_database_adapter Database, QVPN::Core::is_statistic_adapter Stats>
 	using QVPNServer = QVPN::Core::VPNServer_<QVPN::Core::BaseTypes::UByte*, details::QVPNServerDriver<Database, Stats>, Database, Stats>;
+
+	template <QVPN::Core::is_database_adapter Database>
+	using NoStatsQVPNServer = QVPN::Core::VPNServer_<QVPN::Core::BaseTypes::UByte*, details::QVPNServerDriver<Database, NoStatsAdapter>, Database, NoStatsAdapter>;
 	
-	
+	using NoDbNoStatsQVPNServer = QVPNServer<NoDatabaseAdapter, NoStatsAdapter>;
 }

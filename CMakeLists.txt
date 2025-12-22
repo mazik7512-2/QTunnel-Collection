@@ -147,6 +147,7 @@ file(GLOB whitelists_list "${CMAKE_CURRENT_SOURCE_DIR}/*.qwlist")
 
 # Executables
 if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
+
 	message("QVPN Server App is building...")
 	file(GLOB_RECURSE server_src "${QVPN_SERVER_APP_PATH}/src/*.cpp")
 	add_executable("${QVPN_SERVER_APP_NAME}" ${server_src})
@@ -157,7 +158,13 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	target_link_libraries(${QVPN_SERVER_APP_NAME} PRIVATE ${QVPN_LIBRARY_NAME})
 	# link arg parse library
 	target_link_libraries(${QVPN_SERVER_APP_NAME} PRIVATE argparse)
+	
+	# Подключение sqlite3 к Server App
 
+	set(SQLITE3_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/sqlite3")
+	include_directories(${SQLITE3_PATH})
+	link_directories(${SQLITE3_PATH})
+	message("SQLITE3 PATH = ${SQLITE3_PATH}")
 	
 	# Копирование всех белых списков с расширением qwlist для server app
 	foreach(file_ IN ITEMS ${whitelists_list})
@@ -173,7 +180,8 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	endforeach()
 	
 	
-	set(server_settings "${CMAKE_CURRENT_SOURCE_DIR}/server_settings.json")
+	
+	set(server_settings "${CMAKE_CURRENT_SOURCE_DIR}/server_settings_example.json")
 
 	# Копирование шаблонного файла с настройками
 	add_custom_command(
@@ -212,7 +220,7 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
 
 	endforeach()
 
-	set(client_settings "${CMAKE_CURRENT_SOURCE_DIR}/client_settings.json")
+	set(client_settings "${CMAKE_CURRENT_SOURCE_DIR}/client_settings_example.json")
 
 	# Копирование шаблонного файла с настройками
 	add_custom_command(
