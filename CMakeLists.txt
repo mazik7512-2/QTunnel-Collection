@@ -164,7 +164,6 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	set(SQLITE3_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/sqlite3")
 	include_directories(${SQLITE3_PATH})
 	link_directories(${SQLITE3_PATH})
-	message("SQLITE3 PATH = ${SQLITE3_PATH}")
 	
 	# Копирование всех белых списков с расширением qwlist для server app
 	foreach(file_ IN ITEMS ${whitelists_list})
