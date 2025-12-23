@@ -1,9 +1,9 @@
 #include <string_view>
 #include <qvpn_lib.hpp>
 #include <qvpn_driver.hpp>
-#include <sqlite3.c>
+#include <sqlite3.h>
 
-
+#pragma comment(lib, "sqlite3.lib")
 
 using NetAddr = QVPN::Core::NetAddr;
 using UShort = QVPN::Core::BaseTypes::UShort;

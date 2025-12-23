@@ -172,6 +172,16 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	target_include_directories(${QVPN_SERVER_APP_NAME} PRIVATE ${SQLITE3_PATH})
 	target_link_directories(${QVPN_SERVER_APP_NAME} PRIVATE ${SQLITE3_PATH})
 	
+	if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+		# Копирование sqlite3.dll
+		add_custom_command(
+			TARGET ${QVPN_SERVER_APP_NAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+					"${SQLITE3_PATH}/sqlite3.dll" 
+					"${TARGET_DIRECTORY}/sqlite3.dll" 
+			COMMENT "Copying sqlite3.dll ${TARGET_DIRECTORY} directory\n"
+			)
+	endif()
 	# Копирование всех белых списков с расширением qwlist для server app
 	foreach(file_ IN ITEMS ${whitelists_list})
 
@@ -184,7 +194,6 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 		)
 
 	endforeach()
-	
 	
 	
 	set(server_settings "${CMAKE_CURRENT_SOURCE_DIR}/server_settings_example.json")

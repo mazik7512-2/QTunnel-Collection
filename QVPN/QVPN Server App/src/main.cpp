@@ -8,6 +8,7 @@ using QVPNLayers = QVPN::QVPNLayersStrategy;
 
 int main()
 {
+	SQLiteDatabase database("server_database.sqlite");
 	//SQLiteDatabase database();
 
 	return 0;
