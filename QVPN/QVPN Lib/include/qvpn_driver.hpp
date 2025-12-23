@@ -1102,6 +1102,8 @@ namespace QVPN
 			UserStatisticData();
 			UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size);
 
+			void set_data(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size);
+
 			std::string_view get_user() const;
 
 			const QVPNConnectionElement& get_user_con() const;
@@ -1119,7 +1121,6 @@ namespace QVPN
 		concept is_database_adapter =
 			requires (DatabaseAdapterImpl d, std::string_view user, std::shared_ptr<QVPNConnectionSettings> conn_data) {
 				
-				{ d.init(conn_data) } -> std::same_as<void>;
 				{ d.check_user(user) } -> std::same_as<bool>;
 
 		};
@@ -1130,7 +1131,7 @@ namespace QVPN
 			requires (StatisticsAdapterImpl s, std::string_view user, const UserStatisticData& data) {
 
 				{ s.add_user_stats(data) }-> std::same_as<void>;
-				{ s.get_user_stats(user) } -> std::same_as<UserStatisticData>;
+				{ s.get_user_stats(user) } -> std::same_as<std::vector<UserStatisticData>>;
 
 		};
 
@@ -1170,7 +1171,7 @@ namespace QVPN
 		public:
 
 			void add_user_stats(const UserStatisticData& data);
-			UserStatisticData get_user_stats(std::string_view user);
+			std::vector<UserStatisticData> get_user_stats(std::string_view user);
 
 		};
 
@@ -1409,6 +1410,7 @@ namespace QVPN
 				//return settings_.layers_encode(begin, end);
 			}
 
+			// sss
 			std::optional<QVPNData<Addr>> decode_data(Iter begin, Iter end)
 			{
 				packet_manager_.build_packet(begin, end);

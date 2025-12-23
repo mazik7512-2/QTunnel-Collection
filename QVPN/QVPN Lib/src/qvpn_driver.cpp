@@ -349,6 +349,16 @@ QVPN::Core::UserStatisticData::UserStatisticData(std::string_view user, QVPNConn
     net_proto_ = user_conn_.get_ip_address().get_addr_family();
 }
 
+void QVPN::Core::UserStatisticData::set_data(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size)
+{
+    user_ = user;
+    user_conn_ = user_conn;
+    dest_conn_ = dest_conn;
+    transport_proto_ = t_proto;
+    net_proto_ = user_conn_.get_ip_address().get_addr_family();
+    traffic_size_ = traffic_size;
+}
+
 std::string_view QVPN::Core::UserStatisticData::get_user() const
 {
     return user_;
@@ -398,7 +408,7 @@ void QVPN::Core::NoStatisticAdapter::add_user_stats(const UserStatisticData& dat
     // empty
 }
 
-QVPN::Core::UserStatisticData QVPN::Core::NoStatisticAdapter::get_user_stats(std::string_view user)
+std::vector<QVPN::Core::UserStatisticData> QVPN::Core::NoStatisticAdapter::get_user_stats(std::string_view user)
 {
-    return UserStatisticData();
+    return std::vector<UserStatisticData>{};
 }

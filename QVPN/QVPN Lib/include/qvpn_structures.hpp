@@ -317,45 +317,50 @@ namespace QVPN {
 				using ProxyData = QVPNProxyData<Addr>;
 			public:
 
-				QVPNData(std::vector<UByte>&& data)
+				QVPNData(std::vector<UByte>&& data) // TODO: перепроверить смещения
 					: QVPNProxyData<Addr>()
 				{
-					
-
 					data_ = std::move(data);
 					ProxyData::net_protocol = static_cast<NetProtocols>(data_[0]);
 					ProxyData::transport_protocol = static_cast<TransportProtocols>(data_[1]);
-					data_.erase(data_.begin(), data_.begin() + 1);
+					data_.erase(data_.begin(), data_.begin() + 2);
 					switch (ProxyData::net_protocol)
 					{
 
 					case NetProtocols::IPv4:
 					{
 						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 4);
+						ProxyData::source_port = data_[4] << 8 | data_[5];
+						ProxyData::dst_addr = Addr(data_.begin() + 6, data_.begin() + 10);
+						ProxyData::dst_port = data_[10] << 8 | data_[11];
 						break;
 					}
 
 					case NetProtocols::IPv6:
 					{
 						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 16);
+						ProxyData::source_port = data_[16] << 8 | data_[17];
+						ProxyData::dst_addr = Addr(data_.begin() + 18, data_.begin() + 34);
+						ProxyData::dst_port = data_[34] << 8 | data_[35];
 						break;
 					}
 					}
-					
-					auto addr_size = ProxyData::source_addr.get_addr_size();
-					data_.erase(data_.begin(), data_.begin() + addr_size);
-					ProxyData::source_port = data_[0] << 8 | data_[1];
+					auto meta_data_size = ProxyData::source_addr.get_addr_size() * 2 + 4; // 2 addrs (src + dst) and 2 ports (src + dst)
+					data_.erase(data_.begin(), data_.begin() + meta_data_size);
+					//ProxyData::source_port = data_[0] << 8 | data_[1];
 					
 				}
 
-				QVPNData(NetProtocols net, TransportProtocols transport, Addr addr, UShort dest_port, std::vector<UByte>&& data)
+				QVPNData(NetProtocols net, TransportProtocols transport, Addr src_addr, UShort src_port, Addr dst_addr, UShort dst_port, std::vector<UByte>&& data)
 					: QVPNProxyData<Addr>()
 				{
 					data_ = std::move(data);
 					ProxyData::net_protocol = net;
 					ProxyData::transport_protocol = transport;
-					ProxyData::source_addr = addr;
-					ProxyData::source_port = dest_port;
+					ProxyData::source_addr = src_addr;
+					ProxyData::source_port = src_port;
+					ProxyData::dst_addr = dst_addr;
+					ProxyData::dst_port = dst_port;
 				}
 
 				std::pair<UByte*, UByte*> get_raw_data()

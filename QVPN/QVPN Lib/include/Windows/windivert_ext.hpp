@@ -319,9 +319,24 @@ namespace QVPN {
 
 					if (decoded_data.has_value())
 					{
+						auto dst_addr = decoded_data->get_dst_addr();
+						auto dst_port = decoded_data->get_dst_port();
+
 						auto [b, e] = decoded_data->get_raw_data();
-						auto size = std::distance(b, e);
-						if (!WinDivertSend(in_hDivert_, b, size, NULL, &addr))
+
+						auto new_packet = pp.pre_parse(b, e);
+						std::visit([&dst_addr, &dst_port](auto& p) 
+							{ 
+								p.set_dst_port(dst_port); 
+								p.set_dst_addr(dst_addr);
+								p.recalculate_checksums();
+							}, 
+							new_packet);
+
+						//auto size = std::distance(b, e);
+						auto bytes_pair = std::visit([](auto& p) { return p.bytes(); }, new_packet);
+						auto size = std::distance(bytes_pair.first, bytes_pair.second);
+						if (!WinDivertSend(in_hDivert_, bytes_pair.first, size, NULL, &addr))
 						{
 							printf("warning: failed to reinject packet (%d)\n",
 								GetLastError());

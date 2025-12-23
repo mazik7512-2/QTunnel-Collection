@@ -6,20 +6,11 @@
 
 using QVPNClientSettings = QVPN::QVPNClientSettings;
 using QVPNClient = QVPN::QVPNClient;
-using VPNLayers = QVPN::QVPNLayersStrategy;
-
-
-template <QVPN::Core::DataStructures::ProxyDataLike Proxy>
-void test_func(const Proxy& proxy)
-{
-
-}
+using QVPNLayers = QVPN::QVPNLayersStrategy;
 
 
 int main(int argc, const char* argv[])
 {
-    const QVPN::Core::DataStructures::QVPNProxyData<QVPN::Core::NetAddr> test{};
-    test_func(test);
     argparse::ArgumentParser program("QVPN Client App", "0.5");
 
     program.add_argument("-s", "--settings", "-c", "--config")
@@ -32,7 +23,7 @@ int main(int argc, const char* argv[])
     std::string path = program.get<std::string>("--settings");
     settings.parse_settings(path);
 
-    VPNLayers layers{};
+    QVPNLayers layers{};
     settings.apply_strategy(std::move(layers));
 
     auto addr = settings.get_ip_address();
