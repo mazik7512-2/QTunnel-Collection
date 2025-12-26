@@ -24,7 +24,7 @@ namespace QVPN
 		using UInt = QVPN::Core::BaseTypes::UInt;
 
 		template <is_addr Addr>
-		using QVPNData = QVPN::Core::DataStructures::QVPNData<Addr>;
+		using QTunnelData = QVPN::Core::DataStructures::QTunnelData<Addr>;
 
 		enum class LayerTypes
 		{
@@ -49,7 +49,7 @@ namespace QVPN
 			virtual LayerTypes get_layer_type() const = 0;
 			virtual std::string_view get_layer_name() const = 0;
 
-			virtual std::vector<UByte> layer_encode(const QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const = 0;
+			virtual std::vector<UByte> layer_encode(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Iter begin, Iter end) const = 0;
 			virtual std::vector<UByte> layer_encode(Iter begin, Iter end) const = 0;
 			virtual std::vector<UByte> layer_decode(Iter begin, Iter end) const = 0;
 
@@ -99,7 +99,7 @@ namespace QVPN
 				return layer_->get_layer_name();
 			}
 
-			std::vector<UByte> layer_encode(const QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const
+			std::vector<UByte> layer_encode(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Iter begin, Iter end) const
 			{
 				return layer_->layer_encode(data, begin, end);
 			}
@@ -142,7 +142,7 @@ namespace QVPN
 			}
 
 
-			std::vector<UByte> layer_encode(const QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const override
+			std::vector<UByte> layer_encode(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Iter begin, Iter end) const override
 			{
 				std::vector<UByte> res = TLSRecordGenerator::generate_object_bytes<TLS13_RecordGenStrategy, TLSAppDataGenerator>(std::move(rec_strategy), data, std::move(begin), std::move(end));
 				return res;
@@ -168,7 +168,7 @@ namespace QVPN
 
 		template <class Layer, class Iter, class Addr>
 		concept is_layer =
-			requires (Layer l, Iter begin, Iter end, QVPN::Core::DataStructures::QVPNProxyData<Addr> &data) {
+			requires (Layer l, Iter begin, Iter end, QVPN::Core::DataStructures::QTunnelProxy<Addr> &data) {
 
 				{ l.get_layer_type() } -> std::same_as<LayerTypes>;
 				{ l.get_layer_name() } -> std::same_as <std::string_view>;
@@ -459,7 +459,7 @@ namespace QVPN
 				}
 			}
 
-			std::vector<BaseTypes::UByte> layers_encode(QVPN::Core::DataStructures::QVPNProxyData<Addr>& data, Iter begin, Iter end) const
+			std::vector<BaseTypes::UByte> layers_encode(QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Iter begin, Iter end) const
 			{
 				std::vector<BaseTypes::UByte> res_data(begin, end);
 				for (auto& l : layers_)
@@ -750,13 +750,13 @@ namespace QVPN
 
 		template <class VPNDriver>
 		concept is_vpn_client_driver =
-			requires (VPNDriver d, typename VPNDriver::DataIterator begin, typename VPNDriver::DataIterator end, QVPN::Core::DataStructures::QVPNProxyData<typename VPNDriver::AddrType> &data) {
+			requires (VPNDriver d, typename VPNDriver::DataIterator begin, typename VPNDriver::DataIterator end, QVPN::Core::DataStructures::QTunnelProxy<typename VPNDriver::AddrType> &data) {
 
 			typename VPNDriver::AddrType;
 			typename VPNDriver::DataIterator;
 
 			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacket>;
-			{ d.decode_data(begin, end) } -> std::same_as<std::optional<QVPNData<typename VPNDriver::AddrType>>>;
+			{ d.decode_data(begin, end) } -> std::same_as<std::optional<QTunnelData<typename VPNDriver::AddrType>>>;
 
 			{ d.connect() } -> std::same_as<bool>;
 			{ d.init() } -> std::same_as<bool>;
@@ -797,7 +797,7 @@ namespace QVPN
 
 			using DataIterator = Iter;
 			using AddrType = QVPNClientSettings_<Iter>::AddrType;
-			using QVPNProxyData = QVPN::Core::DataStructures::QVPNProxyData<QVPNClientDriver::AddrType>;
+			using QTunnelProxy = QVPN::Core::DataStructures::QTunnelProxy<QVPNClientDriver::AddrType>;
 
 			QVPNClientDriver(QVPNClientSettings_<Iter> settings)
 				: settings_(std::move(settings)), socket_(NetTools::create_socket())
@@ -842,7 +842,7 @@ namespace QVPN
 				return res.success;
 			}
 
-			void encode_and_send(QVPN::Core::DataStructures::QVPNProxyData<AddrType>& proxy_data, Iter begin, Iter end)
+			void encode_and_send(QVPN::Core::DataStructures::QTunnelProxy<AddrType>& proxy_data, Iter begin, Iter end)
 			{
 				auto splitted_packet = encode_data(proxy_data, begin, end);
 				for (size_t i = 0; i < splitted_packet.size(); i++)
@@ -875,7 +875,7 @@ namespace QVPN
 				return settings_.get_ip_address();
 			}
 
-			SplittedPacket encode_data(QVPN::Core::DataStructures::QVPNProxyData<AddrType>& data, Iter begin, Iter end)
+			SplittedPacket encode_data(QVPN::Core::DataStructures::QTunnelProxy<AddrType>& data, Iter begin, Iter end)
 			{
 				SplittedPacket res;
 				auto sp = packet_manager_.split_packet(begin, end);
@@ -888,7 +888,7 @@ namespace QVPN
 				return res;
 			}
 
-			std::optional<QVPNData<Addr>> decode_data(Iter begin, Iter end)
+			std::optional<QTunnelData<Addr>> decode_data(Iter begin, Iter end)
 			{
 				packet_manager_.build_packet(begin, end);
 				if (packet_manager_.have_full_packets())
@@ -896,7 +896,7 @@ namespace QVPN
 					auto [b, e] = packet_manager_.get_raw_packet();
 					auto res = settings_.layers_decode(b, e);
 					packet_manager_.pop_last_packet();
-					QVPNData<Addr> data(std::move(res));
+					QTunnelData<Addr> data(std::move(res));
 					return data;
 				}
 				return std::nullopt;
@@ -1007,13 +1007,13 @@ namespace QVPN
 			void parse_settings(std::string_view path)
 			{
 				using NetProtocols = QVPN::Core::NetProtocols;
-				std::ifstream f;
+				std::ifstream f{};
 				f.open(path);
 				auto settings = json::parse(f);
 
 				auto& addrs = settings["addrs"];
 
-				for (auto& addr_obj : addrs.items())
+				for (auto& addr_obj : addrs)
 				{
 					auto addr_type = static_cast<NetProtocols>(addr_obj["addr_type"].get<UInt>());
 
@@ -1036,9 +1036,9 @@ namespace QVPN
 
 				auto& sup_crypto = settings["supported_crypto"];
 
-				for (auto& crypto_obj : sup_crypto.items())
+				for (auto& crypto_obj : sup_crypto)
 				{
-					auto crypto = crypto_obj.get<UShort>();
+					auto crypto = static_cast<QVPN_Crypto>(crypto_obj.get<UShort>());
 					add_crypto_method(crypto);
 				}
 
@@ -1138,7 +1138,7 @@ namespace QVPN
 		template <class VPNDriverImpl, class DatabaseAdapter, class StatsAdapter>
 		concept is_vpn_server_driver =
 			requires (VPNDriverImpl d, typename VPNDriverImpl::DataIterator begin, typename VPNDriverImpl::DataIterator end,
-		QVPN::Core::DataStructures::QVPNProxyData<typename VPNDriverImpl::AddrType> &data, VPNDriverImpl::SocketType& socket,
+		QVPN::Core::DataStructures::QTunnelProxy<typename VPNDriverImpl::AddrType> &data, VPNDriverImpl::SocketType& socket,
 			DatabaseAdapter& database, StatsAdapter& stats) {
 
 			typename VPNDriverImpl::DataIterator;
@@ -1146,7 +1146,7 @@ namespace QVPN
 			typename VPNDriverImpl::SocketType;
 
 			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacket>;
-			{ d.decode_data(begin, end) } -> std::same_as<std::optional<QVPNData<typename VPNDriverImpl::AddrType>>>;
+			{ d.decode_data(begin, end) } -> std::same_as<std::optional<QTunnelData<typename VPNDriverImpl::AddrType>>>;
 
 			{ d.init(database, stats) } -> std::same_as<void>;
 
@@ -1257,9 +1257,9 @@ namespace QVPN
 				if (!status.success)
 					return false;
 				auto decoded_data = decode_data(data.data(), data.data() + data.size());
-				const auto p_data = static_cast<QVPN::Core::DataStructures::QVPNProxyData<Addr>>(decoded_data);
+				const auto p_data = static_cast<QVPN::Core::DataStructures::QTunnelProxy<Addr>>(decoded_data);
 
-				QVPN::Core::DataStructures::QVPNProxyData<Addr> proxy_data = std::move(p_data.create_and_inverse_addrs(p_data));
+				QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data = std::move(p_data.create_and_inverse_addrs(p_data));
 
 				if (!decoded_data.has_value())
 					return false;
@@ -1383,7 +1383,7 @@ namespace QVPN
 				return res.success;
 			}
 
-			void encode_and_send(Socket& socket, const QVPN::Core::DataStructures::QVPNProxyData<Addr>& proxy_data, Iter begin, Iter end)
+			void encode_and_send(Socket& socket, const QVPN::Core::DataStructures::QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
 			{
 				auto splitted_packet = encode_data(proxy_data, begin, end);
 				for (size_t i = 0; i < splitted_packet.size(); i++)
@@ -1396,7 +1396,7 @@ namespace QVPN
 				}
 			}
 
-			SplittedPacket encode_data(const QVPN::Core::DataStructures::QVPNProxyData<Addr>& proxy_data, Iter begin, Iter end)
+			SplittedPacket encode_data(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
 			{
 				SplittedPacket res;
 				auto sp = packet_manager_.split_packet(begin, end);
@@ -1411,7 +1411,7 @@ namespace QVPN
 			}
 
 			// sss
-			std::optional<QVPNData<Addr>> decode_data(Iter begin, Iter end)
+			std::optional<QTunnelData<Addr>> decode_data(Iter begin, Iter end)
 			{
 				packet_manager_.build_packet(begin, end);
 				if (packet_manager_.have_full_packets())
@@ -1419,7 +1419,7 @@ namespace QVPN
 					auto [b, e] = packet_manager_.get_raw_packet();
 					auto res = settings_.layers_decode(b, e);
 					packet_manager_.pop_last_packet();
-					QVPNData<Addr> data(std::move(res));
+					QTunnelData<Addr> data(std::move(res));
 					return data;
 				}
 				return std::nullopt;

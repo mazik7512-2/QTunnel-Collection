@@ -15,18 +15,18 @@ int main(int argc, const char* argv[])
         .default_value(std::string("Z:\\Files\\Projects\\C++\\MaxVPN\\build\\bin\\Windows\\server_settings.json"));
 
     program.parse_args(argc, argv);
-
+    
     QVPNServerSettings settings{};
     std::string path = program.get<std::string>("--settings");
     settings.parse_settings(path);
-
+    /*
 	SQLiteDatabase database(settings.get_db_host());
     ServerDatabaseAdapter db_adapter(database);
     ServerStatsAdatper stats_adatper(database);
 
     QVPNServer vpn_server(settings);
     vpn_server.init(db_adapter, stats_adatper);
-    
+    */
     std::cin.get();
 	return 0;
 }

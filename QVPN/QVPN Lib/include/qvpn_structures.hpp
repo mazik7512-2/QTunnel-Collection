@@ -258,7 +258,7 @@ namespace QVPN {
 			};
 
 			template <QVPN::Core::is_addr Addr>
-			struct QVPNProxyData
+			struct QTunnelProxy
 			{
 			public:
 				NetProtocols net_protocol{};
@@ -301,9 +301,9 @@ namespace QVPN {
 					return dst_port;
 				}
 
-				static inline QVPNProxyData create_and_inverse_addrs(const QVPNProxyData<Addr>& proxy_data)
+				static inline QTunnelProxy create_and_inverse_addrs(const QTunnelProxy<Addr>& proxy_data)
 				{
-					return QVPNProxyData{ proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_src_addr(), proxy_data.get_src_port() };
+					return QTunnelProxy{ proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_src_addr(), proxy_data.get_src_port() };
 					//return res;
 				}
 
@@ -311,14 +311,14 @@ namespace QVPN {
 
 
 			template <is_addr Addr>
-			class QVPNData : public QVPNProxyData<Addr>
+			class QTunnelData : public QTunnelProxy<Addr>
 			{
 				std::vector<UByte> data_;
-				using ProxyData = QVPNProxyData<Addr>;
+				using ProxyData = QTunnelProxy<Addr>;
 			public:
 
-				QVPNData(std::vector<UByte>&& data) // TODO: перепроверить смещения
-					: QVPNProxyData<Addr>()
+				QTunnelData(std::vector<UByte>&& data) // TODO: перепроверить смещения
+					: QTunnelProxy<Addr>()
 				{
 					data_ = std::move(data);
 					ProxyData::net_protocol = static_cast<NetProtocols>(data_[0]);
@@ -351,8 +351,8 @@ namespace QVPN {
 					
 				}
 
-				QVPNData(NetProtocols net, TransportProtocols transport, Addr src_addr, UShort src_port, Addr dst_addr, UShort dst_port, std::vector<UByte>&& data)
-					: QVPNProxyData<Addr>()
+				QTunnelData(NetProtocols net, TransportProtocols transport, Addr src_addr, UShort src_port, Addr dst_addr, UShort dst_port, std::vector<UByte>&& data)
+					: QTunnelProxy<Addr>()
 				{
 					data_ = std::move(data);
 					ProxyData::net_protocol = net;
@@ -371,7 +371,7 @@ namespace QVPN {
 				}
 			};
 
-			using QVPNProxyData_Ipv4 = QVPNProxyData<QVPN::Core::IPv4Address>;
+			using QVPNProxyData_Ipv4 = QTunnelProxy<QVPN::Core::IPv4Address>;
 
 			template <class AdapterHandle>
 			class Adapter final {
