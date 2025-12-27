@@ -47,14 +47,19 @@ std::string_view QVPN::Core::QVPNClientAuthSettings::get_auth_data() const
 
 // QVPN Net Settings
 
-void QVPN::Core::QVPNNetSettings::add_addr(const Ipv4AddressType& addr, UShort port)
+void QVPN::Core::QVPNNetSettings::add_addr(const Ipv4AddressType& addr, UShort port, TransportProtocols t_proto)
 {
-    data_.emplace_back(addr, port);
+    data_.emplace_back(addr, port, t_proto);
 }
 
-void QVPN::Core::QVPNNetSettings::add_addr(const Ipv6AddressType& addr, UShort port)
+void QVPN::Core::QVPNNetSettings::add_addr(const Ipv6AddressType& addr, UShort port, TransportProtocols t_proto)
 {
-    data_.emplace_back(addr, port);
+    data_.emplace_back(addr, port, t_proto);
+}
+
+void QVPN::Core::QVPNNetSettings::add_addr(const NetAddr& addr, UShort port, TransportProtocols t_proto)
+{
+    data_.emplace_back(addr, port, t_proto);
 }
 
 std::pair<QVPN::Core::QVPNNetSettings::DataIterator_t, QVPN::Core::QVPNNetSettings::DataIterator_t> QVPN::Core::QVPNNetSettings::get_addrs() const

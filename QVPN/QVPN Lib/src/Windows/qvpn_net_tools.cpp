@@ -6,15 +6,49 @@ using UByte = QVPN::Core::BaseTypes::UByte;
 using UShort = QVPN::Core::BaseTypes::UShort;
 
 
-QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(int socket_family, int socket_type, int proto)
+QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(QVPN::Core::NetProtocols net_proto, QVPN::Core::TransportProtocols t_proto)
 {
-	QVPN::NetTools::QVPN_Socket socket(socket_family, socket_type, proto);
-	return socket;
+	QVPNMetaSocketData meta{};
+	return QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_socket_type(t_proto), meta.get_socket_type(t_proto));
 }
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket()
-	: s_mod_(UNDEFINED)
+	: s_mod_(UNDEFINED), socket_(NULL)
 {
+}
+
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(const QVPN_Socket& other) noexcept
+{
+	socket_ = other.socket_;
+	wsa_data_ = other.wsa_data_;
+	socket_data_ = other.socket_data_;
+	s_mod_ = other.s_mod_;
+}
+
+QVPN::NetTools::QVPN_Socket& QVPN::NetTools::QVPN_Socket::operator=(const QVPN_Socket& other) noexcept
+{
+	socket_ = other.socket_;
+	wsa_data_ = other.wsa_data_;
+	socket_data_ = other.socket_data_;
+	s_mod_ = other.s_mod_;
+	return *this;
+}
+
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(QVPN_Socket&& other) noexcept
+{
+	socket_ = std::move(other.socket_);
+	wsa_data_ = std::move(other.wsa_data_);
+	socket_data_ = std::move(other.socket_data_);
+	s_mod_ = std::move(other.s_mod_);
+}
+
+QVPN::NetTools::QVPN_Socket& QVPN::NetTools::QVPN_Socket::operator=(QVPN_Socket&& other) noexcept
+{
+	socket_ = std::move(other.socket_);
+	wsa_data_ = std::move(other.wsa_data_);
+	socket_data_ = std::move(other.socket_data_);
+	s_mod_ = std::move(other.s_mod_);
+	return *this;
 }
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, SocketMod s_mod)
@@ -89,4 +123,19 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::shutdown()
 	WSACleanup();
 	bool s = (res == 0) ? true : false;
 	return QVPN::Core::NetStatus{ s, res };
+}
+
+QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_family(QVPN::Core::NetProtocols net_proto)
+{
+	return families_[net_proto];
+}
+
+QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_type(QVPN::Core::TransportProtocols t_proto)
+{
+	return types_[t_proto];
+}
+
+QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_proto(QVPN::Core::TransportProtocols t_proto)
+{
+	return protos_[t_proto];
 }

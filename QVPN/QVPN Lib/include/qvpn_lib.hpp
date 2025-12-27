@@ -192,6 +192,8 @@ namespace QVPN
 			AddrBytes_t to_bytes() const;
 			std::string to_string() const;
 			AddrInt_t to_uint() const;
+
+			bool operator==(const NetAddr& other) const;
 		};
 
 
@@ -314,6 +316,8 @@ namespace QVPN {
 
 		struct QVPNSocketData
 		{
+			TransportProtocols transport_proto;
+
 			QVPN::Core::NetAddr local_addr;
 			BaseTypes::UShort local_port;
 
@@ -321,7 +325,18 @@ namespace QVPN {
 			BaseTypes::UShort remote_port;
 
 			std::string to_string() const;
+
+			// для std::unordered_map
+			bool operator==(const QVPNSocketData& other) const
+			{
+				return transport_proto == other.transport_proto &&
+					local_addr == other.local_addr &&
+					local_port == other.local_port &&
+					remote_addr == other.remote_addr &&
+					remote_port == other.remote_port;
+			}
 		};
+
 
 		template <class SocketImpl, class Addr>
 		concept is_socket =
@@ -349,9 +364,9 @@ namespace QVPN {
 
 		template <class NetToolsImpl, class Socket>
 		concept is_net_tools =
-			requires (NetToolsImpl t, int socket_family, int socket_type, int proto) {
+			requires (NetToolsImpl t, NetProtocols net_proto, TransportProtocols t_proto) {
 
-				{ NetToolsImpl::create_socket(socket_family, socket_type, proto) } -> std::same_as<Socket>;
+				{ NetToolsImpl::create_socket(net_proto, t_proto) } -> std::same_as<Socket>;
 
 		};
 
@@ -446,6 +461,9 @@ namespace QVPN {
 		};
 
 
+		template <class Data>
+		concept is_whitelist_data = std::convertible_to<Data, std::string_view> || std::convertible_to<Data, std::string>;
+
 		class QVPNWhitelistDefaultStrategy
 		{
 		public:
@@ -489,3 +507,15 @@ namespace QVPN {
 
 }
 
+// for server driver
+namespace std
+{
+	template<>
+	struct hash<QVPN::Core::QVPNSocketData> {
+
+		size_t operator()(const QVPN::Core::QVPNSocketData& data) const {
+			return hash<std::string>()(data.to_string());
+		}
+
+	};
+}

@@ -373,13 +373,23 @@ QVPN::Core::NetAddr::AddrInt_t QVPN::Core::NetAddr::to_uint() const
     return ip_;
 }
 
+bool QVPN::Core::NetAddr::operator==(const NetAddr& other) const
+{
+    for (size_t i = 0; i < ip_.size(); i++)
+    {
+        if (ip_[i] != other.ip_[i])
+            return false;
+    }
+    return true;
+}
+
 // QVPN Socket Data
 
 std::string QVPN::Core::QVPNSocketData::to_string() const
 {
     std::stringstream ss{};
 
-    ss << local_addr.to_string() << ":" << local_port << "-" << remote_addr.to_string() << ":" << remote_port;
+    ss << "(" << transport_proto << ") " << local_addr.to_string() << ":" << local_port << "-" << remote_addr.to_string() << ":" << remote_port;
 
     auto str = ss.str();
     return str;

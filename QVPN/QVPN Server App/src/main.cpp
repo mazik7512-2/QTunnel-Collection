@@ -8,6 +8,7 @@ using QVPNLayers = QVPN::QVPNLayersStrategy;
 
 int main(int argc, const char* argv[])
 {
+    // TODO: Доделать whitelist в генераторах
     argparse::ArgumentParser program("QVPN Server App", "0.5");
 
     program.add_argument("-s", "--settings", "-c", "--config")
@@ -19,14 +20,14 @@ int main(int argc, const char* argv[])
     QVPNServerSettings settings{};
     std::string path = program.get<std::string>("--settings");
     settings.parse_settings(path);
-    /*
+    
 	SQLiteDatabase database(settings.get_db_host());
     ServerDatabaseAdapter db_adapter(database);
     ServerStatsAdatper stats_adatper(database);
 
     QVPNServer vpn_server(settings);
     vpn_server.init(db_adapter, stats_adatper);
-    */
+    
     std::cin.get();
 	return 0;
 }

@@ -2,7 +2,8 @@
     "addrs": [{
             "addr_type": 4,
             "addr": "0.0.0.0",
-            "port": 1234
+            "port": 1234,
+			"proto:" 6 
         }
     ],
 
@@ -11,7 +12,7 @@
     ],
 
     "database": {
-        "host": "db.sqlite",
+        "host": "server_database.sqlite3",
         "user": "admin",
         "pass": "password",
         "name": "database",

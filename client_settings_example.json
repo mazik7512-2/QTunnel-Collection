@@ -2,9 +2,14 @@
     "addr_type": 4,
     "addr": "11.222.3.41",
     "port": 1234,
+	"proto": 6,
 
     "crypto_method": 0,
     "key": "crypto_key",
 
-    "auth_data": "user-key"
+    "auth_data": "user-key",
+	
+	"whitelists": [
+		"RU_whitelist.qwlist"
+	]
 }
