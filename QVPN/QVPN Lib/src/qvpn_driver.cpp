@@ -47,17 +47,17 @@ std::string_view QVPN::Core::QVPNClientAuthSettings::get_auth_data() const
 
 // QVPN Net Settings
 
-void QVPN::Core::QVPNNetSettings::add_addr(const Ipv4AddressType& addr, UShort port, TransportProtocols t_proto)
+void QVPN::Core::QVPNNetSettings::add_addr(const Ipv4AddressType& addr, UShort port, TransportProtocol t_proto)
 {
     data_.emplace_back(addr, port, t_proto);
 }
 
-void QVPN::Core::QVPNNetSettings::add_addr(const Ipv6AddressType& addr, UShort port, TransportProtocols t_proto)
+void QVPN::Core::QVPNNetSettings::add_addr(const Ipv6AddressType& addr, UShort port, TransportProtocol t_proto)
 {
     data_.emplace_back(addr, port, t_proto);
 }
 
-void QVPN::Core::QVPNNetSettings::add_addr(const NetAddr& addr, UShort port, TransportProtocols t_proto)
+void QVPN::Core::QVPNNetSettings::add_addr(const NetAddr& addr, UShort port, TransportProtocol t_proto)
 {
     data_.emplace_back(addr, port, t_proto);
 }
@@ -344,17 +344,17 @@ std::pair<QVPN::Core::SplittedPacketView::DataIterator_t, QVPN::Core::SplittedPa
 // User statistic data
 
 QVPN::Core::UserStatisticData::UserStatisticData()
-    : user_("Anonymous"), transport_proto_(TransportProtocols::TRANSPORT_UNDEFINED), net_proto_(NetProtocols::NET_UNDEFINED), traffic_size_(0), user_conn_("0.0.0.0", 0), dest_conn_("0.0.0.0", 0)
+    : user_("Anonymous"), transport_proto_(TransportProtocol::TRANSPORT_UNDEFINED), net_proto_(NetProtocol::NET_UNDEFINED), traffic_size_(0), user_conn_("0.0.0.0", 0), dest_conn_("0.0.0.0", 0)
 {
 }
 
-QVPN::Core::UserStatisticData::UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size)
+QVPN::Core::UserStatisticData::UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size)
     : user_(user), user_conn_(user_conn), dest_conn_(dest_conn), transport_proto_(t_proto), traffic_size_(traffic_size)
 {
     net_proto_ = user_conn_.get_ip_address().get_addr_family();
 }
 
-void QVPN::Core::UserStatisticData::set_data(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size)
+void QVPN::Core::UserStatisticData::set_data(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size)
 {
     user_ = user;
     user_conn_ = user_conn;
@@ -379,12 +379,12 @@ const QVPN::Core::QVPNConnectionElement& QVPN::Core::UserStatisticData::get_dest
     return dest_conn_;
 }
 
-QVPN::Core::NetProtocols QVPN::Core::UserStatisticData::get_net_proto() const
+QVPN::Core::NetProtocol QVPN::Core::UserStatisticData::get_net_proto() const
 {
     return net_proto_;
 }
 
-QVPN::Core::TransportProtocols QVPN::Core::UserStatisticData::get_transport_proto() const
+QVPN::Core::TransportProtocol QVPN::Core::UserStatisticData::get_transport_proto() const
 {
     return transport_proto_;
 }

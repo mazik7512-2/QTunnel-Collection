@@ -10,7 +10,7 @@ SQLiteDatabase::SQLiteDatabase(std::string_view path)
 	sqlite3_open(path.data(), &db_);
 }
 
-void SQLiteDatabase::add_statistic_data(std::string_view user, NetProtocols net_proto, TransportProtocols transport_proto, const NetAddr& src_addr, UShort src_port, const NetAddr& dst_addr, UShort dst_port, size_t traffic_size)
+void SQLiteDatabase::add_statistic_data(std::string_view user, NetProtocol net_proto, TransportProtocol transport_proto, const NetAddr& src_addr, UShort src_port, const NetAddr& dst_addr, UShort dst_port, size_t traffic_size)
 {
 	char* msg_error;
 	std::stringstream ss{};
@@ -32,8 +32,8 @@ int get_user_stats_callback(void* data, int argc, char** argv, char** azColName)
 	QVPNConnectionElement user_data(std::string_view(argv[1]), static_cast<UShort>(std::stoi(argv[2])));
 	QVPNConnectionElement dst_data(std::string_view(argv[3]), static_cast<UShort>(std::stoi(argv[4])));
 
-	NetProtocols net_proto = static_cast<NetProtocols>(std::stoi(argv[5]));
-	TransportProtocols transport_proto = static_cast<TransportProtocols>(std::stoi(argv[6]));
+	NetProtocol net_proto = static_cast<NetProtocol>(std::stoi(argv[5]));
+	TransportProtocol transport_proto = static_cast<TransportProtocol>(std::stoi(argv[6]));
 	
 	size_t traffic_size = static_cast<size_t>(std::stoi(argv[7]));
 	for (size_t i = 0; i < argc; i++)

@@ -6,7 +6,7 @@ using UByte = QVPN::Core::BaseTypes::UByte;
 using UShort = QVPN::Core::BaseTypes::UShort;
 
 
-QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(QVPN::Core::NetProtocols net_proto, QVPN::Core::TransportProtocols t_proto)
+QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto)
 {
 	QVPNMetaSocketData meta{};
 	return QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_socket_type(t_proto), meta.get_socket_type(t_proto));
@@ -15,6 +15,26 @@ QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(QVPN::Co
 QVPN::NetTools::QVPN_Socket::QVPN_Socket()
 	: s_mod_(UNDEFINED), socket_(NULL)
 {
+}
+
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(int sock_family, int sock_type, int sock_proto)
+{
+	socket_ = socket(sock_family, sock_type, sock_proto);
+	switch (sock_proto)
+	{
+	case IPPROTO_TCP:
+		socket_data_.transport_proto = QVPN::Core::TCP;
+		break;
+	case IPPROTO_UDP:
+		socket_data_.transport_proto = QVPN::Core::UDP;
+		break;
+	default:
+		socket_data_.transport_proto = QVPN::Core::TRANSPORT_UNDEFINED;
+		break;
+	}
+	socket_data_.remote_port = 0;
+	socket_data_.local_port = 0;
+	s_mod_ = UNDEFINED;
 }
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket(const QVPN_Socket& other) noexcept
@@ -51,7 +71,7 @@ QVPN::NetTools::QVPN_Socket& QVPN::NetTools::QVPN_Socket::operator=(QVPN_Socket&
 	return *this;
 }
 
-QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, SocketMod s_mod)
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto)
 {
 	socket_ = socket;
 	socket_data_.remote_addr = remote_addr;
@@ -59,9 +79,10 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address 
 	socket_data_.local_addr = local_addr;
 	socket_data_.local_port = local_port;
 	s_mod_ = s_mod;
+	socket_data_.transport_proto = transport_proto;
 }
 
-QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, SocketMod s_mod)
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto)
 {
 	socket_ = socket;
 	socket_data_.remote_addr = remote_addr;
@@ -69,9 +90,10 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address 
 	socket_data_.local_addr = local_addr;
 	socket_data_.local_port = local_port;
 	s_mod_ = s_mod;
+	socket_data_.transport_proto = transport_proto;
 }
 
-QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, SocketMod s_mod)
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto)
 {
 	socket_ = socket;
 	socket_data_.remote_addr = remote_addr;
@@ -79,8 +101,8 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remo
 	socket_data_.local_addr = local_addr;
 	socket_data_.local_port = local_port;
 	s_mod_ = s_mod;
+	socket_data_.transport_proto = transport_proto;
 }
-
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::listen(int con_limit)
 {
@@ -125,17 +147,17 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::shutdown()
 	return QVPN::Core::NetStatus{ s, res };
 }
 
-QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_family(QVPN::Core::NetProtocols net_proto)
+QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_family(QVPN::Core::NetProtocol net_proto)
 {
 	return families_[net_proto];
 }
 
-QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_type(QVPN::Core::TransportProtocols t_proto)
+QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_type(QVPN::Core::TransportProtocol t_proto)
 {
 	return types_[t_proto];
 }
 
-QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_proto(QVPN::Core::TransportProtocols t_proto)
+QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_proto(QVPN::Core::TransportProtocol t_proto)
 {
 	return protos_[t_proto];
 }

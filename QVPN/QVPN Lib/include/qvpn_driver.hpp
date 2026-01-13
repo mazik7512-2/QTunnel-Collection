@@ -365,7 +365,7 @@ namespace QVPN
 		{
 		public:
 			// 5 - packet builder data (package id - 1 byte, data_offset - 2 bytes, original_packet_size - 2 bytes), 5 - size of tls record, 
-			// 38 - size of qtunnel data (net proto - 1 byte, transport proto - 1 byte, src_net addr - 16 bytes, src_port - 2 bytes, dst_net_addr - 16 bytes, dst_port - 2 bytes)
+			// 38 - size of qtunnel data (net proto - 1 byte, transport proto - 1 byte, src_net addr - 16 bytes (max), src_port - 2 bytes, dst_net_addr - 16 bytes (max), dst_port - 2 bytes)
 			constexpr static UShort data_meta_qvpn_size = 5 + 5 + 38;
 
 		private:
@@ -495,36 +495,36 @@ namespace QVPN
 		private:
 			AddrType addr_;
 			BaseTypes::UShort port_;
-			TransportProtocols t_proto_;
+			TransportProtocol t_proto_;
 
 		public:
 
 			QVPNConnectionElement() = default;
 
-			QVPNConnectionElement(const Ipv4AddressType& address, BaseTypes::UShort port, TransportProtocols transport_proto = TRANSPORT_UNDEFINED)
+			QVPNConnectionElement(const Ipv4AddressType& address, BaseTypes::UShort port, TransportProtocol transport_proto = TRANSPORT_UNDEFINED)
 				: addr_(address), port_(port), t_proto_(transport_proto)
 			{
 
 			}
 
-			QVPNConnectionElement(const Ipv6AddressType& address, BaseTypes::UShort port, TransportProtocols transport_proto = TRANSPORT_UNDEFINED)
+			QVPNConnectionElement(const Ipv6AddressType& address, BaseTypes::UShort port, TransportProtocol transport_proto = TRANSPORT_UNDEFINED)
 				: addr_(address), port_(port), t_proto_(transport_proto)
 			{
 			}
 
-			QVPNConnectionElement(std::string_view data, BaseTypes::UShort port, TransportProtocols transport_proto = TRANSPORT_UNDEFINED)
+			QVPNConnectionElement(std::string_view data, BaseTypes::UShort port, TransportProtocol transport_proto = TRANSPORT_UNDEFINED)
 				: addr_(data), port_(port), t_proto_(transport_proto)
 			{
 
 			}
 
-			QVPNConnectionElement(const AddrType& address, BaseTypes::UShort port, TransportProtocols transport_proto = TRANSPORT_UNDEFINED)
+			QVPNConnectionElement(const AddrType& address, BaseTypes::UShort port, TransportProtocol transport_proto = TRANSPORT_UNDEFINED)
 				: addr_(address), port_(port), t_proto_(transport_proto)
 			{
 
 			}
 
-			void set_transport_proto(TransportProtocols t_proto)
+			void set_transport_proto(TransportProtocol t_proto)
 			{
 				t_proto_ = t_proto;
 			}
@@ -539,7 +539,7 @@ namespace QVPN
 				addr_ = address;
 			}
 
-			void set_ip_address(std::string_view addr, QVPN::Core::NetProtocols addr_type)
+			void set_ip_address(std::string_view addr, QVPN::Core::NetProtocol addr_type)
 			{
 				switch (addr_type)
 				{
@@ -576,12 +576,12 @@ namespace QVPN
 				return port_;
 			}
 
-			TransportProtocols get_transport_proto() const
+			TransportProtocol get_transport_proto() const
 			{
 				return t_proto_;
 			}
 
-			NetProtocols get_net_proto() const
+			NetProtocol get_net_proto() const
 			{
 				return addr_.get_addr_family();
 			}
@@ -613,13 +613,13 @@ namespace QVPN
 
 			QVPNConnectionSettings() = default;
 
-			QVPNConnectionSettings(const Ipv4AddressType& address, BaseTypes::UShort port, TransportProtocols t_proto)
+			QVPNConnectionSettings(const Ipv4AddressType& address, BaseTypes::UShort port, TransportProtocol t_proto)
 				: data_(address, port, t_proto)
 			{
 
 			}
 
-			QVPNConnectionSettings(const Ipv6AddressType& address, BaseTypes::UShort port, TransportProtocols t_proto)
+			QVPNConnectionSettings(const Ipv6AddressType& address, BaseTypes::UShort port, TransportProtocol t_proto)
 				: data_(address, port, t_proto)
 			{
 			}
@@ -634,7 +634,7 @@ namespace QVPN
 				data_.set_ip_address(address);
 			}
 
-			void set_ip_address(std::string_view addr, QVPN::Core::NetProtocols addr_type)
+			void set_ip_address(std::string_view addr, QVPN::Core::NetProtocol addr_type)
 			{
 				switch (addr_type)
 				{
@@ -661,7 +661,7 @@ namespace QVPN
 				data_.set_port(port);
 			}
 
-			void set_transport_proto(TransportProtocols t_proto)
+			void set_transport_proto(TransportProtocol t_proto)
 			{
 				data_.set_transport_proto(t_proto);
 			}
@@ -676,12 +676,12 @@ namespace QVPN
 				return data_.get_port();
 			}
 
-			TransportProtocols get_transport_proto() const
+			TransportProtocol get_transport_proto() const
 			{
 				return data_.get_transport_proto();
 			}
 
-			NetProtocols get_net_proto() const
+			NetProtocol get_net_proto() const
 			{
 				return data_.get_net_proto();
 			}
@@ -741,10 +741,10 @@ namespace QVPN
 
 				auto settings = json::parse(f);
 
-				auto addr_type = static_cast<QVPN::Core::NetProtocols>(settings["addr_type"].get<UInt>());
+				auto addr_type = static_cast<QVPN::Core::NetProtocol>(settings["addr_type"].get<UInt>());
 				auto addr = settings["addr"].get<std::string>();
 				auto port = static_cast<UShort>(settings["port"].get<UShort>());
-				auto proto = static_cast<TransportProtocols>(settings["proto"].get<UByte>());
+				auto proto = static_cast<TransportProtocol>(settings["proto"].get<UByte>());
 
 				set_ip_address(addr);
 				set_port(port);
@@ -1028,9 +1028,9 @@ namespace QVPN
 
 		public:
 
-			void add_addr(const Ipv4AddressType& addr, UShort port, TransportProtocols t_proto);
-			void add_addr(const Ipv6AddressType& addr, UShort port, TransportProtocols t_proto);
-			void add_addr(const NetAddr& addr, UShort port, TransportProtocols t_proto);
+			void add_addr(const Ipv4AddressType& addr, UShort port, TransportProtocol t_proto);
+			void add_addr(const Ipv6AddressType& addr, UShort port, TransportProtocol t_proto);
+			void add_addr(const NetAddr& addr, UShort port, TransportProtocol t_proto);
 
 			std::pair<DataIterator_t, DataIterator_t> get_addrs() const;
 		};
@@ -1059,7 +1059,7 @@ namespace QVPN
 
 			void parse_settings(std::string_view path)
 			{
-				using NetProtocols = QVPN::Core::NetProtocols;
+				using NetProtocol = QVPN::Core::NetProtocol;
 				std::ifstream f{};
 				f.open(path);
 				auto settings = json::parse(f);
@@ -1068,11 +1068,11 @@ namespace QVPN
 
 				for (auto& addr_obj : addrs)
 				{
-					auto addr_type = static_cast<NetProtocols>(addr_obj["addr_type"].get<UInt>());
+					auto addr_type = static_cast<NetProtocol>(addr_obj["addr_type"].get<UInt>());
 
 					auto addr = addr_obj["addr"].get<std::string>();
 					auto port = addr_obj["port"].get<UShort>();
-					auto proto = static_cast<TransportProtocols>(addr_obj["proto"].get<UByte>());
+					auto proto = static_cast<TransportProtocol>(addr_obj["proto"].get<UByte>());
 
 					NetAddr net_addr(addr);
 					add_addr(net_addr, port, proto);
@@ -1136,25 +1136,25 @@ namespace QVPN
 			QVPNConnectionElement user_conn_;
 			QVPNConnectionElement dest_conn_;
 
-			NetProtocols net_proto_;
-			TransportProtocols transport_proto_;
+			NetProtocol net_proto_;
+			TransportProtocol transport_proto_;
 
 			size_t traffic_size_;
 
 		public:
 
 			UserStatisticData();
-			UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size);
+			UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size);
 
-			void set_data(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocols t_proto, size_t traffic_size);
+			void set_data(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size);
 
 			std::string_view get_user() const;
 
 			const QVPNConnectionElement& get_user_con() const;
 			const QVPNConnectionElement& get_dest_con() const;
 
-			NetProtocols get_net_proto() const;
-			TransportProtocols get_transport_proto() const;
+			NetProtocol get_net_proto() const;
+			TransportProtocol get_transport_proto() const;
 
 			size_t get_traffic_size() const;
 
@@ -1294,6 +1294,7 @@ namespace QVPN
 
 			bool vpn_loop_iteration(Socket& client_socket, std::unordered_map<QVPNSocketData, Socket>& sock_map, Stats& stats, std::string_view user)
 			{
+				// TODO: Срезать TCP пакет
 				auto [status, data] = client_socket.receive();
 				if (!status.success)
 					return false;
@@ -1321,8 +1322,8 @@ namespace QVPN
 
 				QVPNConnectionElement user_conn(proxy_data.get_src_addr(), proxy_data.get_src_port(), proxy_data.get_transport_proto());
 				QVPNConnectionElement dest_conn(proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_transport_proto());
-				NetProtocols net_proto = proxy_data.get_net_proto();
-				TransportProtocols transport_proto = proxy_data.get_transport_proto();
+				NetProtocol net_proto = proxy_data.get_net_proto();
+				TransportProtocol transport_proto = proxy_data.get_transport_proto();
 				size_t data_size = std::distance(b, e);
 
 				UserStatisticData stats_data(user, user_conn, dest_conn, transport_proto, data_size);
@@ -1342,6 +1343,8 @@ namespace QVPN
 
 			void listen_and_connect_socket_(Socket& socket, Database& database, Stats& stats)
 			{
+				using NoNetTcpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::TcpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
+				using NoNetUdpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::UdpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
 				while (true)
 				{
 					auto res = socket.listen();
@@ -1351,7 +1354,10 @@ namespace QVPN
 						TLS13_DefaultServerHelloGenStrategy strategy{};
 
 						auto client_socket = socket.accept<Addr>();
+						//TODO: Срезать TCP пакет и установить параметры tcp пакета
 						auto [status, data] = socket.receive();
+
+						
 
 						auto rec = TLS13_RecordView(data.data(), data.data() + data.size());
 

@@ -22,7 +22,7 @@ namespace QVPN
 
 
 		// only ip4 and ip6
-		enum NetProtocols : BaseTypes::UByte
+		enum NetProtocol : BaseTypes::UByte
 		{
 			IPv4 = 4,
 			IPv6 = 6,
@@ -30,7 +30,7 @@ namespace QVPN
 		};
 
 		// only tcp and udp
-		enum TransportProtocols : BaseTypes::UByte
+		enum TransportProtocol : BaseTypes::UByte
 		{
 			TCP = 6,
 			UDP = 17,
@@ -45,7 +45,7 @@ namespace QVPN
 			typename AddrType::AddrInt_t;
 
 			//{ AddrType::get_addr_family() } -> std::same_as<int>;
-			{ addr.get_addr_family() } -> std::same_as<NetProtocols>;
+			{ addr.get_addr_family() } -> std::same_as<NetProtocol>;
 			{ addr.to_bytes() } -> std::same_as<typename AddrType::AddrBytes_t>;
 			{ addr.to_string() } -> std::same_as<std::string>;
 			{ addr.to_uint() } -> std::same_as<typename AddrType::AddrInt_t>;
@@ -98,7 +98,7 @@ namespace QVPN
 			bool operator==(const IPv4Address& other) const;
 
 			//static consteval int get_addr_family();
-			consteval NetProtocols get_addr_family();
+			consteval NetProtocol get_addr_family();
 			consteval size_t get_addr_size();
 
 			AddrBytes_t to_bytes() const;
@@ -139,7 +139,7 @@ namespace QVPN
 			IPv6Address(std::string_view data);
 
 			//static consteval int get_addr_family();
-			consteval NetProtocols get_addr_family();
+			consteval NetProtocol get_addr_family();
 			consteval size_t get_addr_size();
 
 			AddrBytes_t to_bytes() const;
@@ -182,7 +182,7 @@ namespace QVPN
 			NetAddr(std::string_view data);
 
 			size_t get_addr_size();
-			NetProtocols get_addr_family() const;
+			NetProtocol get_addr_family() const;
 
 			IPv4Address to_ipv4() const;
 			IPv6Address to_ipv6() const;
@@ -316,7 +316,7 @@ namespace QVPN {
 
 		struct QVPNSocketData
 		{
-			TransportProtocols transport_proto;
+			TransportProtocol transport_proto;
 
 			QVPN::Core::NetAddr local_addr;
 			BaseTypes::UShort local_port;
@@ -364,7 +364,7 @@ namespace QVPN {
 
 		template <class NetToolsImpl, class Socket>
 		concept is_net_tools =
-			requires (NetToolsImpl t, NetProtocols net_proto, TransportProtocols t_proto) {
+			requires (NetToolsImpl t, NetProtocol net_proto, TransportProtocol t_proto) {
 
 				{ NetToolsImpl::create_socket(net_proto, t_proto) } -> std::same_as<Socket>;
 

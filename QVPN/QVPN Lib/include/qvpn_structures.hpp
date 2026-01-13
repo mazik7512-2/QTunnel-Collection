@@ -247,8 +247,8 @@ namespace QVPN {
 			concept ProxyDataLike =
 				requires (ProxyDataImpl t, const ProxyDataImpl& cr_proxy_data) {
 
-					{ t.get_net_proto() } -> std::same_as<NetProtocols>;
-					{ t.get_transport_proto() } -> std::same_as<TransportProtocols>;
+					{ t.get_net_proto() } -> std::same_as<NetProtocol>;
+					{ t.get_transport_proto() } -> std::same_as<TransportProtocol>;
 					{ t.get_src_addr() } -> QVPN::Core::is_addr;
 					{ t.get_src_port() } -> std::same_as<UShort>;
 					{ t.get_dst_addr() } -> QVPN::Core::is_addr;
@@ -261,8 +261,8 @@ namespace QVPN {
 			struct QTunnelProxy
 			{
 			public:
-				NetProtocols net_protocol{};
-				TransportProtocols transport_protocol{};
+				NetProtocol net_protocol{};
+				TransportProtocol transport_protocol{};
 				Addr source_addr{};
 				UShort source_port{};
 
@@ -271,12 +271,12 @@ namespace QVPN {
 
 			public:
 
-				NetProtocols get_net_proto() const
+				NetProtocol get_net_proto() const
 				{
 					return net_protocol;
 				}
 
-				TransportProtocols get_transport_proto() const
+				TransportProtocol get_transport_proto() const
 				{
 					return transport_protocol;
 				}
@@ -321,13 +321,13 @@ namespace QVPN {
 					: QTunnelProxy<Addr>()
 				{
 					data_ = std::move(data);
-					ProxyData::net_protocol = static_cast<NetProtocols>(data_[0]);
-					ProxyData::transport_protocol = static_cast<TransportProtocols>(data_[1]);
+					ProxyData::net_protocol = static_cast<NetProtocol>(data_[0]);
+					ProxyData::transport_protocol = static_cast<TransportProtocol>(data_[1]);
 					data_.erase(data_.begin(), data_.begin() + 2);
 					switch (ProxyData::net_protocol)
 					{
 
-					case NetProtocols::IPv4:
+					case NetProtocol::IPv4:
 					{
 						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 4);
 						ProxyData::source_port = data_[4] << 8 | data_[5];
@@ -336,7 +336,7 @@ namespace QVPN {
 						break;
 					}
 
-					case NetProtocols::IPv6:
+					case NetProtocol::IPv6:
 					{
 						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 16);
 						ProxyData::source_port = data_[16] << 8 | data_[17];
@@ -351,7 +351,7 @@ namespace QVPN {
 					
 				}
 
-				QTunnelData(NetProtocols net, TransportProtocols transport, Addr src_addr, UShort src_port, Addr dst_addr, UShort dst_port, std::vector<UByte>&& data)
+				QTunnelData(NetProtocol net, TransportProtocol transport, Addr src_addr, UShort src_port, Addr dst_addr, UShort dst_port, std::vector<UByte>&& data)
 					: QTunnelProxy<Addr>()
 				{
 					data_ = std::move(data);
@@ -556,8 +556,8 @@ namespace QVPN {
 					{ t.set_src_addr(net_addr) } -> std::same_as<void>;
 					{ t.set_dst_addr(net_addr) } -> std::same_as<void>;
 
-					{ t.get_protocol_version() } -> std::same_as<NetProtocols>;
-					{ t.get_transport_protocol() } -> std::same_as<TransportProtocols>;
+					{ t.get_protocol_version() } -> std::same_as<NetProtocol>;
+					{ t.get_transport_protocol() } -> std::same_as<TransportProtocol>;
 
 					{ t.recalculate_ip_checksum() } -> std::same_as<void>;
 
@@ -573,7 +573,7 @@ namespace QVPN {
 				{ Ip4PacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 				{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 				{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
-				{ t.get_ip_version() } -> std::same_as<NetProtocols>;
+				{ t.get_ip_version() } -> std::same_as<NetProtocol>;
 				{ t.get_ip_header_length() } -> std::same_as<UByte>;
 				{ t.get_ip_dscp() } -> std::same_as<UByte>;
 				{ t.get_ip_ecn() } -> std::same_as<UByte>;
@@ -582,7 +582,7 @@ namespace QVPN {
 				{ t.get_ip_flags() } -> std::same_as<UByte>;
 				{ t.get_ip_offset() } -> std::same_as<UShort>;
 				{ t.get_ip_ttl() } -> std::same_as<UByte>;
-				{ t.get_ip_protocol() } -> std::same_as<TransportProtocols>;
+				{ t.get_ip_protocol() } -> std::same_as<TransportProtocol>;
 				{ t.get_ip_checksum() } -> std::same_as<UShort>;
 				{ t.get_ip_source() } -> std::same_as<IPv4Address>;
 				{ t.get_ip_dest() } -> std::same_as<IPv4Address>;
@@ -616,7 +616,7 @@ namespace QVPN {
 
 				UByte* get_next_protocol_byte();
 
-				NetProtocols get_ip_version() const;
+				NetProtocol get_ip_version() const;
 				UByte get_ip_header_length() const;
 
 				UByte get_ip_dscp() const;
@@ -630,7 +630,7 @@ namespace QVPN {
 				UShort get_ip_offset() const;
 
 				UByte get_ip_ttl() const;
-				TransportProtocols get_ip_protocol() const;
+				TransportProtocol get_ip_protocol() const;
 
 				UShort get_ip_checksum() const;
 
@@ -650,8 +650,8 @@ namespace QVPN {
 				NetAddr get_src_addr() const;
 				NetAddr get_dst_addr() const;
 
-				NetProtocols get_protocol_version() const;
-				TransportProtocols get_transport_protocol() const;
+				NetProtocol get_protocol_version() const;
+				TransportProtocol get_transport_protocol() const;
 
 				void recalculate_ip_checksum();
 
@@ -689,7 +689,7 @@ namespace QVPN {
 
 				UByte* get_next_protocol_byte();
 
-				NetProtocols get_ip_version() const;
+				NetProtocol get_ip_version() const;
 				UByte get_ip_header_length() const;
 
 				UByte get_ip_dscp() const;
@@ -703,7 +703,7 @@ namespace QVPN {
 				UShort get_ip_offset() const;
 
 				UByte get_ip_ttl() const;
-				TransportProtocols get_ip_protocol() const;
+				TransportProtocol get_ip_protocol() const;
 
 				UShort get_ip_checksum() const;
 
@@ -723,8 +723,8 @@ namespace QVPN {
 				NetAddr get_src_addr() const;
 				NetAddr get_dst_addr() const;
 
-				NetProtocols get_protocol_version() const;
-				TransportProtocols get_transport_protocol() const;
+				NetProtocol get_protocol_version() const;
+				TransportProtocol get_transport_protocol() const;
 
 				void recalculate_ip_checksum();
 
@@ -807,14 +807,15 @@ namespace QVPN {
 				{ t.set_transport_length(length) } -> std::same_as<void>;
 
 				{ t.recalculate_transport_checksum(std::declval<const TransportIpv4PseudoHeader&>(), std::declval<typename TransportImpl::ConstDataIterator_t>(), std::declval<typename TransportImpl::ConstDataIterator_t>()) } -> std::same_as<void>;
+
+				{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 			};
 
 			template <class TcpImpl>
 			concept TcpPacketLike =
-				requires (TcpImpl t) {
+				requires (TcpImpl t, UInt number, UByte flags) {
 
 					{ TcpImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
-					{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_tcp_src_port() } -> std::same_as<UShort>;
 					{ t.get_tcp_dst_port() } -> std::same_as<UShort>;
@@ -832,6 +833,9 @@ namespace QVPN {
 
 					{ t.set_tcp_checksum(std::declval<UShort>()) } -> std::same_as<void>;
 
+					{ t.set_tcp_seq_number(number) } -> std::same_as<void>;
+					{ t.set_tcp_ack_number(number) } -> std::same_as<void>;
+					{ t.set_tcp_flags(flags) } -> std::same_as<void>;
 
 			}&& UnifiedTransportLike<TcpImpl>&& UnifiedPacketLike<TcpImpl>;
 
@@ -878,6 +882,9 @@ namespace QVPN {
 				void set_dst_port(UShort port);
 
 				void set_transport_length(UShort length);
+				void set_tcp_seq_number(UInt number);
+				void set_tcp_ack_number(UInt number);
+				void set_tcp_flags(UByte flags);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -933,6 +940,9 @@ namespace QVPN {
 				void set_dst_port(UShort port);
 
 				void set_transport_length(UShort length);
+				void set_tcp_seq_number(UInt number);
+				void set_tcp_ack_number(UInt number);
+				void set_tcp_flags(UByte flags);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -958,7 +968,6 @@ namespace QVPN {
 				requires (UdpImpl t) {
 
 					{ UdpImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
-					{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 					{ t.get_udp_src_port() } -> std::same_as<UShort>;
 					{ t.get_udp_dst_port() } -> std::same_as<UShort>;
@@ -3334,6 +3343,7 @@ namespace QVPN {
 
 				}
 
+				/*
 				void recalculate_checksums()
 				{
 					NetLayer::recalculate_ip_checksum();
@@ -3345,7 +3355,7 @@ namespace QVPN {
 					auto pseudo = TransportIpv4PseudoHeader(src, dst, NetLayer::get_ip_protocol(), length);
 					TransportLayer::recalculate_transport_checksum(pseudo, b, e);
 				}
-
+				
 				template <std::random_access_iterator Iter>
 				FullPacket set_data(Iter begin, Iter end) const
 				{
@@ -3357,7 +3367,7 @@ namespace QVPN {
 					fp.recalculate_checksums();
 					return fp;
 				}
-
+				*/
 			};
 
 
@@ -3630,6 +3640,324 @@ namespace QVPN {
 			// View instances
 			template class FullPacket<Ipv4Packet_View, TcpPacket_View, DataPacket_View>;
 			template class FullPacket<Ipv4Packet_View, UdpPacket_View, DataPacket_View>;
+
+
+
+			template <class TransportDataPacketImpl>
+			concept NoNetPacketLike = is_transport_layer<TransportDataPacketImpl> && is_data_layer<TransportDataPacketImpl>;
+
+			template <is_transport_layer TransportPacket, is_data_layer DataPacket>
+			class NoNetPacket : public TransportPacket, public DataPacket
+			{
+			public:
+
+				using DataIterator_t = TransportPacket::DataIterator_t;
+				using ConstDataIterator_t = TransportPacket::ConstDataIterator_t;
+
+			public:
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter begin, Iter end)
+					: TransportPacket(begin, end), DataPacket(TransportPacket::get_next_protocol_byte(), end)
+				{
+
+				}
+
+			};
+
+
+			// Default specs for NoNetPacket
+			template <>
+			class NoNetPacket<TcpPacket, DataPacket> : public TcpPacket, public DataPacket
+			{
+
+			private:
+
+				std::vector<UByte> data_{};
+
+			public:
+
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+			public:
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter begin, Iter end)
+					: TcpPacket(begin, end), DataPacket(TcpPacket::get_next_protocol_byte(), end)
+				{
+
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter transport_begin, Iter transport_end, Iter begin, Iter end)
+					: TcpPacket(transport_begin, transport_end), DataPacket(begin, end)
+				{
+
+				}
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				{
+					auto [t_b, t_e] = TcpPacket::to_bytes();
+					auto [d_b, d_e] = TcpPacket::to_bytes();
+					std::copy(t_b, t_e, std::back_inserter(data_));
+					std::copy(d_b, d_e, std::back_inserter(data_));
+					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
+				}
+
+				void recalculate_checksums(NetAddr src, NetAddr dst, UShort length)
+				{
+					NetProtocol net_proto = src.get_addr_family();
+					auto [b, e] = DataPacket::get_data();
+					switch (net_proto)
+					{
+					case IPv4:
+					{
+						auto src4 = src.to_ipv4();
+						auto dst4 = dst.to_ipv4();
+						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(net_proto), length);
+						TcpPacket::recalculate_transport_checksum(pseudo, b, e);
+						break;
+					}
+					default:
+						break;
+					}
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket set_data(Iter begin, Iter end) const
+				{
+					auto [t_b, t_e] = TcpPacket::to_bytes();
+					NoNetPacket np(t_b, t_e, begin, end);
+					auto size = static_cast<UShort>(std::distance(begin, end));
+					np.set_transport_length(size);
+					np.recalculate_checksums();
+					return np;
+				}
+
+				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
+				{
+					TcpPacket::set_tcp_seq_number(seq);
+					TcpPacket::set_tcp_ack_number(ack);
+					TcpPacket::set_tcp_flags(flags);
+				}
+
+			};
+
+			template <>
+			class NoNetPacket<UdpPacket, DataPacket> : public UdpPacket, public DataPacket
+			{
+			private:
+
+				std::vector<UByte> data_{};
+
+			public:
+
+				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+			public:
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter begin, Iter end)
+					: UdpPacket(begin, end), DataPacket(UdpPacket::get_next_protocol_byte(), end)
+				{
+
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter transport_begin, Iter transport_end, Iter begin, Iter end)
+					: UdpPacket(transport_begin, transport_end), DataPacket(begin, end)
+				{
+
+				}
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				{
+					auto [t_b, t_e] = UdpPacket::to_bytes();
+					auto [d_b, d_e] = UdpPacket::to_bytes();
+					std::copy(t_b, t_e, std::back_inserter(data_));
+					std::copy(d_b, d_e, std::back_inserter(data_));
+					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
+				}
+
+				void recalculate_checksums(NetAddr src, NetAddr dst, UShort length)
+				{
+					NetProtocol net_proto = src.get_addr_family();
+					auto [b, e] = DataPacket::get_data();
+					switch (net_proto)
+					{
+					case IPv4:
+					{
+						auto src4 = src.to_ipv4();
+						auto dst4 = dst.to_ipv4();
+						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(net_proto), length);
+						UdpPacket::recalculate_transport_checksum(pseudo, b, e);
+						break;
+					}
+					default:
+						break;
+					}
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket set_data(Iter begin, Iter end) const
+				{
+					auto [t_b, t_e] = TcpPacket::to_bytes();
+					NoNetPacket np(t_b, t_e, begin, end);
+					auto size = static_cast<UShort>(std::distance(begin, end));
+					np.set_transport_length(size);
+					np.recalculate_checksums();
+					return np;
+				}
+
+				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
+				{
+
+				}
+			};
+
+			// Views specs for no net packet
+
+			template <>
+			class NoNetPacket<TcpPacket_View, DataPacket_View> : public TcpPacket_View, public DataPacket_View
+			{
+
+			public:
+
+				using ConstDataIterator_t = TcpPacket_View::ConstDataIterator_t;
+
+			public:
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter begin, Iter end)
+					: TcpPacket_View(begin, end), DataPacket_View(TcpPacket::get_next_protocol_byte(), end)
+				{
+
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter transport_begin, Iter transport_end, Iter begin, Iter end)
+					: TcpPacket_View(transport_begin, transport_end), DataPacket_View(begin, end)
+				{
+
+				}
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				{
+					auto [t_b, t_e] = TcpPacket_View::to_bytes();
+					auto [d_b, d_e] = TcpPacket_View::to_bytes();
+					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(t_b, d_e);
+				}
+
+				void recalculate_checksums(NetAddr src, NetAddr dst, UShort length)
+				{
+					NetProtocol net_proto = src.get_addr_family();
+					auto [b, e] = DataPacket_View::get_data();
+					switch (net_proto)
+					{
+					case IPv4:
+					{
+						auto src4 = src.to_ipv4();
+						auto dst4 = dst.to_ipv4();
+						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(net_proto), length);
+						TcpPacket_View::recalculate_transport_checksum(pseudo, b, e);
+						break;
+					}
+					default:
+						break;
+					}
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket set_data(Iter begin, Iter end) const
+				{
+					auto [t_b, t_e] = TcpPacket::to_bytes();
+					NoNetPacket np(t_b, t_e, begin, end);
+					auto size = static_cast<UShort>(std::distance(begin, end));
+					np.set_transport_length(size);
+					np.recalculate_checksums();
+					return np;
+				}
+
+				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
+				{
+					TcpPacket_View::set_tcp_seq_number(seq);
+					TcpPacket_View::set_tcp_ack_number(ack);
+					TcpPacket_View::set_tcp_flags(flags);
+				}
+
+			};
+
+
+			template <>
+			class NoNetPacket<UdpPacket_View, DataPacket_View> : public UdpPacket_View, public DataPacket_View
+			{
+			public:
+
+				using ConstDataIterator_t = UdpPacket_View::ConstDataIterator_t;
+
+			public:
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter begin, Iter end)
+					: UdpPacket_View(begin, end), DataPacket_View(UdpPacket::get_next_protocol_byte(), end)
+				{
+
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter transport_begin, Iter transport_end, Iter begin, Iter end)
+					: UdpPacket_View(transport_begin, transport_end), DataPacket_View(begin, end)
+				{
+
+				}
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				{
+					auto [t_b, t_e] = UdpPacket_View::to_bytes();
+					auto [d_b, d_e] = UdpPacket_View::to_bytes();
+					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(t_b, d_e);
+				}
+
+				void recalculate_checksums(NetAddr src, NetAddr dst, UShort length)
+				{
+					NetProtocol net_proto = src.get_addr_family();
+					auto [b, e] = DataPacket_View::get_data();
+					switch (net_proto)
+					{
+					case IPv4:
+					{
+						auto src4 = src.to_ipv4();
+						auto dst4 = dst.to_ipv4();
+						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(net_proto), length);
+						UdpPacket_View::recalculate_transport_checksum(pseudo, b, e);
+						break;
+					}
+					default:
+						break;
+					}
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket set_data(Iter begin, Iter end) const
+				{
+					auto [t_b, t_e] = TcpPacket::to_bytes();
+					NoNetPacket np(t_b, t_e, begin, end);
+					auto size = static_cast<UShort>(std::distance(begin, end));
+					np.set_transport_length(size);
+					np.recalculate_checksums();
+					return np;
+				}
+
+				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
+				{
+
+				}
+			};
+
+
+			// Default instances for no net packet
+			template class NoNetPacket<TcpPacket, DataPacket>;
+			template class NoNetPacket<UdpPacket, DataPacket>;
+
+			// View instances for no net packet
+			template class NoNetPacket<TcpPacket_View, DataPacket_View>;
+			template class NoNetPacket<UdpPacket_View, DataPacket_View>;
 		}
 	}
 }

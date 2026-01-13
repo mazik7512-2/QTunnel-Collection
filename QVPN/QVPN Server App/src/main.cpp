@@ -8,7 +8,9 @@ using QVPNLayers = QVPN::QVPNLayersStrategy;
 
 int main(int argc, const char* argv[])
 {
-    // TODO: ƒоделать whitelist в генераторах
+
+    // TODO: доделать перехват seq, ack через WinSock
+
     argparse::ArgumentParser program("QVPN Server App", "0.5");
 
     program.add_argument("-s", "--settings", "-c", "--config")

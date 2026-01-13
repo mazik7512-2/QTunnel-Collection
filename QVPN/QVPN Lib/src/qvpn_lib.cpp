@@ -91,9 +91,9 @@ bool QVPN::Core::IPv4Address::operator==(const IPv4Address& other) const
     return to_uint() == other.to_uint();
 }
 
-consteval QVPN::Core::NetProtocols QVPN::Core::IPv4Address::get_addr_family()
+consteval QVPN::Core::NetProtocol QVPN::Core::IPv4Address::get_addr_family()
 {
-    return NetProtocols::IPv4;
+    return NetProtocol::IPv4;
 }
 
 consteval size_t QVPN::Core::IPv4Address::get_addr_size()
@@ -151,9 +151,9 @@ QVPN::Core::IPv6Address::IPv6Address(std::string_view data)
     std::copy(vec.begin(), vec.end(), ip_.begin());
 }
 
-consteval QVPN::Core::NetProtocols QVPN::Core::IPv6Address::get_addr_family()
+consteval QVPN::Core::NetProtocol QVPN::Core::IPv6Address::get_addr_family()
 {
-    return NetProtocols::IPv6;
+    return NetProtocol::IPv6;
 }
 
 consteval size_t QVPN::Core::IPv6Address::get_addr_size()
@@ -323,13 +323,13 @@ size_t QVPN::Core::NetAddr::get_addr_size()
     return ip_.size();
 }
 
-QVPN::Core::NetProtocols QVPN::Core::NetAddr::get_addr_family() const
+QVPN::Core::NetProtocol QVPN::Core::NetAddr::get_addr_family() const
 {
     if (ip_.size() == 4)
-        return NetProtocols::IPv4;
+        return NetProtocol::IPv4;
     else if (ip_.size() == 16)
-        return NetProtocols::IPv6;
-    return NetProtocols::NET_UNDEFINED;
+        return NetProtocol::IPv6;
+    return NetProtocol::NET_UNDEFINED;
 }
 
 QVPN::Core::IPv4Address QVPN::Core::NetAddr::to_ipv4() const

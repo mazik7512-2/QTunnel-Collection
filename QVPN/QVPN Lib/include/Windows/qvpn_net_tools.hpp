@@ -14,8 +14,8 @@ namespace std
 {
 	// for socket family class
 	template<>
-	struct hash<QVPN::Core::NetProtocols> {
-		size_t operator()(const QVPN::Core::NetProtocols& data) const {
+	struct hash<QVPN::Core::NetProtocol> {
+		size_t operator()(const QVPN::Core::NetProtocol& data) const {
 			return hash<int>()(data);
 		}
 
@@ -86,9 +86,9 @@ namespace QVPN {
 				auto addr_family = addr.get_addr_family();
 				switch (addr_family)
 				{
-				case QVPN::Core::NetProtocols::IPv4:
+				case QVPN::Core::NetProtocol::IPv4:
 					return qvpn_connect_(socket, addr.to_ipv4(), port);
-				case QVPN::Core::NetProtocols::IPv6:
+				case QVPN::Core::NetProtocol::IPv6:
 					return qvpn_connect_(socket, addr.to_ipv6(), port);
 				default:
 					return QVPN::Core::NetData{ false, 0 };
@@ -141,9 +141,9 @@ namespace QVPN {
 				auto addr_family = addr.get_addr_family();
 				switch (addr_family)
 				{
-				case QVPN::Core::NetProtocols::IPv4:
+				case QVPN::Core::NetProtocol::IPv4:
 					return qvpn_bind_(socket, addr.to_ipv4(), port);
-				case QVPN::Core::NetProtocols::IPv6:
+				case QVPN::Core::NetProtocol::IPv6:
 					return qvpn_bind_(socket, addr.to_ipv6(), port);
 				default:
 					return QVPN::Core::NetData{ false, 0 };
@@ -155,12 +155,14 @@ namespace QVPN {
 
 		namespace details
 		{
+			
+			using TransportProtocol = QVPN::Core::TransportProtocol;
 
 			template <QVPN::Core::is_addr Addr, class Socket>
 				requires QVPN::Core::is_socket<Socket, Addr>
 			struct SocketAccept
 			{
-				Socket operator()(SOCKET& socket)
+				Socket operator()(SOCKET& socket, TransportProtocol t_proto)
 				{
 					return Socket{};
 				}
@@ -171,7 +173,7 @@ namespace QVPN {
 			requires QVPN::Core::is_socket<Socket, QVPN::Core::IPv4Address>
 			struct SocketAccept<QVPN::Core::IPv4Address, Socket>
 			{
-				Socket operator()(SOCKET& socket)
+				Socket operator()(SOCKET& socket, TransportProtocol t_proto)
 				{
 					sockaddr_in sock_addr{};
 					int addr_len = sizeof(sock_addr);;
@@ -185,7 +187,7 @@ namespace QVPN {
 
 					QVPN::Core::NetAddr addr((UByte*)&clientAddr.sin_addr.S_un.S_un_b, (UByte*)&clientAddr.sin_addr.S_un.S_un_b + addr_len);
 					UShort port = clientAddr.sin_port;
-					return Socket(sock, addr, port, net_addr, sock_addr.sin_port, SERVER_MOD);
+					return Socket(sock, addr, port, net_addr, sock_addr.sin_port, SERVER_MOD, t_proto);
 				}
 			};
 
@@ -194,7 +196,7 @@ namespace QVPN {
 			requires QVPN::Core::is_socket<Socket, QVPN::Core::IPv6Address>
 			struct SocketAccept<QVPN::Core::IPv6Address, Socket>
 			{
-				Socket operator()(SOCKET& socket)
+				Socket operator()(SOCKET& socket, TransportProtocol t_proto)
 				{
 					sockaddr_in6 sock_addr{};
 					int addr_len = sizeof(sock_addr);;
@@ -208,7 +210,7 @@ namespace QVPN {
 
 					QVPN::Core::NetAddr addr((UByte*)&clientAddr.sin6_addr.u.Byte, (UByte*)&clientAddr.sin6_addr.u.Byte + addr_len);
 					UShort port = clientAddr.sin6_port;
-					return Socket(sock, addr, port, net_addr, sock_addr.sin6_port, SERVER_MOD);
+					return Socket(sock, addr, port, net_addr, sock_addr.sin6_port, SERVER_MOD, t_proto);
 				}
 			};
 
@@ -217,7 +219,7 @@ namespace QVPN {
 			requires QVPN::Core::is_socket<Socket, QVPN::Core::NetAddr>
 			struct SocketAccept<QVPN::Core::NetAddr, Socket>
 			{
-				Socket operator()(SOCKET& socket)
+				Socket operator()(SOCKET& socket, TransportProtocol t_proto)
 				{
 					sockaddr_in6 sock_addr{};
 					int addr_len = sizeof(sock_addr);;
@@ -231,7 +233,7 @@ namespace QVPN {
 
 					QVPN::Core::NetAddr addr((UByte*)&clientAddr.sin6_addr.u.Byte, (UByte*)&clientAddr.sin6_addr.u.Byte + addr_len);
 					UShort port = clientAddr.sin6_port;
-					return Socket(sock, addr, port, net_addr, sock_addr.sin6_port, SERVER_MOD);
+					return Socket(sock, addr, port, net_addr, sock_addr.sin6_port, SERVER_MOD, t_proto);
 				}
 			};
 
@@ -251,9 +253,12 @@ namespace QVPN {
 
 			SocketMod s_mod_ = UNDEFINED;
 
+			using TransportProtocol = QVPN::Core::TransportProtocol;
 		public:
 
 			QVPN_Socket();
+
+			QVPN_Socket(int sock_family, int sock_type, int sock_proto);
 
 			template <class ... Args>
 			QVPN_Socket(Args&& ... args)
@@ -269,9 +274,9 @@ namespace QVPN {
 			QVPN_Socket(QVPN_Socket&& other) noexcept;
 			QVPN_Socket& operator=(QVPN_Socket&& other) noexcept;
 
-			QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, SocketMod s_mod);
-			QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, SocketMod s_mod);
-			QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, SocketMod s_mod);
+			QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto);
+			QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto);
+			QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto);
 
 			template<class ... Args>
 			void create_socket_by_args(Args&& ... args)
@@ -338,7 +343,7 @@ namespace QVPN {
 			template <QVPN::Core::is_addr Addr>
 			QVPN_Socket accept()
 			{
-				return QVPN::NetTools::details::SocketAccept<Addr, QVPN_Socket>{}(socket_);
+				return QVPN::NetTools::details::SocketAccept<Addr, QVPN_Socket>{}(socket_, socket_data_.transport_proto);
 			}
 
 			QVPN::Core::NetStatus listen(int con_limit = SOMAXCONN);
@@ -371,21 +376,26 @@ namespace QVPN {
 				return socket_data_.remote_port;
 			}
 
+			TransportProtocol get_transport_protocol() const
+			{
+				return socket_data_.transport_proto;
+			}
+
 		};
 
 
 		class QVPNMetaSocketData
 		{
-			std::unordered_map<QVPN::Core::NetProtocols, int> families_ = { {QVPN::Core::NetProtocols::IPv4, AF_INET}, {QVPN::Core::NetProtocols::IPv6, AF_INET6} };
-			std::unordered_map<QVPN::Core::TransportProtocols, int> types_ = { {QVPN::Core::TransportProtocols::TCP, SOCK_STREAM}, {QVPN::Core::TransportProtocols::UDP, SOCK_DGRAM} };
-			std::unordered_map<QVPN::Core::TransportProtocols, int> protos_ = { {QVPN::Core::TransportProtocols::TCP, IPPROTO_TCP}, {QVPN::Core::TransportProtocols::UDP, IPPROTO_UDP} };
+			std::unordered_map<QVPN::Core::NetProtocol, int> families_ = { {QVPN::Core::NetProtocol::IPv4, AF_INET}, {QVPN::Core::NetProtocol::IPv6, AF_INET6} };
+			std::unordered_map<QVPN::Core::TransportProtocol, int> types_ = { {QVPN::Core::TransportProtocol::TCP, SOCK_RAW}, {QVPN::Core::TransportProtocol::UDP, SOCK_RAW} };
+			std::unordered_map<QVPN::Core::TransportProtocol, int> protos_ = { {QVPN::Core::TransportProtocol::TCP, IPPROTO_TCP}, {QVPN::Core::TransportProtocol::UDP, IPPROTO_UDP} };
 		public:
 
 			using SockParam = int;
 
-			SockParam get_socket_family(QVPN::Core::NetProtocols net_proto);
-			SockParam get_socket_type(QVPN::Core::TransportProtocols t_proto);
-			SockParam get_socket_proto(QVPN::Core::TransportProtocols t_proto);
+			SockParam get_socket_family(QVPN::Core::NetProtocol net_proto);
+			SockParam get_socket_type(QVPN::Core::TransportProtocol t_proto);
+			SockParam get_socket_proto(QVPN::Core::TransportProtocol t_proto);
 
 		};
 
@@ -393,7 +403,7 @@ namespace QVPN {
 		{
 		public:
 
-			static QVPN::NetTools::QVPN_Socket create_socket(QVPN::Core::NetProtocols net_proto, QVPN::Core::TransportProtocols t_proto);
+			static QVPN::NetTools::QVPN_Socket create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
 		};
 
 	}
