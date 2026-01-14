@@ -365,8 +365,9 @@ namespace QVPN
 		{
 		public:
 			// 5 - packet builder data (package id - 1 byte, data_offset - 2 bytes, original_packet_size - 2 bytes), 5 - size of tls record, 
-			// 38 - size of qtunnel data (net proto - 1 byte, transport proto - 1 byte, src_net addr - 16 bytes (max), src_port - 2 bytes, dst_net_addr - 16 bytes (max), dst_port - 2 bytes)
-			constexpr static UShort data_meta_qvpn_size = 5 + 5 + 38;
+			// 47 - size of qtunnel data (net proto - 1 byte, transport proto - 1 byte, src_net addr - 16 bytes (max), src_port - 2 bytes, dst_net_addr - 16 bytes (max), dst_port - 2 bytes, 
+			// 4 bytes - size of seq number, 4 bytes - size of ack number, 1 byte - size of tcp flags)
+			constexpr static UShort data_meta_qvpn_size = 5 + 5 + 47;
 
 		private:
 
@@ -1250,6 +1251,8 @@ namespace QVPN
 
 			QVPNPacketManager packet_manager_;
 
+			PacketPreParser pp_{};
+
 		private:
 
 			void clean_threads_()
@@ -1265,7 +1268,7 @@ namespace QVPN
 
 			std::optional<Socket> connect_to_server_impl_(QVPNSocketData& key)
 			{
-				auto socket = NetTools::create_socket(key.remote_addr.get_addr_family(), key.transport_proto);
+				auto socket = NetTools::create_raw_socket(key.remote_addr.get_addr_family(), key.transport_proto);
 				auto res = socket.connect(key.remote_addr, key.remote_port);
 				if (res.success)
 				{
@@ -1345,6 +1348,9 @@ namespace QVPN
 			{
 				using NoNetTcpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::TcpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
 				using NoNetUdpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::UdpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
+				using TCPPacketView = QVPN::Core::DataStructures::TcpPacket_View;
+				using UDPPacketView = QVPN::Core::DataStructures::UdpPacket_View;
+
 				while (true)
 				{
 					auto res = socket.listen();
@@ -1355,9 +1361,7 @@ namespace QVPN
 
 						auto client_socket = socket.accept<Addr>();
 						//TODO: Срезать TCP пакет и установить параметры tcp пакета
-						auto [status, data] = socket.receive();
-
-						
+						auto [status, data] = socket.receive();				
 
 						auto rec = TLS13_RecordView(data.data(), data.data() + data.size());
 
@@ -1367,7 +1371,7 @@ namespace QVPN
 						auto [mb, me] = rec.get_tls_record_data();
 						auto mes = TLS13_MessageView(mb, me);
 
-						if (mes.get_tls_msg_type() != QVPN::Core::DataStructures::TLSMessageType::SERVER_HELLO)
+						if (mes.get_tls_msg_type() != QVPN::Core::DataStructures::TLSMessageType::CLIENT_HELLO)
 							continue;
 
 						auto [h_b, h_e] = mes.get_tls_msg_data();

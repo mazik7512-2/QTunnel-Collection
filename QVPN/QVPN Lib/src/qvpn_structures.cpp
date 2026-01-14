@@ -414,6 +414,36 @@ UShort QVPN::Core::DataStructures::TcpPacketLittleEndian::get_transport_length()
 	return get_tcp_header_length() * bytes_in_quartet;
 }
 
+UInt QVPN::Core::DataStructures::TcpPacketLittleEndian::get_sender_number() const
+{
+	return get_tcp_seq_number();
+}
+
+UInt QVPN::Core::DataStructures::TcpPacketLittleEndian::get_receiver_number() const
+{
+	return get_tcp_ack_number();
+}
+
+UByte QVPN::Core::DataStructures::TcpPacketLittleEndian::get_flags() const
+{
+	return get_tcp_flags();
+}
+
+void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_sender_number(UInt number)
+{
+	set_tcp_seq_number(number);
+}
+
+void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_receiver_number(UInt number)
+{
+	set_tcp_ack_number(number);
+}
+
+void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_flags(UByte flags)
+{
+	set_tcp_flags(flags);
+}
+
 void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_dst_port(UShort port)
 {
 	header_[2] = static_cast<UByte>(port >> 8 & 0xFF);
@@ -567,6 +597,33 @@ void QVPN::Core::DataStructures::UdpPacketLittleEndian::recalculate_transport_ch
 UShort QVPN::Core::DataStructures::UdpPacketLittleEndian::get_transport_length() const
 {
 	return get_udp_length() * bytes_in_quartet;
+}
+
+UInt QVPN::Core::DataStructures::UdpPacketLittleEndian::get_sender_number() const
+{
+	return 0;
+}
+
+UInt QVPN::Core::DataStructures::UdpPacketLittleEndian::get_receiver_number() const
+{
+	return 0;
+}
+
+UByte QVPN::Core::DataStructures::UdpPacketLittleEndian::get_flags() const
+{
+	return 0;
+}
+
+void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_sender_number(UInt number)
+{
+}
+
+void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_receiver_number(UInt number)
+{
+}
+
+void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_flags(UByte flags)
+{
 }
 
 void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_dst_port(UShort port)
@@ -1028,6 +1085,36 @@ UShort QVPN::Core::DataStructures::TcpPacketView::get_transport_length() const
 	return get_tcp_header_length() * bytes_in_quartet;
 }
 
+UInt QVPN::Core::DataStructures::TcpPacketView::get_sender_number() const
+{
+	return get_tcp_seq_number();
+}
+
+UInt QVPN::Core::DataStructures::TcpPacketView::get_receiver_number() const
+{
+	return get_tcp_ack_number();
+}
+
+UByte QVPN::Core::DataStructures::TcpPacketView::get_flags() const
+{
+	return get_tcp_flags();
+}
+
+void QVPN::Core::DataStructures::TcpPacketView::set_sender_number(UInt number)
+{
+	set_tcp_seq_number(number);
+}
+
+void QVPN::Core::DataStructures::TcpPacketView::set_receiver_number(UInt number)
+{
+	set_tcp_ack_number(number);
+}
+
+void QVPN::Core::DataStructures::TcpPacketView::set_flags(UByte flags)
+{
+	set_tcp_flags(flags);
+}
+
 void QVPN::Core::DataStructures::TcpPacketView::set_dst_port(UShort port)
 {
 	tcp_header_[2] = static_cast<UByte>(port >> 8 & 0xFF);
@@ -1180,6 +1267,33 @@ void QVPN::Core::DataStructures::UdpPacketView::recalculate_transport_checksum(c
 UShort QVPN::Core::DataStructures::UdpPacketView::get_transport_length() const
 {
 	return get_udp_length() * bytes_in_quartet;
+}
+
+UInt QVPN::Core::DataStructures::UdpPacketView::get_sender_number() const
+{
+	return 0;
+}
+
+UInt QVPN::Core::DataStructures::UdpPacketView::get_receiver_number() const
+{
+	return 0;
+}
+
+UByte QVPN::Core::DataStructures::UdpPacketView::get_flags() const
+{
+	return 0;
+}
+
+void QVPN::Core::DataStructures::UdpPacketView::set_sender_number(UInt number)
+{
+}
+
+void QVPN::Core::DataStructures::UdpPacketView::set_receiver_number(UInt number)
+{
+}
+
+void QVPN::Core::DataStructures::UdpPacketView::set_flags(UByte flags)
+{
 }
 
 void QVPN::Core::DataStructures::UdpPacketView::set_dst_port(UShort port)

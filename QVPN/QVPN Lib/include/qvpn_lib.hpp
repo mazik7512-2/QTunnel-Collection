@@ -338,9 +338,19 @@ namespace QVPN {
 		};
 
 
+		class QVPNSocketSettings
+		{
+			bool ip_header_ = false;
+
+		public:
+			QVPNSocketSettings(bool ip_data = false);
+			bool ip_header() const;
+		};
+
+
 		template <class SocketImpl, class Addr>
 		concept is_socket =
-			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr &addr, const BaseTypes::UShort source_port, int flags, int con_limit) {
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr &addr, const BaseTypes::UShort source_port, int flags, int con_limit, const QVPNSocketSettings& sock_settings) {
 
 			SocketImpl::buffer_size;
 
@@ -359,6 +369,10 @@ namespace QVPN {
 
 			{ t.get_remote_addr() } -> std::same_as<const Addr&>;
 			{ t.get_remote_port() } -> std::same_as<BaseTypes::UShort>;
+
+			{ t.get_transport_protocol() } -> std::same_as<TransportProtocol>;
+
+			{ t.apply_settings(sock_settings) } -> std::same_as<void>;
 		};
 
 
@@ -367,6 +381,7 @@ namespace QVPN {
 			requires (NetToolsImpl t, NetProtocol net_proto, TransportProtocol t_proto) {
 
 				{ NetToolsImpl::create_socket(net_proto, t_proto) } -> std::same_as<Socket>;
+				{ NetToolsImpl::create_raw_socket(net_proto, t_proto) } -> std::same_as<Socket>;
 
 		};
 

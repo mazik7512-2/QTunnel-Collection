@@ -254,6 +254,7 @@ namespace QVPN {
 			SocketMod s_mod_ = UNDEFINED;
 
 			using TransportProtocol = QVPN::Core::TransportProtocol;
+			using QVPNSocketSettings = QVPN::Core::QVPNSocketSettings;
 		public:
 
 			QVPN_Socket();
@@ -381,13 +382,21 @@ namespace QVPN {
 				return socket_data_.transport_proto;
 			}
 
+			void apply_settings(const QVPNSocketSettings& settings)
+			{
+				char optval = static_cast<char>(settings.ip_header());
+				int optlen = sizeof(optval);
+				setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen);
+			}
+
 		};
 
 
 		class QVPNMetaSocketData
 		{
 			std::unordered_map<QVPN::Core::NetProtocol, int> families_ = { {QVPN::Core::NetProtocol::IPv4, AF_INET}, {QVPN::Core::NetProtocol::IPv6, AF_INET6} };
-			std::unordered_map<QVPN::Core::TransportProtocol, int> types_ = { {QVPN::Core::TransportProtocol::TCP, SOCK_RAW}, {QVPN::Core::TransportProtocol::UDP, SOCK_RAW} };
+			std::unordered_map<QVPN::Core::TransportProtocol, int> raw_types_ = { {QVPN::Core::TransportProtocol::TCP, SOCK_RAW}, {QVPN::Core::TransportProtocol::UDP, SOCK_RAW} };
+			std::unordered_map<QVPN::Core::TransportProtocol, int> types_ = { {QVPN::Core::TransportProtocol::TCP, SOCK_STREAM }, {QVPN::Core::TransportProtocol::UDP, SOCK_DGRAM } };
 			std::unordered_map<QVPN::Core::TransportProtocol, int> protos_ = { {QVPN::Core::TransportProtocol::TCP, IPPROTO_TCP}, {QVPN::Core::TransportProtocol::UDP, IPPROTO_UDP} };
 		public:
 
@@ -397,6 +406,8 @@ namespace QVPN {
 			SockParam get_socket_type(QVPN::Core::TransportProtocol t_proto);
 			SockParam get_socket_proto(QVPN::Core::TransportProtocol t_proto);
 
+			SockParam get_raw_socket_type(QVPN::Core::TransportProtocol t_proto);
+
 		};
 
 		class QVPNNetTools
@@ -404,6 +415,7 @@ namespace QVPN {
 		public:
 
 			static QVPN::NetTools::QVPN_Socket create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
+			static QVPN::NetTools::QVPN_Socket create_raw_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
 		};
 
 	}

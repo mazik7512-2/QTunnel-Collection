@@ -246,8 +246,11 @@ namespace QVPN {
 					auto port_src = std::visit([](auto& p) { return p.get_src_port(); }, package);
 					auto ip_dest = std::visit([](auto& p) { return p.get_dst_addr(); }, package);
 					auto port_dst = std::visit([](auto& p) { return p.get_dst_port(); }, package);
+					auto seq = std::visit([](auto& p) { return p.get_sender_number(); }, package);
+					auto ack = std::visit([](auto& p) { return p.get_receiver_number(); }, package);
+					auto flags = std::visit([](auto& p) { return p.get_flags(); }, package);
 
-					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data{ ver, net_proto, ip_src, port_src, ip_dest, port_dst };
+					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data{ ver, net_proto, ip_src, port_src, ip_dest, port_dst, seq, ack, flags };
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
 
@@ -322,19 +325,28 @@ namespace QVPN {
 						auto dst_addr = decoded_data->get_dst_addr();
 						auto dst_port = decoded_data->get_dst_port();
 
+						auto seq = decoded_data->get_seq();
+						auto ack = decoded_data->get_ack();
+						auto flags = decoded_data->get_flags();
+
 						auto [b, e] = decoded_data->get_raw_data();
 
-						auto new_packet = pp.pre_parse(b, e);
-						std::visit([&dst_addr, &dst_port](auto& p) 
+						// TODO: Кажется придется передавать не только seq, ack, но и еще данные из tcp
+
+						std::visit([&dst_addr, &dst_port, &seq, &ack, &flags](auto& p) 
 							{ 
 								p.set_dst_port(dst_port); 
 								p.set_dst_addr(dst_addr);
+								p.set_sender_number(seq);
+								p.set_receiver_number(ack);
+								p.set_flags(flags);
+								//p.set_data(b, e);
 								p.recalculate_checksums();
 							}, 
-							new_packet);
-
+							package);
+							
 						//auto size = std::distance(b, e);
-						auto bytes_pair = std::visit([](auto& p) { return p.bytes(); }, new_packet);
+						auto bytes_pair = std::visit([](auto& p) { return p.bytes(); }, package);
 						auto size = std::distance(bytes_pair.first, bytes_pair.second);
 						if (!WinDivertSend(in_hDivert_, bytes_pair.first, size, NULL, &addr))
 						{

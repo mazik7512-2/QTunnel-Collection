@@ -4,12 +4,22 @@
 using QVPNNetTools = QVPN::NetTools::QVPNNetTools;
 using UByte = QVPN::Core::BaseTypes::UByte;
 using UShort = QVPN::Core::BaseTypes::UShort;
+using QVPNSocketSettings = QVPN::Core::QVPNSocketSettings;
 
 
 QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto)
 {
 	QVPNMetaSocketData meta{};
 	return QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_socket_type(t_proto), meta.get_socket_type(t_proto));
+}
+
+QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_raw_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto)
+{
+	QVPNMetaSocketData meta{};
+	QVPNSocketSettings sock_s(false);
+	auto sock = QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_socket_type(t_proto), meta.get_socket_type(t_proto));
+	sock.apply_settings(sock_s);
+	return sock;
 }
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket()
@@ -160,4 +170,9 @@ QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData
 QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_proto(QVPN::Core::TransportProtocol t_proto)
 {
 	return protos_[t_proto];
+}
+
+QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_raw_socket_type(QVPN::Core::TransportProtocol t_proto)
+{
+	return raw_types_[t_proto];
 }

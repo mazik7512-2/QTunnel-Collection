@@ -394,3 +394,13 @@ std::string QVPN::Core::QVPNSocketData::to_string() const
     auto str = ss.str();
     return str;
 }
+
+QVPN::Core::QVPNSocketSettings::QVPNSocketSettings(bool ip_data)
+{
+    ip_header_ = ip_data;
+}
+
+bool QVPN::Core::QVPNSocketSettings::ip_header() const
+{
+    return ip_header_;
+}
