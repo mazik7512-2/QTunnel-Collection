@@ -254,149 +254,11 @@ namespace QVPN {
 					{ t.get_dst_addr() } -> QVPN::Core::is_addr;
 					{ t.get_dst_port() } -> std::same_as<UShort>;
 
-					{ t.get_seq() } -> std::same_as<UInt>;
-					{ t.get_ack() } -> std::same_as<UInt>;
-					{ t.get_flags() } -> std::same_as<UByte>;
+					{ t.get_proto_data() } -> std::same_as<std::pair<UByte*, UByte*>>;
 
 					{ std::remove_const_t<std::remove_reference_t<ProxyDataImpl>>::create_and_inverse_addrs(cr_proxy_data) } -> std::same_as<std::remove_const_t<std::remove_reference_t<ProxyDataImpl>>>;
 			};
 
-			template <QVPN::Core::is_addr Addr>
-			struct QTunnelProxy
-			{
-			public:
-				NetProtocol net_protocol{};
-				TransportProtocol transport_protocol{};
-				Addr source_addr{};
-				UShort source_port{};
-
-				Addr dst_addr{};
-				UShort dst_port{};
-
-				UInt seq{};
-				UInt ack{};
-
-				UByte flags{};
-
-			public:
-
-				NetProtocol get_net_proto() const
-				{
-					return net_protocol;
-				}
-
-				TransportProtocol get_transport_proto() const
-				{
-					return transport_protocol;
-				}
-
-				Addr get_src_addr() const
-				{
-					return source_addr;
-				}
-
-				UShort get_src_port() const
-				{
-					return source_port;
-				}
-
-				Addr get_dst_addr() const
-				{
-					return dst_addr;
-				}
-
-				UShort get_dst_port() const
-				{
-					return dst_port;
-				}
-
-				UInt get_seq() const
-				{
-					return seq;
-				}
-
-				UInt get_ack() const
-				{
-					return ack;
-				}
-
-				UByte get_flags() const
-				{
-					return flags;
-				}
-
-				static inline QTunnelProxy create_and_inverse_addrs(const QTunnelProxy<Addr>& proxy_data)
-				{
-					return QTunnelProxy{ proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_src_addr(), 
-						proxy_data.get_src_port(), proxy_data.get_seq(), proxy_data.get_ack(), proxy_data.get_flags() };
-					//return res;
-				}
-
-			};
-
-
-			template <is_addr Addr>
-			class QTunnelData : public QTunnelProxy<Addr>
-			{
-				std::vector<UByte> data_;
-				using ProxyData = QTunnelProxy<Addr>;
-			public:
-
-				QTunnelData(std::vector<UByte>&& data) // TODO: перепроверить смещения
-					: QTunnelProxy<Addr>()
-				{
-					data_ = std::move(data);
-					ProxyData::net_protocol = static_cast<NetProtocol>(data_[0]);
-					ProxyData::transport_protocol = static_cast<TransportProtocol>(data_[1]);
-					data_.erase(data_.begin(), data_.begin() + 2);
-					switch (ProxyData::net_protocol)
-					{
-
-					case NetProtocol::IPv4:
-					{
-						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 4);
-						ProxyData::source_port = data_[4] << 8 | data_[5];
-						ProxyData::dst_addr = Addr(data_.begin() + 6, data_.begin() + 10);
-						ProxyData::dst_port = data_[10] << 8 | data_[11];
-						break;
-					}
-
-					case NetProtocol::IPv6:
-					{
-						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 16);
-						ProxyData::source_port = data_[16] << 8 | data_[17];
-						ProxyData::dst_addr = Addr(data_.begin() + 18, data_.begin() + 34);
-						ProxyData::dst_port = data_[34] << 8 | data_[35];
-						break;
-					}
-					}
-					auto meta_data_size = ProxyData::source_addr.get_addr_size() * 2 + 4; // 2 addrs (src + dst) and 2 ports (src + dst)
-					data_.erase(data_.begin(), data_.begin() + meta_data_size);
-					//ProxyData::source_port = data_[0] << 8 | data_[1];
-					
-				}
-
-				QTunnelData(NetProtocol net, TransportProtocol transport, Addr src_addr, UShort src_port, Addr dst_addr, UShort dst_port, std::vector<UByte>&& data)
-					: QTunnelProxy<Addr>()
-				{
-					data_ = std::move(data);
-					ProxyData::net_protocol = net;
-					ProxyData::transport_protocol = transport;
-					ProxyData::source_addr = src_addr;
-					ProxyData::source_port = src_port;
-					ProxyData::dst_addr = dst_addr;
-					ProxyData::dst_port = dst_port;
-				}
-
-				std::pair<UByte*, UByte*> get_raw_data()
-				{
-					auto start = data_.data();
-					auto end = data_.data() + data_.size();
-					return std::pair<UByte*, UByte*>(start, end);
-				}
-			};
-
-			using QVPNProxyData_Ipv4 = QTunnelProxy<QVPN::Core::IPv4Address>;
 
 			template <class AdapterHandle>
 			class Adapter final {
@@ -567,8 +429,14 @@ namespace QVPN {
 				typename PacketImpl::DataIterator_t;
 				typename PacketImpl::ConstDataIterator_t;
 
+				//typename PacketImpl::ObjectType;
+				//typename PacketImpl::ViewType;
+
 				{ ct.to_bytes() } -> std::same_as<std::pair<typename PacketImpl::ConstDataIterator_t, typename PacketImpl::ConstDataIterator_t>>;
 				{ t.to_bytes() } -> std::same_as<std::pair<typename PacketImpl::DataIterator_t, typename PacketImpl::DataIterator_t>>;
+
+				//{ ct.to_object() } -> std::same_as<typename PacketImpl::ObjectType>;
+				//{ ct.to_view() } -> std::same_as<typename PacketImpl::ViewType>;
 			};
 
 			template <class IpPacketImpl>
@@ -622,6 +490,7 @@ namespace QVPN {
 
 			}&& UnifiedIpPacketLike<Ip4PacketImpl>&& UnifiedPacketLike<Ip4PacketImpl>;
 
+			class Ipv4PacketView;
 
 			class Ipv4PacketLittleEndian {
 
@@ -632,8 +501,12 @@ namespace QVPN {
 
 			public:
 
+				/* Unified Packet implementaion */
 				using DataIterator_t = std::vector<UByte>::iterator;
 				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+				using ObjectType = Ipv4PacketLittleEndian;
+				using ViewType = Ipv4PacketView;
 
 				Ipv4PacketLittleEndian(UByte* begin, UByte* end);
 
@@ -687,6 +560,9 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 
+				ObjectType to_object() const;
+				ViewType to_view() const;
+
 			};
 
 
@@ -706,6 +582,9 @@ namespace QVPN {
 
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = const UByte*;
+
+				using ObjectType = Ipv4PacketLittleEndian;
+				using ViewType = Ipv4PacketView;
 
 				Ipv4PacketView(UByte* begin, UByte* end);
 
@@ -759,6 +638,8 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 
+				ObjectType to_object() const;
+				ViewType to_view() const;
 
 			};
 
@@ -845,7 +726,7 @@ namespace QVPN {
 
 			template <class TcpImpl>
 			concept TcpPacketLike =
-				requires (TcpImpl t, UInt number, UByte flags) {
+				requires (TcpImpl t, UInt number, UByte flags, UShort ushort) {
 
 					{ TcpImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
@@ -868,10 +749,14 @@ namespace QVPN {
 					{ t.set_tcp_seq_number(number) } -> std::same_as<void>;
 					{ t.set_tcp_ack_number(number) } -> std::same_as<void>;
 					{ t.set_tcp_flags(flags) } -> std::same_as<void>;
+					{ t.set_tcp_offset(flags) } -> std::same_as<void>;
+					{ t.set_tcp_window(ushort) } -> std::same_as<void>;
+					{ t.set_tcp_urgent(ushort) } -> std::same_as<void>;
 
 			}&& UnifiedTransportLike<TcpImpl>&& UnifiedPacketLike<TcpImpl>;
 
 
+			class TcpPacketView;
 
 			class TcpPacketLittleEndian
 			{
@@ -883,6 +768,9 @@ namespace QVPN {
 
 				using DataIterator_t = std::vector<UByte>::iterator;
 				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+				using ObjectType = TcpPacketLittleEndian;
+				using ViewType = TcpPacketView;
 
 				TcpPacketLittleEndian(UByte* begin, UByte* end);
 
@@ -925,10 +813,16 @@ namespace QVPN {
 				void set_tcp_seq_number(UInt number);
 				void set_tcp_ack_number(UInt number);
 				void set_tcp_flags(UByte flags);
+				void set_tcp_offset(UByte offset);
+				void set_tcp_window(UShort window);
+				void set_tcp_urgent(UShort urgent);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				ObjectType to_object() const;
+				ViewType to_view() const;
 
 			};
 
@@ -948,6 +842,9 @@ namespace QVPN {
 
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = const UByte*;
+
+				using ObjectType = TcpPacketLittleEndian;
+				using ViewType = TcpPacketView;
 
 				TcpPacketView(UByte* begin, UByte* end);
 
@@ -984,6 +881,9 @@ namespace QVPN {
 				void set_sender_number(UInt number);
 				void set_receiver_number(UInt number);
 				void set_flags(UByte flags);
+				void set_tcp_offset(UByte offset);
+				void set_tcp_window(UShort window);
+				void set_tcp_urgent(UShort urgent);
 
 				void set_dst_port(UShort port);
 
@@ -996,6 +896,9 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 
+				ObjectType to_object() const;
+				ViewType to_view() const;
+
 			};
 
 
@@ -1006,7 +909,6 @@ namespace QVPN {
 				TcpPacket_(UByte* begin, UByte* end)
 					: TcpImpl(begin, end) {
 				}
-
 
 			};
 
@@ -1026,6 +928,7 @@ namespace QVPN {
 			}&& UnifiedTransportLike<UdpImpl>&& UnifiedPacketLike<UdpImpl>;
 
 
+			class UdpPacketView;
 
 			class UdpPacketLittleEndian
 			{
@@ -1037,6 +940,9 @@ namespace QVPN {
 
 				using DataIterator_t = std::vector<UByte>::iterator;
 				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+
+				using ObjectType = UdpPacketLittleEndian;
+				using ViewType = UdpPacketView;
 
 				UdpPacketLittleEndian(UByte* begin, UByte* end);
 
@@ -1074,6 +980,9 @@ namespace QVPN {
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				ObjectType to_object() const;
+				ViewType to_view() const;
 			};
 
 
@@ -1089,6 +998,9 @@ namespace QVPN {
 
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = const UByte*;
+
+				using ObjectType = UdpPacketLittleEndian;
+				using ViewType = UdpPacketView;
 
 				UdpPacketView(UByte* begin, UByte* end);
 
@@ -1125,6 +1037,9 @@ namespace QVPN {
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				ObjectType to_object() const;
+				ViewType to_view() const;
 			};
 
 
@@ -1171,7 +1086,7 @@ namespace QVPN {
 			}&& UnifiedPacketLike<DataPacketImpl>;
 
 
-
+			class DataPacketView;
 
 			class DataPacketLittleEndian
 			{
@@ -1183,6 +1098,9 @@ namespace QVPN {
 				using DataIterator_t = std::vector<UByte>::iterator;
 				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
 
+				using ObjectType = DataPacketLittleEndian;
+				using ViewType = DataPacketView;
+
 				DataPacketLittleEndian(UByte* begin, UByte* end);
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_data() const;
 				std::pair<DataIterator_t, DataIterator_t> get_data();
@@ -1192,6 +1110,9 @@ namespace QVPN {
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				ObjectType to_object() const;
+				ViewType to_view() const;
 			};
 
 
@@ -1208,6 +1129,9 @@ namespace QVPN {
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = const UByte*;
 
+				using ObjectType = DataPacketLittleEndian;
+				using ViewType = DataPacketView;
+
 				DataPacketView(UByte* begin, UByte* end);
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_data() const;
 				std::pair<DataIterator_t, DataIterator_t> get_data();
@@ -1217,6 +1141,9 @@ namespace QVPN {
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				ObjectType to_object() const;
+				ViewType to_view() const;
 			};
 
 
@@ -3437,6 +3364,247 @@ namespace QVPN {
 			/////////////////////////////////////////////////////////////////
 
 
+
+
+			// QTunnel
+
+			class QTunnelTCPViewScheme
+			{
+			private:
+
+				UShort length_;
+				UByte* data_;
+
+			public:
+
+				QTunnelTCPViewScheme(UByte* begin, UByte* end);
+
+				UInt get_seq() const;
+				UInt get_ack() const;
+				UByte get_flags() const;
+
+				UByte get_offset() const;
+				UShort get_window() const;
+				UShort get_urgent_pointer() const;
+
+				std::pair<UByte*, UByte*> get_options() const;
+
+				static std::vector<UByte> generate_bytes(TcpPacketView tcp_packet);
+
+			};
+
+
+			class QTunnelUDPViewScheme
+			{
+			public:
+				QTunnelUDPViewScheme(UByte* begin, UByte* end);
+				static std::vector<UByte> generate_bytes(UdpPacketView udp_packet);
+
+			};
+
+			struct QTunnelProtoData
+			{
+				std::vector<UByte> data{}; // 2 byte - length, after array of bytes
+
+			public:
+
+				QTunnelProtoData() = default;
+
+				QTunnelProtoData(UByte* begin, UByte* end)
+				{
+					UShort length = static_cast<UShort>(std::distance(begin, end));
+					data.push_back(length >> 8 & 0xFF);
+					data.push_back(length & 0xFF);
+					std::copy(begin, end, std::back_inserter(data));
+				}
+
+				QTunnelProtoData(QTunnelProtoData&& other) noexcept
+				{
+					data = std::move(other.data);
+				}
+
+				QTunnelProtoData& operator=(QTunnelProtoData&& other) noexcept
+				{
+					data = std::move(other.data);
+					return *this;
+				}
+
+				UShort get_length() const
+				{
+					return static_cast<UShort>(data[0] << 8 | data[1]);
+				}
+
+				std::pair<UByte*, UByte*> get_proto_data()
+				{
+					auto length = get_length();
+					auto start = data.size();;
+					return std::pair<UByte*, UByte*>(data.data() + start, data.data() + length);
+				}
+
+				std::pair<UByte*, UByte*> to_bytes()
+				{
+					auto length = get_length();
+					return std::pair<UByte*, UByte*>(data.data(), data.data() + length);
+				}
+
+			};
+
+
+			template <QVPN::Core::is_addr Addr>
+			struct QTunnelProxy
+			{
+			public:
+				NetProtocol net_protocol{};
+				TransportProtocol transport_protocol{};
+				Addr source_addr{};
+				UShort source_port{};
+
+				Addr dst_addr{};
+				UShort dst_port{};
+
+				mutable QTunnelProtoData proto_data;
+
+			public:
+
+				QTunnelProxy() = default;
+
+				QTunnelProxy(NetProtocol net_p, TransportProtocol transport_p, const Addr& src, UShort src_p, const Addr& dst, UShort dst_p, UByte* begin, UByte* end)
+				{
+					net_protocol = net_p;
+					transport_protocol = transport_p;
+					source_addr = src;
+					source_port = src_p;
+					dst_addr = dst;
+					dst_port = dst_p;
+
+					proto_data = QTunnelProtoData(begin, end);
+				}
+
+				QTunnelProxy(NetProtocol net_p, TransportProtocol transport_p, const Addr& src, UShort src_p, const Addr& dst, UShort dst_p, QTunnelProtoData&& proto_d)
+				{
+					net_protocol = net_p;
+					transport_protocol = transport_p;
+					source_addr = src;
+					source_port = src_p;
+					dst_addr = dst;
+					dst_port = dst_p;
+
+					proto_data = std::move(proto_d);
+				}
+
+				NetProtocol get_net_proto() const
+				{
+					return net_protocol;
+				}
+
+				TransportProtocol get_transport_proto() const
+				{
+					return transport_protocol;
+				}
+
+				Addr get_src_addr() const
+				{
+					return source_addr;
+				}
+
+				UShort get_src_port() const
+				{
+					return source_port;
+				}
+
+				Addr get_dst_addr() const
+				{
+					return dst_addr;
+				}
+
+				UShort get_dst_port() const
+				{
+					return dst_port;
+				}
+
+				std::pair<UByte*, UByte*> get_proto_data() const
+				{
+					//return std::pair<UByte*, UByte*>(proto_data.data.data(), proto_data.data.data() + proto_data.data.size())
+					return proto_data.to_bytes();
+				}
+
+				static inline QTunnelProxy create_and_inverse_addrs(const QTunnelProxy<Addr>& proxy_data)
+				{
+					auto [b, e] = proxy_data.get_proto_data();
+					return QTunnelProxy(proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_src_addr(),
+						proxy_data.get_src_port(), b, e);
+					//return res;
+				}
+
+			};
+
+
+			template <is_addr Addr>
+			class QTunnelData : public QTunnelProxy<Addr>
+			{
+				std::vector<UByte> data_;
+				using ProxyData = QTunnelProxy<Addr>;
+			public:
+
+				QTunnelData(std::vector<UByte>&& data) // TODO: перепроверить смещения
+					: QTunnelProxy<Addr>()
+				{
+					data_ = std::move(data);
+					ProxyData::net_protocol = static_cast<NetProtocol>(data_[0]);
+					ProxyData::transport_protocol = static_cast<TransportProtocol>(data_[1]);
+					data_.erase(data_.begin(), data_.begin() + 2);
+					switch (ProxyData::net_protocol)
+					{
+
+					case NetProtocol::IPv4:
+					{
+						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 4);
+						ProxyData::source_port = data_[4] << 8 | data_[5];
+						ProxyData::dst_addr = Addr(data_.begin() + 6, data_.begin() + 10);
+						ProxyData::dst_port = data_[10] << 8 | data_[11];
+						break;
+					}
+
+					case NetProtocol::IPv6:
+					{
+						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 16);
+						ProxyData::source_port = data_[16] << 8 | data_[17];
+						ProxyData::dst_addr = Addr(data_.begin() + 18, data_.begin() + 34);
+						ProxyData::dst_port = data_[34] << 8 | data_[35];
+						break;
+					}
+					}
+					auto meta_data_size = ProxyData::source_addr.get_addr_size() * 2 + 4; // 2 addrs (src + dst) and 2 ports (src + dst)
+					data_.erase(data_.begin(), data_.begin() + meta_data_size);
+					//ProxyData::source_port = data_[0] << 8 | data_[1];
+
+				}
+
+				QTunnelData(NetProtocol net, TransportProtocol transport, Addr src_addr, UShort src_port, Addr dst_addr, UShort dst_port, std::vector<UByte>&& data)
+					: QTunnelProxy<Addr>()
+				{
+					data_ = std::move(data);
+					ProxyData::net_protocol = net;
+					ProxyData::transport_protocol = transport;
+					ProxyData::source_addr = src_addr;
+					ProxyData::source_port = src_port;
+					ProxyData::dst_addr = dst_addr;
+					ProxyData::dst_port = dst_port;
+				}
+
+				std::pair<UByte*, UByte*> get_raw_data()
+				{
+					auto start = data_.data();
+					auto end = data_.data() + data_.size();
+					return std::pair<UByte*, UByte*>(start, end);
+				}
+			};
+
+			using QVPNProxyData_Ipv4 = QTunnelProxy<QVPN::Core::IPv4Address>;
+
+
+			// Full Packet specs
+
 			// Default specs
 			template <>
 			class FullPacket<Ipv4Packet, TcpPacket, DataPacket> : public Ipv4Packet, public TcpPacket, public DataPacket
@@ -3495,6 +3663,39 @@ namespace QVPN {
 					fp.set_transport_length(size);
 					fp.recalculate_checksums();
 					return fp;
+				}
+
+				QTunnelProtoData collect_proto_data()
+				{
+					auto tcp_view = TcpPacket::to_view();
+					auto bytes = QTunnelTCPViewScheme::generate_bytes(tcp_view);
+					QTunnelProtoData res(bytes.data(), bytes.data() + bytes.size());
+					return res;
+				}
+
+				void set_qtunnel_proto_data(QTunnelProtoData& data)
+				{
+					auto [b, e] = data.get_proto_data();
+					QTunnelTCPViewScheme scheme(b, e);
+					set_tcp_seq_number(scheme.get_seq());
+					set_tcp_ack_number(scheme.get_ack());
+					set_tcp_flags(scheme.get_flags());
+
+					set_tcp_offset(scheme.get_offset());
+					set_tcp_window(scheme.get_window());
+					set_tcp_urgent(scheme.get_urgent_pointer());
+				}
+
+				void set_qtunnel_proto_data(UByte* begin, UByte* end)
+				{
+					QTunnelTCPViewScheme scheme(begin, end);
+					set_tcp_seq_number(scheme.get_seq());
+					set_tcp_ack_number(scheme.get_ack());
+					set_tcp_flags(scheme.get_flags());
+
+					set_tcp_offset(scheme.get_offset());
+					set_tcp_window(scheme.get_window());
+					set_tcp_urgent(scheme.get_urgent_pointer());
 				}
 
 			};
@@ -3557,6 +3758,26 @@ namespace QVPN {
 					return fp;
 				}
 
+				QTunnelProtoData collect_proto_data()
+				{
+					auto view = UdpPacket::to_view();
+					auto bytes = QTunnelUDPViewScheme::generate_bytes(view);
+					QTunnelProtoData res(bytes.data(), bytes.data() + bytes.size());
+					return res;
+				}
+
+				void set_qtunnel_proto_data(QTunnelProtoData& data)
+				{
+					auto [b, e] = data.get_proto_data();
+					QTunnelTCPViewScheme scheme(b, e);
+				}
+
+				void set_qtunnel_proto_data(UByte* begin, UByte* end)
+				{
+					QTunnelTCPViewScheme scheme(begin, end);
+				}
+
+
 			};
 
 
@@ -3614,6 +3835,39 @@ namespace QVPN {
 					return fp;
 				}
 
+				QTunnelProtoData collect_proto_data()
+				{
+					auto tcp_view = TcpPacket_View::to_view();
+					auto bytes = QTunnelTCPViewScheme::generate_bytes(tcp_view);
+					QTunnelProtoData res(bytes.data(), bytes.data() + bytes.size());
+					return res;
+				}
+
+				void set_qtunnel_proto_data(QTunnelProtoData& data)
+				{
+					auto [b, e] = data.get_proto_data();
+					QTunnelTCPViewScheme scheme(b, e);
+					set_tcp_seq_number(scheme.get_seq());
+					set_tcp_ack_number(scheme.get_ack());
+					set_tcp_flags(scheme.get_flags());
+
+					set_tcp_offset(scheme.get_offset());
+					set_tcp_window(scheme.get_window());
+					set_tcp_urgent(scheme.get_urgent_pointer());
+				}
+
+				void set_qtunnel_proto_data(UByte* begin, UByte* end)
+				{
+					QTunnelTCPViewScheme scheme(begin, end);
+					set_tcp_seq_number(scheme.get_seq());
+					set_tcp_ack_number(scheme.get_ack());
+					set_tcp_flags(scheme.get_flags());
+
+					set_tcp_offset(scheme.get_offset());
+					set_tcp_window(scheme.get_window());
+					set_tcp_urgent(scheme.get_urgent_pointer());
+				}
+
 			};
 
 			template <>
@@ -3666,6 +3920,25 @@ namespace QVPN {
 					fp.set_transport_length(size);
 					fp.recalculate_checksums();
 					return fp;
+				}
+
+				QTunnelProtoData collect_proto_data()
+				{
+					auto view = UdpPacket_View::to_view();
+					auto bytes = QTunnelUDPViewScheme::generate_bytes(view);
+					QTunnelProtoData res(bytes.data(), bytes.data() + bytes.size());
+					return res;
+				}
+
+				void set_qtunnel_proto_data(QTunnelProtoData& data)
+				{
+					auto [b, e] = data.get_proto_data();
+					QTunnelTCPViewScheme scheme(b, e);
+				}
+
+				void set_qtunnel_proto_data(UByte* begin, UByte* end)
+				{
+					QTunnelTCPViewScheme scheme(begin, end);
 				}
 
 			};

@@ -162,7 +162,6 @@ namespace QVPN {
 
 		private:
 
-
 			std::vector<Filter_t> filters_out_;
 			std::vector<Filter_t> filters_in_;
 
@@ -237,20 +236,19 @@ namespace QVPN {
 
 					//package.set_ip_source(adapter_addr);
 					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
-					
 					auto package = pp.pre_parse(packet, packet + packet_len);
 
 					auto ver = std::visit([](auto& p) { return p.get_ip_version(); }, package);
-					auto net_proto = std::visit([](auto& p) { return p.get_ip_protocol(); }, package);
+					auto transport_proto = std::visit([](auto& p) { return p.get_ip_protocol(); }, package);
 					auto ip_src = std::visit([](auto& p) { return p.get_src_addr(); }, package);
 					auto port_src = std::visit([](auto& p) { return p.get_src_port(); }, package);
 					auto ip_dest = std::visit([](auto& p) { return p.get_dst_addr(); }, package);
 					auto port_dst = std::visit([](auto& p) { return p.get_dst_port(); }, package);
-					auto seq = std::visit([](auto& p) { return p.get_sender_number(); }, package);
-					auto ack = std::visit([](auto& p) { return p.get_receiver_number(); }, package);
-					auto flags = std::visit([](auto& p) { return p.get_flags(); }, package);
 
-					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data{ ver, net_proto, ip_src, port_src, ip_dest, port_dst, seq, ack, flags };
+					auto qtunnel_proto_data = std::visit([](auto& p) {return p.collect_proto_data(); }, package);
+					
+
+					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data(ver, transport_proto, ip_src, port_src, ip_dest, port_dst, std::move(qtunnel_proto_data));
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
 
@@ -325,22 +323,20 @@ namespace QVPN {
 						auto dst_addr = decoded_data->get_dst_addr();
 						auto dst_port = decoded_data->get_dst_port();
 
-						auto seq = decoded_data->get_seq();
-						auto ack = decoded_data->get_ack();
-						auto flags = decoded_data->get_flags();
+						//auto seq = decoded_data->get_seq();
+						//auto ack = decoded_data->get_ack();
+						//auto flags = decoded_data->get_flags();
+
+						auto [qtp_b, qtp_e] = decoded_data->get_proto_data();
 
 						auto [b, e] = decoded_data->get_raw_data();
 
-						// TODO: Кажется придется передавать не только seq, ack, но и еще данные из tcp
-
-						std::visit([&dst_addr, &dst_port, &seq, &ack, &flags](auto& p) 
+						std::visit([&dst_addr, &dst_port, &qtp_b, &qtp_e](auto& p) 
 							{ 
 								p.set_dst_port(dst_port); 
 								p.set_dst_addr(dst_addr);
-								p.set_sender_number(seq);
-								p.set_receiver_number(ack);
-								p.set_flags(flags);
-								//p.set_data(b, e);
+								p.set_qtunnel_proto_data(qtp_b, qtp_e);
+								//p.set_data(b, e); // TODO: доделать
 								p.recalculate_checksums();
 							}, 
 							package);

@@ -1306,8 +1306,9 @@ namespace QVPN
 				if (!decoded_data.has_value())
 					return false;
 
-				const auto p_data = static_cast<QVPN::Core::DataStructures::QTunnelProxy<Addr>>(*decoded_data);
-				QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data = p_data.create_and_inverse_addrs(p_data);
+				//const auto p_data = static_cast<QVPN::Core::DataStructures::QTunnelProxy<Addr>>(*decoded_data);
+				//QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data = p_data.create_and_inverse_addrs(p_data);
+				QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data = decoded_data->create_and_inverse_addrs(*decoded_data);
 
 				QVPNSocketData key{ decoded_data->get_transport_proto(), decoded_data->get_src_addr(), decoded_data->get_src_port(), decoded_data->get_dst_addr(), decoded_data->get_dst_port() };
 				connect_if_not_to_server(key, sock_map);
