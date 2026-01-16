@@ -824,6 +824,10 @@ namespace QVPN {
 				ObjectType to_object() const;
 				ViewType to_view() const;
 
+				// no checksum calcs
+				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
+				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
+
 			};
 
 
@@ -898,6 +902,10 @@ namespace QVPN {
 
 				ObjectType to_object() const;
 				ViewType to_view() const;
+
+				// no checksum calcs
+				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
+				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
 
 			};
 
@@ -983,6 +991,10 @@ namespace QVPN {
 
 				ObjectType to_object() const;
 				ViewType to_view() const;
+
+				// no checksum calcs
+				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UShort length);
+				static ObjectType generate_object(UShort src_port, UShort dst_port, UShort length);
 			};
 
 
@@ -1040,6 +1052,10 @@ namespace QVPN {
 
 				ObjectType to_object() const;
 				ViewType to_view() const;
+
+				// no checksum calcs
+				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UShort length);
+				static ObjectType generate_object(UShort src_port, UShort dst_port, UShort length);
 			};
 
 
@@ -3186,6 +3202,9 @@ namespace QVPN {
 					obj_bytes.push_back(static_cast<UByte>(dst_port >> 8 & 0xFF));
 					obj_bytes.push_back(static_cast<UByte>(dst_port & 0xFF));
 
+					auto [b, e] = proxy_data.get_proto_data();
+					std::copy(b, e, std::back_inserter(obj_bytes));
+
 					std::copy(begin, end, std::back_inserter(obj_bytes));
 					return obj_bytes;
 				}
@@ -3396,8 +3415,14 @@ namespace QVPN {
 
 			class QTunnelUDPViewScheme
 			{
+			private:
+				UShort length_;
+				UByte* data_;
 			public:
 				QTunnelUDPViewScheme(UByte* begin, UByte* end);
+
+				UShort get_length() const;
+
 				static std::vector<UByte> generate_bytes(UdpPacketView udp_packet);
 
 			};
@@ -3437,7 +3462,7 @@ namespace QVPN {
 				std::pair<UByte*, UByte*> get_proto_data()
 				{
 					auto length = get_length();
-					auto start = data.size();;
+					auto start = sizeof(length);
 					return std::pair<UByte*, UByte*>(data.data() + start, data.data() + length);
 				}
 
@@ -3449,6 +3474,30 @@ namespace QVPN {
 
 			};
 
+
+			template <TransportProtocol Proto>
+			class QTunnelTransportSchemeAdapter
+			{
+
+			};
+
+			template <>
+			class QTunnelTransportSchemeAdapter<TransportProtocol::TCP> : public QTunnelTCPViewScheme
+			{
+			public:
+				QTunnelTransportSchemeAdapter(UByte* begin, UByte* end)
+					: QTunnelTCPViewScheme(begin, end) {
+				}
+			};
+
+			template <>
+			class QTunnelTransportSchemeAdapter<TransportProtocol::UDP> : public QTunnelUDPViewScheme
+			{
+			public:
+				QTunnelTransportSchemeAdapter(UByte* begin, UByte* end)
+					: QTunnelUDPViewScheme(begin, end) {
+				}
+			};
 
 			template <QVPN::Core::is_addr Addr>
 			struct QTunnelProxy
@@ -4015,7 +4064,7 @@ namespace QVPN {
 					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
 				}
 
-				void recalculate_checksums(NetAddr src, NetAddr dst, UShort length)
+				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
 				{
 					NetProtocol net_proto = src.get_addr_family();
 					auto [b, e] = DataPacket::get_data();
@@ -4089,7 +4138,7 @@ namespace QVPN {
 					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
 				}
 
-				void recalculate_checksums(NetAddr src, NetAddr dst, UShort length)
+				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
 				{
 					NetProtocol net_proto = src.get_addr_family();
 					auto [b, e] = DataPacket::get_data();
@@ -4157,7 +4206,7 @@ namespace QVPN {
 					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(t_b, d_e);
 				}
 
-				void recalculate_checksums(NetAddr src, NetAddr dst, UShort length)
+				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
 				{
 					NetProtocol net_proto = src.get_addr_family();
 					auto [b, e] = DataPacket_View::get_data();
@@ -4226,7 +4275,7 @@ namespace QVPN {
 					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(t_b, d_e);
 				}
 
-				void recalculate_checksums(NetAddr src, NetAddr dst, UShort length)
+				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
 				{
 					NetProtocol net_proto = src.get_addr_family();
 					auto [b, e] = DataPacket_View::get_data();
@@ -4267,9 +4316,15 @@ namespace QVPN {
 			template class NoNetPacket<TcpPacket, DataPacket>;
 			template class NoNetPacket<UdpPacket, DataPacket>;
 
+			using NoNetPacketTcpObject = NoNetPacket<TcpPacket, DataPacket>;
+			using NoNetPacketUdpObject = NoNetPacket<UdpPacket, DataPacket>;
+
 			// View instances for no net packet
 			template class NoNetPacket<TcpPacket_View, DataPacket_View>;
 			template class NoNetPacket<UdpPacket_View, DataPacket_View>;
+
+			using NoNetPacketTcpView = NoNetPacket<TcpPacket_View, DataPacket_View>;
+			using NoNetPacketUdpView = NoNetPacket<UdpPacket_View, DataPacket_View>;
 		}
 	}
 }

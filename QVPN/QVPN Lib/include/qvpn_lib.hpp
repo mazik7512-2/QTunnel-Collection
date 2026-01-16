@@ -389,9 +389,10 @@ namespace QVPN {
 		concept is_preparser =
 			requires (PreParserImpl pp) {
 				
-			typename PreParserImpl::PacketType;
+			typename PreParserImpl::FullPacketType;
+			typename PreParserImpl::NoNetPacketType;
 
-				{ pp.pre_parse() };
+				{ pp.pre_parse() }; //TODO:  ак сюда засунуть шаблонный параметр?
 
 		};
 
