@@ -323,25 +323,20 @@ namespace QVPN {
 						auto dst_addr = decoded_data->get_dst_addr();
 						auto dst_port = decoded_data->get_dst_port();
 
-						//auto seq = decoded_data->get_seq();
-						//auto ack = decoded_data->get_ack();
-						//auto flags = decoded_data->get_flags();
-
 						auto [qtp_b, qtp_e] = decoded_data->get_proto_data();
 
 						auto [b, e] = decoded_data->get_raw_data();
 
-						std::visit([&dst_addr, &dst_port, &qtp_b, &qtp_e](auto& p) 
+						std::visit([&dst_addr, &dst_port, &qtp_b, &qtp_e, &b, &e](auto& p) 
 							{ 
 								p.set_dst_port(dst_port); 
 								p.set_dst_addr(dst_addr);
 								p.set_qtunnel_proto_data(qtp_b, qtp_e);
-								//p.set_data(b, e); // TODO: доделать
+								p.set_data(b, e);
 								p.recalculate_checksums();
 							}, 
 							package);
 							
-						//auto size = std::distance(b, e);
 						auto bytes_pair = std::visit([](auto& p) { return p.bytes(); }, package);
 						auto size = std::distance(bytes_pair.first, bytes_pair.second);
 						if (!WinDivertSend(in_hDivert_, bytes_pair.first, size, NULL, &addr))

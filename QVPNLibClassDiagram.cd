@@ -1,0 +1,1082 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="NameAndType">
+  <Class Name="QVPN::Core::BaseLayer&lt;Iter, Addr&gt;" Collapsed="true">
+    <Position X="6.5" Y="8.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAEAAAAAAAQABAAAAAAAAAQAAAAAAAAAAAAAACA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::LayerWrapper&lt;Iter, Addr&gt;" Collapsed="true">
+    <Position X="30.75" Y="2.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAEACAAEAQQAAAAAAAAAAAQIAAAAAAAABAEAACA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QLayer&lt;Iter, Addr&gt;" Collapsed="true">
+    <Position X="6.5" Y="9.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAEAAAEAAAQAAAAAAAAAAAQAAAAAAAAAAAAAACA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DefaultLayersStrategy&lt;Iter, Addr&gt;" Collapsed="true">
+    <Position X="48.75" Y="0.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAQAAAAAAAAAAAAAAACAAAAAABAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::SplittedPacket" Collapsed="true">
+    <Position X="41" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAQAAAAAAAIAEQAABAAEAAEAAQAAAAEgAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::SplittedPacketView" Collapsed="true">
+    <Position X="45.25" Y="4.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAEAQAgAAAAAIAEQAAAAAEAAEAAQAAAAEgAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::PacketBuilder" Collapsed="true">
+    <Position X="68.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AEAAAIABAEAAAAAAAAAAAABAIAAAAAAAAAAAAAhAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNPacketManager" Collapsed="true">
+    <Position X="58" Y="3.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>gCABAAAAgQCAAAAAAQAAIAgAAAAAAQOCAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNLayersSettings&lt;Iter, Addr&gt;" Collapsed="true">
+    <Position X="8" Y="0.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAEAAAAAAAAQAACAACEABAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNConnectionElement" Collapsed="true">
+    <Position X="45.25" Y="3.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAUAAAAAAAQAABAAABAAEAEAAAAIAQAAAyAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNConnectionSettings" Collapsed="true">
+    <Position X="17.5" Y="0.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAEAAAAAAAACAAAAABAAAAEAAAAAAQAAAyAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNClientCryptoSettings" Collapsed="true">
+    <Position X="12" Y="0.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAAAQAAAAAAAAIAAAAAAgAACAAAAAAAAAAAACAI=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNClientAuthSettings" Collapsed="true">
+    <Position X="14.75" Y="0.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAAAAABAAAQAAAAAAQAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNClientSettings_&lt;Iter&gt;" Collapsed="true">
+    <Position X="8.25" Y="1.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>EAAAAAAAAAAAAAAAAAAAAAAAIQAAAAAAAAAAACAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNClientDriver&lt;Iter, Addr, Socket, NetTools&gt;" Collapsed="true">
+    <Position X="41" Y="3.5" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AgEAIAAAAEAABEAAgAAQAAAgAACAAAIAEAAAAAAEAAg=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::VPNClient&lt;AdapterDriver, NetDriver&gt;" Collapsed="true">
+    <Position X="12.5" Y="5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAQAAAAAAAAAgAAAAAAAAAAAAAEAAAAAAAQAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNDatabaseSettings" Collapsed="true">
+    <Position X="12" Y="2.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAFAAAAAEAAAACAAIAIAAAAYAIEEAIACAAQAAQAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNNetSettings" Collapsed="true">
+    <Position X="14.75" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAAAAAAAAAAAAAAAAAAIAAAAAAAEAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNServerCryptoSettings" Collapsed="true">
+    <Position X="17" Y="2.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAQAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNServerSettings_&lt;Iter&gt;" Collapsed="true">
+    <Position X="8.25" Y="3.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>EAAAAAAACAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::UserStatisticData" Collapsed="true">
+    <Position X="58" Y="8.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>KAEAAIAEAAAACAAAIAAAAEAAAABAAAAAAAQAAgSAAAE=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::NoDatabaseAdapter" Collapsed="true">
+    <Position X="37.5" Y="2.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAgAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::NoStatisticAdapter" Collapsed="true">
+    <Position X="63" Y="2.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAEA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNServerDriver&lt;Iter, Addr, Socket, NetTools, Database, Stats&gt;" Collapsed="true">
+    <Position X="63" Y="3.5" Width="4.5" />
+    <TypeIdentifier>
+      <HashCode>QAABAARAAAAABEACAAgQQoAAAgGAAAIAEAgAQAAAIgg=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::VPNServer_&lt;Iter, VPNServerDriver, Database, Stats&gt;" Collapsed="true">
+    <Position X="63" Y="8.5" Width="3.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAABAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::IPv4Address" Collapsed="true">
+    <Position X="53" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAABCAAQIAAgEAAEAAIAAgAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::IPv6Address" Collapsed="true">
+    <Position X="24" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAABAAAAIAQgAAAEAAIAAgAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::NetAddr" Collapsed="true">
+    <Position X="34" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAABAAAQIAAgEAAEAAIEAhAAAQAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::UnifiedNetAddr&lt;Addr&gt;" Collapsed="true">
+    <Position X="53" Y="8.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNSocketSettings" Collapsed="true">
+    <Position X="68.5" Y="3.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AACAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::AdapterDriver&lt;AdapterDriverImpl&gt;" Collapsed="true">
+    <Position X="12.5" Y="3.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::NetDriver&lt;NetDriverImpl&gt;" Collapsed="true">
+    <Position X="20.75" Y="3.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::TrafficFilter_&lt;FilterImpl&gt;" Collapsed="true">
+    <Position X="37.5" Y="8.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNWhitelistElement" Collapsed="true">
+    <Position X="34" Y="4.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AQAAAAAAAAQAAABCABAAAAAAAIRAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNWhitelistElementView" Collapsed="true">
+    <Position X="37.5" Y="4.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAQAAABAABAAAAAAAABAAAAAAAIAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNWhitelistDefaultStrategy" Collapsed="true">
+    <Position X="30.75" Y="4.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAIQAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::QVPNWhitelist" Collapsed="true">
+    <Position X="24" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAIgAIABAAAAAAAAAAAAAAAAAABAAAgAAAAAAAABAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::PacketPreParser" Collapsed="true">
+    <Position X="24" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAEAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_tools.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::Adapter&lt;AdapterHandle&gt;" Collapsed="true">
+    <Position X="24" Y="0.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAEAAAEAAAABAIACIAAQAEAQAIAAFAgAAECCMAAQAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::AdapterList&lt;AdapterHandle&gt;" Collapsed="true">
+    <Position X="34" Y="0.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAACAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::Ipv4PacketView" Collapsed="true">
+    <Position X="68.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AARAoAABgNBEAAQAQEAAQACADAEAFFADgBAkAAMQJAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::Ipv4PacketLittleEndian" Collapsed="true">
+    <Position X="63" Y="1.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AARAoAABgFBABAQAAEAAQACADAEAFFADgBAEAAMQJAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::Ipv4Packet_&lt;Ip4PacketImpl&gt;" Collapsed="true">
+    <Position X="58" Y="1.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TcpPacketView" Collapsed="true">
+    <Position X="58" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gkRAJTABAFICAAQCBHFIBoAAABAABkQAAAAAXgIgAPA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TcpPacketLittleEndian" Collapsed="true">
+    <Position X="53" Y="4.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>gkRAJRABABIAAAQCBHFIBoCAABQABkQAAAAAXgIgAOA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TcpPacket_&lt;TcpImpl&gt;" Collapsed="true">
+    <Position X="48.75" Y="4.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::UdpPacketView" Collapsed="true">
+    <Position X="48.75" Y="8.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ggBAIAAAAAIAAAACBEEKBkiAAAAIBEQBAAAAHgIgAoA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::UdpPacketLittleEndian" Collapsed="true">
+    <Position X="45.25" Y="8.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>ggBAIAAAAAIAAAACBEEKBgCAAAAIBEQBAABAHgIgAoA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::UdpPacket_&lt;UdpImpl&gt;" Collapsed="true">
+    <Position X="41" Y="8.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::DataPacketView" Collapsed="true">
+    <Position X="45.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAFAEAgAAAAAEAAAAAAAAAAAEAAAAAAAAIAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::DataPacketLittleEndian" Collapsed="true">
+    <Position X="41" Y="0.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAEAEAAAAAACEAAAAAAAAAAAEAAAAAAAAIAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::DataPacket_&lt;DataPacketImpl&gt;" Collapsed="true">
+    <Position X="37.5" Y="0.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::Http1PacketRequestLittleEndian" Collapsed="true">
+    <Position X="30.75" Y="1.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAgAEAAAAAGAEBAAAAABABQAEAAABAAAEAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::Http1PacketRequestView" Collapsed="true">
+    <Position X="34" Y="1.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAgAEAgAAAGAEBAAAAABABQAEAAABAAAEAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::Http1PacketResponseLittleEndian" Collapsed="true">
+    <Position X="37.5" Y="1.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIQAAgCAAAkAAAAAACAAAABAAEAAAAAAEEAJAAI=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::Http1PacketResponseView" Collapsed="true">
+    <Position X="41" Y="1.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIQAAgCgAAkAAAAAACAAAABAAEAAAAAAEEAJAAI=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::HttpRequestPacket&lt;HttpRequestImpl&gt;" Collapsed="true">
+    <Position X="45.25" Y="1.5" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::HttpResponsePacket&lt;HttpResponseImpl&gt;" Collapsed="true">
+    <Position X="48.75" Y="1.5" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSRandomLittleEndian" Collapsed="true">
+    <Position X="34" Y="7.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gIAAAAAAAAAAAAIAAAACAgAQACAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSRandomView" Collapsed="true">
+    <Position X="37.5" Y="7.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gIAAAAAAAAAAAAIAAAACAgBAECAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSSessionIDLittleEndian" Collapsed="true">
+    <Position X="58" Y="7.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAAAAgAAAAAAAIAAgAIAIAAAEAAAAAAAAAAAgA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSSessionIDView" Collapsed="true">
+    <Position X="63" Y="7.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIACAAgAAAAAAAAAAgBIAIAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSCipherSuitLittleEndian" Collapsed="true">
+    <Position X="24" Y="6.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAQAAAAAAAAAAAgAgAAAAwACEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSCipherSuitView" Collapsed="true">
+    <Position X="30.75" Y="6.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAQAAAAIAAAAAAAAgBAAAgACEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSCompressionLittleEndian" Collapsed="true">
+    <Position X="34" Y="6.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>gEAAAABAAAAAAAAAAAAAAgAAAAAAAEAAAAAAAAQgIAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSCompressionView" Collapsed="true">
+    <Position X="37.5" Y="6.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAAAAAAAAAAAAAAgBAAAAAIEAAAAAAAAQgIAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSExtensionLittleEndian" Collapsed="true">
+    <Position X="41" Y="6.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gACAAIAAAAAAAAAAAAgAAghAAAgAAEAAAAAAAAAQAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSExtensionView" Collapsed="true">
+    <Position X="53" Y="6.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gACAAIAAAAAAAAAAAAhAAghAAAgAAEAAAAAAAAAQAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSExtensionWrapper&lt;TLSExtension, TLSExtensionData, ...Args&gt;" Collapsed="true">
+    <Position X="58" Y="6.5" Width="4.5" />
+    <TypeIdentifier>
+      <HashCode>gAAAAgAAAAACAAAAAAgAAgAAAAAAAAAAAAAQAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSExtensionsLittleEndian" Collapsed="true">
+    <Position X="45.25" Y="6.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAAAAAAAAAAgAAAAgAAAAAAAEAAAkAACBAQAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSExtensionsView" Collapsed="true">
+    <Position X="48.75" Y="6.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAACAAAAAAAAAAAgBAAAAAAEAAAgAACAAQAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSSupportedVersionsEntryLittleEndian" Collapsed="true">
+    <Position X="68.5" Y="7.5" Width="3" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAAAAIQAAAAgAAAwAAAAAACEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSSupportedVersionsEntryView" Collapsed="true">
+    <Position X="24" Y="8.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAAAAIAAAAAgAAAwBAAAAACEAAAAgAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSSupportedVersionsExtensionLittleEndian" Collapsed="true">
+    <Position X="30.75" Y="8.5" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAAAAAIAAAAAAgAAgAAEQgACEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSSupportedVersionsExtensionView" Collapsed="true">
+    <Position X="34" Y="8.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAAAAIAAAAAAgAAgBAEAAADEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSKeyShareEntryLittleEndian" Collapsed="true">
+    <Position X="24" Y="7.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAAAAAQAAgAAAAABgAIAAgAAEAAAAAAAAAgAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSKeyShareEntryView" Collapsed="true">
+    <Position X="30.75" Y="7.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAAACAAAAAAAAABgBAAAgAAEAAACAAAAAgAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSKeyShareClientHelloLittleEndian" Collapsed="true">
+    <Position X="63" Y="6.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAAIAAAAAAAAAAgAAhAAAAAAAEEAgAAAACAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSKeyShareClientHelloView" Collapsed="true">
+    <Position X="68.5" Y="6.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAAAAAAAAAAAgAAgBAAAAACEEAgAAAACAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSServerNameIndicationEntryLittleEndian" Collapsed="true">
+    <Position X="41" Y="7.5" Width="3" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAEAAACAAAAAAAAAkAAAAAAAEAAAABIAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSServerNameIndicationEntryView" Collapsed="true">
+    <Position X="45.25" Y="7.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAEAAACAAAAAABAAkBAAAAAAEAAAABAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSServerNameIndicationExtensionLittleEndian" Collapsed="true">
+    <Position X="48.75" Y="7.5" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAEAAACABAAAAgAAkAAAAAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView" Collapsed="true">
+    <Position X="53" Y="7.5" Width="3" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAEAAACABAIAAgAAgBAAAAAAEAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_DefaultRecordGenerationStrategy" Collapsed="true">
+    <Position X="37.5" Y="5.5" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_RecordLittleEndian" Collapsed="true">
+    <Position X="53" Y="5.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAACAAAAIAAAAAQggQAAAAAEAAAAAAAAAAEAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_RecordView" Collapsed="true">
+    <Position X="58" Y="5.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAACAAAAIAAAAAQghQAAAAAEAAAAABAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_MessageLittleEndian" Collapsed="true">
+    <Position X="45.25" Y="5.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>gAAAAoAAIAACAAAAAAAAAgAAAAQAAEAAAAAAAgBAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_MessageView" Collapsed="true">
+    <Position X="48.75" Y="5.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>gAAAAoAAIAACAAAAAAAAAgBAAAQAAEAAAAAAAgAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_DefaultClientHelloGenerationStrategy" Collapsed="true">
+    <Position X="34" Y="5.5" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>AEAAAAAAAAiAAAAAAAAAAACACAQAAhAAAAEAAAAAACA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_ClientHelloPacketLittleEndian" Collapsed="true">
+    <Position X="24" Y="5.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>gAAACIABAIACSBEABAAAAgQAAAAIAEAACAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_ClientHelloPacketView" Collapsed="true">
+    <Position X="30.75" Y="5.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>gAAACIABAIACCBEABAAAAgBAAgAIAEAACAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_DefaultServerHelloGenerationStrategy" Collapsed="true">
+    <Position X="41" Y="5.5" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAgAAAAAAAAAACCACAQAAAAAAQAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_ServerHelloPacketLittleEndian" Collapsed="true">
+    <Position X="63" Y="5.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>gAAACKABAIACCAEABAAAAgAAAAAIAEAACAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_ServerHelloPacketView" Collapsed="true">
+    <Position X="68.5" Y="5.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>gAAACIABAIACDAEABAAAAgBAAAAIAEAACAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_ApplicationDataLittleEndian" Collapsed="true">
+    <Position X="63" Y="4.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>gAAAAIAAAAACAAAAAAAAAgAAAAAAAEACAAAAQAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::TLS13_ApplicationDataView" Collapsed="true">
+    <Position X="68.5" Y="4.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>gACAAIAAAAACAAAAAAAAAgBAAAAAAEAAAAAAQAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::FullPacket&lt;NetLayer, TransportLayer, DataLayer&gt;" Collapsed="true">
+    <Position X="53" Y="0.5" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::QTunnelTCPViewScheme" Collapsed="true">
+    <Position X="7.75" Y="5.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>MgAAAIAIAQAAAAEACAAAAAAAAAAAAAAAAAAAACAIAAg=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::QTunnelUDPViewScheme" Collapsed="true">
+    <Position X="4.75" Y="5.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>IAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAEAgAAAIAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::QTunnelTransportSchemeAdapter&lt;Proto&gt;" Collapsed="true">
+    <Position X="34" Y="3.5" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::QTunnelTransportSchemeAdapter&lt;TransportProtocol::TCP&gt;" Collapsed="true">
+    <Position X="6.75" Y="6.75" Width="4.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::QTunnelData&lt;Addr&gt;" Collapsed="true">
+    <Position X="12.5" Y="7.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIABABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::FullPacket&lt;Ipv4Packet, TcpPacket, DataPacket&gt;" Collapsed="true">
+    <Position X="58" Y="0.5" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAABAAAAACAAAAAAAAAAAAAoAAAAAAAgAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::FullPacket&lt;Ipv4Packet, UdpPacket, DataPacket&gt;" Collapsed="true">
+    <Position X="63" Y="0.5" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAABAAAAACAAAAAAAAAAAAAoAAAAAAAgAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::FullPacket&lt;Ipv4Packet_View, TcpPacket_View, DataPacket_View&gt;" Collapsed="true">
+    <Position X="68.5" Y="0.5" Width="4.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAABAAAAACAAAAAAAAAAAAAoAAAAAAAgAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::FullPacket&lt;Ipv4Packet_View, UdpPacket_View, DataPacket_View&gt;" Collapsed="true">
+    <Position X="24" Y="1.5" Width="4.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAABAAAAACAAAAAAAAAAAAAoAAAAAAAgAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::NoNetPacket&lt;TransportPacket, DataPacket&gt;" Collapsed="true">
+    <Position X="48.75" Y="2.5" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::NoNetPacket&lt;TcpPacket, DataPacket&gt;" Collapsed="true">
+    <Position X="45.25" Y="2.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAAAAAAAAAAAAAAAAAAAAAAgAAAAEAAgCAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::NoNetPacket&lt;UdpPacket, DataPacket&gt;" Collapsed="true">
+    <Position X="41" Y="2.5" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAAAAAAAAAAAAAAAAAAAAAAgAAAAEAAgCAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::NoNetPacket&lt;TcpPacket_View, DataPacket_View&gt;" Collapsed="true">
+    <Position X="53" Y="2.5" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAAAAAAAAAAAAAAAAAAAAAAgAAAAEAAgCAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::Core::DataStructures::NoNetPacket&lt;UdpPacket_View, DataPacket_View&gt;" Collapsed="true">
+    <Position X="58" Y="2.5" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAAAAAAAAAAAAAAAAAAAAAAgAAAAEAAgCAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::PcapExt::PcapNetDriver" Collapsed="true">
+    <Position X="30.75" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAEAAAAIAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\pcap_ext.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::PcapExt::AdapterCriteria&lt;AdapterHandle&gt;" Collapsed="true">
+    <Position X="30.75" Y="0.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\pcap_ext.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::NetTools::QVPN_Socket" Collapsed="true">
+    <Position X="37.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AIAAAACAQICAYAABgAAAAAAggAAAAQEAgAEgEAEEQgg=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\qvpn_net_tools.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::NetTools::QVPNMetaSocketData" Collapsed="true">
+    <Position X="48.75" Y="3.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>QQAAAAAEAAAAAAEAAAAAgAAAAAAAAEAEAAAAAAIAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\qvpn_net_tools.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::NetTools::QVPNNetTools" Collapsed="true">
+    <Position X="53" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAQAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\qvpn_net_tools.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::WinDivertExt::WinDivertTrafficFilterType" Collapsed="true">
+    <Position X="30.75" Y="9.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAgAAAAAAABgCAAAAAAAAAIAAAAAgAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\windivert_ext.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::WinDivertExt::WinDivertTrafficFilter_&lt;FilterType&gt;" Collapsed="true">
+    <Position X="24" Y="9.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AQACBAAAAAAAQAJAAAAIACoAAAAACAAAAAAADEAAIBA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\windivert_ext.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::WinDivertExt::WinDivertClientNetDriver_&lt;Filter, VPNDriver&gt;" Collapsed="true">
+    <Position X="68.5" Y="8.5" Width="3.25" />
+    <TypeIdentifier>
+      <HashCode>ADCAABABEAgAhjAABAAAAgAAAAggBAIABBAAQMABAWA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\windivert_ext.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="QVPN::WinTunExt::WinTunDriver" Collapsed="true">
+    <Position X="34" Y="9.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\wintun_ext.hpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Struct Name="QVPN::Core::NetStatus" Collapsed="true">
+    <Position X="34" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::Core::NetData" Collapsed="true">
+    <Position X="30.75" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQAAAAAAAAAAAAIAAAAAAAAAAAAAAoAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::Core::QVPNSocketData" Collapsed="true">
+    <Position X="41" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAABAAAAAAAAAASAAAACAAAAAIAAAAAAAAAQ=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="std::hash&lt;QVPN::Core::IPv4Address&gt;" Collapsed="true">
+    <Position X="24" Y="10.75" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::Core::DataStructures::TransportIpv4PseudoHeaderBytesBuffer" Collapsed="true">
+    <Position X="63" Y="10.75" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::Core::DataStructures::TransportIpv4PseudoHeaderTypesBuffer" Collapsed="true">
+    <Position X="68.5" Y="10.75" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAEABAAAAAAAAQgAAAAACAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::Core::DataStructures::TransportIpv4PseudoHeader" Collapsed="true">
+    <Position X="58" Y="10.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAQAAKAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::Core::DataStructures::TLS13_HelloPacketScheme&lt;Val&gt;" Collapsed="true">
+    <Position X="53" Y="10.75" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAQAAAAIQCA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::Core::DataStructures::QTunnelProtoData" Collapsed="true">
+    <Position X="37.5" Y="10.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAAAAEAAAAAAAAAAAAAAAAAEAAAEAwAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::Core::DataStructures::QTunnelProxy&lt;Addr&gt;" Collapsed="true">
+    <Position X="12.5" Y="6.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAABAIAAAAAAAAAIwACAEAAAAAAAACQQAkQEBAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::NetTools::details::SocketAccept&lt;Addr, Socket&gt;" Collapsed="true">
+    <Position X="45.25" Y="10.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\qvpn_net_tools.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Struct Name="QVPN::NetTools::details::SocketAccept&lt;QVPN::Core::IPv4Address, Socket&gt;" Collapsed="true">
+    <Position X="48.75" Y="10.75" Width="3.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\qvpn_net_tools.hpp</FileName>
+    </TypeIdentifier>
+  </Struct>
+  <Enum Name="QVPN::Core::LayerTypes" Collapsed="true">
+    <Position X="48.5" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAgAAAAAAAAAAAAAAAAAACAAAAAABAAAAgA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::QVPN_Crypto" Collapsed="true">
+    <Position X="55" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_driver.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::NetProtocol" Collapsed="true">
+    <Position X="51.75" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::TransportProtocol" Collapsed="true">
+    <Position X="58.25" Y="13.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAEAAAAAAAACAIAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_lib.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::QVPNCharset" Collapsed="true">
+    <Position X="58.25" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAgAABAAEAAAAAAAAAAAAAAAAAAAAAAAgAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::HttpRequestType" Collapsed="true">
+    <Position X="35" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAAYAAACABAEAAAAAAAAAgAABAAgAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::HttpVersion" Collapsed="true">
+    <Position X="45" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAABAAAAAAAAAAIAAAAAAAEAACAAAAAAAQAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::HttpResponseStatus" Collapsed="true">
+    <Position X="38.25" Y="12.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAEAAARBAAAAAAAAAJAAAAAAgACAAgAAABAAAACAM=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::HttpContentType" Collapsed="true">
+    <Position X="31.5" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAABAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::HttpConnectionType" Collapsed="true">
+    <Position X="27.25" Y="12.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AIAACAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::HttpUserAgent" Collapsed="true">
+    <Position X="41.5" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQAAAAAAAAAAAAAAAAAAAAAAAAAAgBIAAAAAAAAABA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::TLSRecordType" Collapsed="true">
+    <Position X="51.75" Y="13.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAIAAEAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::TLSMessageType" Collapsed="true">
+    <Position X="45" Y="13.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQAgACAAAAAAAAAgAEAAAAAEAAAAAAABAAAAEAAAIQ=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::TLSProtocolVersion" Collapsed="true">
+    <Position X="48.5" Y="13.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAAAAAAAAACAAAAAAAACIAAAAAAAEAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::TLSCipherSuite" Collapsed="true">
+    <Position X="27.25" Y="13.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAEAAABDAAyEEAgeQIAACAAIAAAAEAIEIACICCgA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::TLSCompressionMethod" Collapsed="true">
+    <Position X="31.5" Y="13.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::TLSKeyTypes" Collapsed="true">
+    <Position X="38.25" Y="13.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::TLSKeyTypesLength" Collapsed="true">
+    <Position X="41.5" Y="13.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::TLSExtensionType" Collapsed="true">
+    <Position X="35" Y="13.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAAAAAAAAAAAAAAAAAAAAAAAAACAIAAAAIACAAE=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::TLSSNIRecordType" Collapsed="true">
+    <Position X="55" Y="13.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::Core::DataStructures::AdapterFlags" Collapsed="true">
+    <Position X="23.75" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EQAAAAAAIAIIFAAAAAAAAABAAAAgAAAAAAAAAAAAQAA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\qvpn_structures.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="QVPN::NetTools::SocketMod" Collapsed="true">
+    <Position X="23.75" Y="13.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAgAAAAAAAAAAAABAAAAAAAAAAAACA=</HashCode>
+      <FileName>Z:\Files\Projects\C++\MaxVPN\QVPN\QVPN Lib\include\Windows\qvpn_net_tools.hpp</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
