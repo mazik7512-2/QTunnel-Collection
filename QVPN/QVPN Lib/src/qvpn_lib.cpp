@@ -404,3 +404,53 @@ bool QVPN::Core::QVPNSocketSettings::ip_header() const
 {
     return ip_header_;
 }
+
+
+// QVPN Lib 
+
+
+consteval std::string_view QVPN::Core::QVPNLib::get_short_library_name() const
+{
+    return short_lib_name_;
+}
+
+consteval std::string_view QVPN::Core::QVPNLib::get_library_name() const
+{
+    return lib_name_;
+}
+
+consteval QVPN::Core::QVPNLib::UInt QVPN::Core::QVPNLib::get_major_version() const
+{
+    return major_ver_;
+}
+
+consteval QVPN::Core::QVPNLib::UInt QVPN::Core::QVPNLib::get_minor_version() const
+{
+    return minor_ver_;
+}
+
+consteval QVPN::Core::QVPNLib::UInt QVPN::Core::QVPNLib::get_patch_version() const
+{
+    return patch_ver_;
+}
+
+consteval std::string_view QVPN::Core::QVPNLib::get_library_version() const
+{
+    return lib_ver_;
+}
+
+consteval std::string_view QVPN::Core::QVPNLib::get_full_library_name() const
+{
+    return full_lib_name_;
+}
+
+consteval bool QVPN::Core::QVPNLib::is_compatible(UInt major, UInt minor, UInt patch) const
+{
+    if (last_compatible_major_ver_ > major)
+        return false;
+    if (last_compatible_minor_ver_ > minor)
+        return false;
+    if (last_compatible_patch_ver_ > patch)
+        return false;
+    return true;
+}

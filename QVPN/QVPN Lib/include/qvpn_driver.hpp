@@ -365,9 +365,10 @@ namespace QVPN
 		{
 		public:
 			// 5 - packet builder data (package id - 1 byte, data_offset - 2 bytes, original_packet_size - 2 bytes), 5 - size of tls record, 
-			// 47 - size of qtunnel data (net proto - 1 byte, transport proto - 1 byte, src_net addr - 16 bytes (max), src_port - 2 bytes, dst_net_addr - 16 bytes (max), dst_port - 2 bytes, 
-			// 4 bytes - size of seq number, 4 bytes - size of ack number, 1 byte - size of tcp flags)
-			constexpr static UShort data_meta_qvpn_size = 5 + 5 + 47;
+			// 40 - size of qtunnel data (net proto - 1 byte, transport proto - 1 byte, src_net addr - 16 bytes (max), src_port - 2 bytes, dst_net_addr - 16 bytes (max), dst_port - 2 bytes, 
+			// 2 bytes - size of transport proto data
+			// 256 bytes - size of max add data size //?
+			constexpr static UShort data_meta_qvpn_size = 5 + 5 + 40 + 256;
 
 		private:
 
@@ -804,7 +805,7 @@ namespace QVPN
 			typename VPNDriver::AddrType;
 			typename VPNDriver::DataIterator;
 
-			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacket>;
+			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacketView>;
 			{ d.decode_data(begin, end) } -> std::same_as<std::optional<QTunnelData<typename VPNDriver::AddrType>>>;
 
 			{ d.connect() } -> std::same_as<bool>;
@@ -928,17 +929,12 @@ namespace QVPN
 				return settings_.get_ip_address();
 			}
 
-			SplittedPacket encode_data(QVPN::Core::DataStructures::QTunnelProxy<AddrType>& data, Iter begin, Iter end)
+			SplittedPacketView encode_data(QVPN::Core::DataStructures::QTunnelProxy<AddrType>& data, Iter begin, Iter end)
 			{
-				SplittedPacket res;
-				auto sp = packet_manager_.split_packet(begin, end);
-				for (size_t i = 0; i < sp.size(); i++)
-				{
-					//auto [b, e] = sp.get_raw_packet(i);
-					auto s_packet = sp.get(i);
-					res.add_data(std::move(settings_.layers_encode(data, s_packet.data(), s_packet.data() + s_packet.size())));
-				}
-				return res;
+				// first must be encoding, after splitting
+				auto encoded_packet = settings_.layers_encode(data, begin, end);
+				auto sp = packet_manager_.split_packet(encoded_packet.data(), encoded_packet.data() + encoded_packet.size());
+				return sp;
 			}
 
 			std::optional<QTunnelData<Addr>> decode_data(Iter begin, Iter end)
@@ -1190,7 +1186,7 @@ namespace QVPN
 			typename VPNDriverImpl::AddrType;
 			typename VPNDriverImpl::SocketType;
 
-			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacket>;
+			{ d.encode_data(data, begin, end) } -> std::same_as<SplittedPacketView>;
 			{ d.decode_data(begin, end) } -> std::same_as<std::optional<QTunnelData<typename VPNDriverImpl::AddrType>>>;
 
 			{ d.init(database, stats) } -> std::same_as<void>;
@@ -1554,18 +1550,12 @@ namespace QVPN
 				}
 			}
 
-			SplittedPacket encode_data(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+			SplittedPacketView encode_data(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
 			{
-				SplittedPacket res;
-				auto sp = packet_manager_.split_packet(begin, end);
-				for (size_t i = 0; i < sp.size(); i++)
-				{
-					//auto [b, e] = sp.get_raw_packet(i);
-					auto data = sp.get(i);
-					res.add_data(std::move(settings_.layers_encode(proxy_data, data.data(), data.data() + data.size())));
-				}
-				return res;
-				//return settings_.layers_encode(begin, end);
+				// first must be encoding, after splitting
+				auto encoded_data = settings_.layers_encode(proxy_data, begin, end);
+				auto sp = packet_manager_.split_packet(encoded_data.data(), encoded_data.data() + encoded_data.size());
+				return sp;
 			}
 
 			std::optional<QTunnelData<Addr>> decode_data(Iter begin, Iter end)

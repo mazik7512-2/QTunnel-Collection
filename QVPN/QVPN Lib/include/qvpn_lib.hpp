@@ -20,6 +20,38 @@ namespace QVPN
 			using ubyte_const_iter = std::vector<unsigned char>::const_iterator;
 		}
 
+		class QVPNLib
+		{
+			using UInt = BaseTypes::UInt;
+
+			static constexpr std::string_view lib_name_ = "QVPN Library";
+			static constexpr std::string_view short_lib_name_ = "QVPN Lib";
+
+			static constexpr UInt major_ver_ = 0;
+			static constexpr UInt minor_ver_ = 5;
+			static constexpr UInt patch_ver_ = 1;
+
+			static constexpr std::string_view lib_ver_ = "0.5.1";
+
+			static constexpr std::string_view full_lib_name_ = "QVPN Library v0.5.1";
+
+			static constexpr UInt last_compatible_major_ver_ = 0;
+			static constexpr UInt last_compatible_minor_ver_ = 5;
+			static constexpr UInt last_compatible_patch_ver_ = 0;
+
+		public:
+			consteval std::string_view get_short_library_name() const;
+			consteval std::string_view get_library_name() const;
+			consteval UInt get_major_version() const;
+			consteval UInt get_minor_version() const;
+			consteval UInt get_patch_version() const;
+			consteval std::string_view get_library_version() const;
+			consteval std::string_view get_full_library_name() const;
+			consteval bool is_compatible(UInt major, UInt minor, UInt patch) const;
+		};
+
+
+
 
 		// only ip4 and ip6
 		enum NetProtocol : BaseTypes::UByte
