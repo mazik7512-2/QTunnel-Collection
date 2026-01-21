@@ -178,6 +178,11 @@ QVPN::Core::DataStructures::Ipv4PacketLittleEndian::ViewType QVPN::Core::DataStr
 	return ViewType(start, end);
 }
 
+std::string QVPN::Core::DataStructures::Ipv4PacketLittleEndian::to_net_friendly_view() const
+{
+	return ip_to_friendly_view();
+}
+
 void QVPN::Core::DataStructures::Ipv4PacketLittleEndian::set_ip_source(const QVPN::Core::IPv4Address& src)
 {
 	constexpr auto ip_addr_size = 4;
@@ -387,6 +392,11 @@ QVPN::Core::DataStructures::TcpPacketLittleEndian::ViewType QVPN::Core::DataStru
 	UByte* start = const_cast<UByte*>(header_.data());
 	UByte* end = const_cast<UByte*>(header_.data() + header_.size());
 	return ViewType(start, end);
+}
+
+std::string QVPN::Core::DataStructures::TcpPacketLittleEndian::to_transport_friendly_view() const
+{
+	return tcp_to_friendly_view();
 }
 
 std::vector<UByte> QVPN::Core::DataStructures::TcpPacketLittleEndian::generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent)
@@ -633,6 +643,11 @@ QVPN::Core::DataStructures::UdpPacketLittleEndian::ViewType QVPN::Core::DataStru
 	return ViewType(start, end);
 }
 
+std::string QVPN::Core::DataStructures::UdpPacketLittleEndian::to_transport_friendly_view() const
+{
+	return to_udp_friendly_view();
+}
+
 std::vector<UByte> QVPN::Core::DataStructures::UdpPacketLittleEndian::generate_object_bytes(UShort src_port, UShort dst_port, UShort length)
 {
 	std::vector<UByte> bytes{};
@@ -721,6 +736,17 @@ UByte QVPN::Core::DataStructures::UdpPacketLittleEndian::get_flags() const
 	return 0;
 }
 
+std::string QVPN::Core::DataStructures::UdpPacketLittleEndian::to_udp_friendly_view() const
+{
+	std::stringstream ss{};
+
+	ss << "Src port: " << get_udp_src_port(); ss << " Dst port: " << get_udp_dst_port() << std::endl;
+	ss << "Length: " << get_udp_length(); ss << "Checksum: " << get_udp_checksum() << std::endl;
+
+	auto str = ss.str();
+	return str;
+}
+
 void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_sender_number(UInt number)
 {
 }
@@ -787,6 +813,14 @@ QVPN::Core::DataStructures::DataPacketLittleEndian::ViewType QVPN::Core::DataStr
 	UByte* start = const_cast<UByte*>(data_.data());
 	UByte* end = const_cast<UByte*>(data_.data() + data_.size());
 	return ViewType(start, end);
+}
+
+std::string QVPN::Core::DataStructures::DataPacketLittleEndian::to_data_friendly_view() const
+{
+	std::stringstream ss{};
+	ss << "Data size: " << data_.size() << " bytes";
+	auto str = ss.str();
+	return str;
 }
 
 QVPN::Core::DataStructures::Ipv4PacketView::Ipv4PacketView(UByte* begin, UByte* end)
@@ -941,6 +975,11 @@ QVPN::Core::DataStructures::Ipv4PacketView::ViewType QVPN::Core::DataStructures:
 	UByte* start = const_cast<UByte*>(header_);
 	UByte* end = const_cast<UByte*>(additional_header_ + add_header_size_);
 	return ViewType(start, end);
+}
+
+std::string QVPN::Core::DataStructures::Ipv4PacketView::to_net_friendly_view() const
+{
+	return ip_to_friendly_view();
 }
 
 void QVPN::Core::DataStructures::Ipv4PacketView::set_ip_source(const QVPN::Core::IPv4Address& src)
@@ -1171,6 +1210,11 @@ QVPN::Core::DataStructures::TcpPacketView::ViewType QVPN::Core::DataStructures::
 	UByte* start = const_cast<UByte*>(tcp_header_);
 	UByte* end = const_cast<UByte*>(options_ + tcp_options_size);
 	return ViewType(start, end);
+}
+
+std::string QVPN::Core::DataStructures::TcpPacketView::to_transport_friendly_view() const
+{
+	return tcp_to_friendly_view();
 }
 
 std::vector<UByte> QVPN::Core::DataStructures::TcpPacketView::generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent)
@@ -1406,6 +1450,11 @@ QVPN::Core::DataStructures::UdpPacketView::ViewType QVPN::Core::DataStructures::
 	return ViewType(start, end);
 }
 
+std::string QVPN::Core::DataStructures::UdpPacketView::to_transport_friendly_view() const
+{
+	return to_udp_friendly_view();
+}
+
 std::vector<UByte> QVPN::Core::DataStructures::UdpPacketView::generate_object_bytes(UShort src_port, UShort dst_port, UShort length)
 {
 	return UdpPacketLittleEndian::generate_object_bytes(src_port, dst_port, length);
@@ -1484,6 +1533,17 @@ UByte QVPN::Core::DataStructures::UdpPacketView::get_flags() const
 	return 0;
 }
 
+std::string QVPN::Core::DataStructures::UdpPacketView::to_udp_friendly_view() const
+{
+	std::stringstream ss{};
+
+	ss << "Src port: " << get_udp_src_port(); ss << " Dst port: " << get_udp_dst_port() << std::endl;
+	ss << "Length: " << get_udp_length(); ss << "Checksum: " << get_udp_checksum() << std::endl;
+
+	auto str = ss.str();
+	return str;
+}
+
 void QVPN::Core::DataStructures::UdpPacketView::set_sender_number(UInt number)
 {
 }
@@ -1557,6 +1617,14 @@ QVPN::Core::DataStructures::DataPacketView::ViewType QVPN::Core::DataStructures:
 	UByte* start = const_cast<UByte*>(data_);
 	UByte* end = const_cast<UByte*>(data_ + data_size_);
 	return ViewType(start, end);
+}
+
+std::string QVPN::Core::DataStructures::DataPacketView::to_data_friendly_view() const
+{
+	std::stringstream ss{};
+	ss << "Data size: " << data_size_ << " bytes";
+	auto str = ss.str();
+	return str;
 }
 
 QVPN::Core::DataStructures::TransportIpv4PseudoHeader::TransportIpv4PseudoHeader(UInt src, UInt dst, UByte protocol, UShort length)

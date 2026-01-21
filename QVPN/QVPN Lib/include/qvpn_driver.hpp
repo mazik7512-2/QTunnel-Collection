@@ -1059,6 +1059,10 @@ namespace QVPN
 				using NetProtocol = QVPN::Core::NetProtocol;
 				std::ifstream f{};
 				f.open(path);
+
+				if (!f.is_open())
+					return;
+
 				auto settings = json::parse(f);
 
 				auto& addrs = settings["addrs"];
@@ -1217,7 +1221,7 @@ namespace QVPN
 		};
 
 
-		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats>
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
 			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
 		class QVPNServerDriver
 		{
@@ -1248,6 +1252,8 @@ namespace QVPN
 			QVPNPacketManager packet_manager_;
 
 			PacketPreParser pp_{};
+
+			Logger logger_{};
 
 			using NoNetTcpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::TcpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
 			using NoNetUdpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::UdpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
@@ -1281,12 +1287,17 @@ namespace QVPN
 
 			std::optional<Socket> connect_to_server_impl_(QVPNSocketData& key)
 			{
+				std::stringstream ss{};
 				auto socket = NetTools::create_raw_socket(key.remote_addr.get_addr_family(), key.transport_proto);
 				auto res = socket.connect(key.remote_addr, key.remote_port);
 				if (res.success)
 				{
+					ss << key.remote_addr.to_string() << ":" << key.remote_port << " connected";
+					logger_.success(ss.str());
 					return socket;
 				}
+				ss << key.remote_addr.to_string() << ":" << key.remote_port << " cannot connected";
+				logger_.fail(ss.str());
 				return std::nullopt;
 			}
 
@@ -1367,6 +1378,11 @@ namespace QVPN
 
 			bool vpn_loop_iteration(Socket& client_socket, std::unordered_map<QVPNSocketData, Socket>& sock_map, Stats& stats, std::string_view user)
 			{
+				std::stringstream ss{};
+				
+				ss << "Received data from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
+
+				logger_.info(ss.str());
 				auto [status, data] = client_socket.receive();
 				if (!status.success)
 					return false;

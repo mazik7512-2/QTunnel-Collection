@@ -10,14 +10,14 @@ using QVPNSocketSettings = QVPN::Core::QVPNSocketSettings;
 QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto)
 {
 	QVPNMetaSocketData meta{};
-	return QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_socket_type(t_proto), meta.get_socket_type(t_proto));
+	return QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_socket_type(t_proto), meta.get_socket_proto(t_proto));
 }
 
 QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_raw_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto)
 {
 	QVPNMetaSocketData meta{};
 	QVPNSocketSettings sock_s(false);
-	auto sock = QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_socket_type(t_proto), meta.get_socket_type(t_proto));
+	auto sock = QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_socket_type(t_proto), meta.get_socket_proto(t_proto));
 	sock.apply_settings(sock_s);
 	return sock;
 }
@@ -29,22 +29,26 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket()
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket(int sock_family, int sock_type, int sock_proto)
 {
-	socket_ = socket(sock_family, sock_type, sock_proto);
-	switch (sock_proto)
+	int result = WSAStartup(MAKEWORD(2, 2), &wsa_data_);
+	if (result == 0)
 	{
-	case IPPROTO_TCP:
-		socket_data_.transport_proto = QVPN::Core::TCP;
-		break;
-	case IPPROTO_UDP:
-		socket_data_.transport_proto = QVPN::Core::UDP;
-		break;
-	default:
-		socket_data_.transport_proto = QVPN::Core::TRANSPORT_UNDEFINED;
-		break;
+		socket_ = socket(sock_family, sock_type, sock_proto);
+		switch (sock_proto)
+		{
+		case IPPROTO_TCP:
+			socket_data_.transport_proto = QVPN::Core::TCP;
+			break;
+		case IPPROTO_UDP:
+			socket_data_.transport_proto = QVPN::Core::UDP;
+			break;
+		default:
+			socket_data_.transport_proto = QVPN::Core::TRANSPORT_UNDEFINED;
+			break;
+		}
+		socket_data_.remote_port = 0;
+		socket_data_.local_port = 0;
+		s_mod_ = UNDEFINED;
 	}
-	socket_data_.remote_port = 0;
-	socket_data_.local_port = 0;
-	s_mod_ = UNDEFINED;
 }
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket(const QVPN_Socket& other) noexcept

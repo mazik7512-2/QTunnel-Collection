@@ -4,7 +4,7 @@
 #include <fstream>
 #include <random>
 #include <qvpn_tools.hpp>
-
+#include <filesystem>
 
 QVPN::Core::IPv4Address::IPv4Address()
 {
@@ -252,7 +252,9 @@ QVPN::Core::QVPNWhitelist::QVPNWhitelist(std::string_view path)
 
 void QVPN::Core::QVPNWhitelist::parse_whitelist(std::string_view path)
 {
-    std::ifstream wlist(path.data());
+    std::ifstream wlist{};
+    //auto full_path = std::filesystem::current_path() / path.data();
+    wlist.open(path);
     std::string line;
 
     if (!wlist.is_open())

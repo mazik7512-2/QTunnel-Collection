@@ -5,9 +5,12 @@
 #include <wintun_ext.hpp>
 #include <qvpn_net_tools.hpp>
 #include <qvpn_driver.hpp>
+#include <qvpn_tools.hpp>
 
 namespace QVPN
 {
+
+	using QVPNLogger = QVPN::Core::Tools::QVPNLogger<QVPN::Core::QVPNPlatform::WINDOWS>;
 
 	namespace details
 	{
@@ -15,11 +18,12 @@ namespace QVPN
 		using QVPNNetTools = QVPN::NetTools::QVPNNetTools;
 
 		template <QVPN::Core::is_database_adapter Database, QVPN::Core::is_statistic_adapter Stats>
-		using QVPNServerDriver = QVPN::Core::QVPNServerDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPNSocket, QVPNNetTools, Database, Stats>;
+		using QVPNServerDriver = QVPN::Core::QVPNServerDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPNSocket, QVPNNetTools, Database, Stats, QVPNLogger>;
 	}
 
 	using QVPNClientSettings = QVPN::Core::QVPNClientSettings;
-	using QVPNClient = QVPN::Core::VPNClient<QVPN::WinTunExt::WinTunDriver, QVPN::WinDivertExt::WinDivertClientNetDriver>;
+	using QVPNClientDriver = QVPN::WinDivertExt::WinDivertClientNetDriver<QVPNLogger>;
+	using QVPNClient = QVPN::Core::VPNClient<QVPN::WinTunExt::WinTunDriver, QVPNClientDriver>;
 	using QVPNLayersStrategy = QVPN::Core::DefaultLayersStrategy<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr>;
 
 	using QVPNServerSettings = QVPN::Core::QVPNServerSettings;

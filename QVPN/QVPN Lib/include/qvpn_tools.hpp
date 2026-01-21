@@ -5,6 +5,7 @@
 #include <ctime>
 #include <algorithm>
 #include <qvpn_structures.hpp>
+#include <chrono>
 
 namespace QVPN {
 
@@ -157,6 +158,63 @@ namespace QVPN {
 			}
 
 			std::vector<QVPN::Core::BaseTypes::UByte> parse_net_addr(std::string_view addr);
+
+
+			template <QVPNPlatform Platform>
+			class QVPNLogger
+			{
+			public:
+
+			};
+
+			template<>
+			class QVPNLogger<QVPNPlatform::WINDOWS>
+			{
+				using sys_clock = std::chrono::system_clock;
+				struct WinColors
+				{
+					constexpr static std::string_view HEADER = "\033[95m";
+					constexpr static std::string_view OKBLUE = "\033[94m";
+					constexpr static std::string_view OKCYAN = "\033[96m";
+					constexpr static std::string_view OKGREEN = "\033[92m";
+					constexpr static std::string_view WARNING = "\033[93m";
+					constexpr static std::string_view FAIL = "\033[91m";
+					constexpr static std::string_view ENDC = "\033[0m";
+					constexpr static std::string_view BOLD = "\033[1m";
+					constexpr static std::string_view UNDERLINE = "\033[4m";
+					constexpr static std::string_view DEFAULT = "\033[0m";
+				};
+
+			public:
+
+				void info(std::string_view data)
+				{
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					std::cout << WinColors::HEADER << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO)" << data << WinColors::DEFAULT << std::endl;
+				}
+
+				void success(std::string_view data)
+				{
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					std::cout << WinColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS)" << data << WinColors::DEFAULT << std::endl;
+				}
+
+				void fail(std::string_view data)
+				{
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					std::cout << WinColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL)" << data << WinColors::DEFAULT << std::endl;
+				}
+
+				void warning(std::string_view data)
+				{
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING)" << data << WinColors::DEFAULT << std::endl;
+				}
+			};
 		}
 		
 		class PacketPreParser

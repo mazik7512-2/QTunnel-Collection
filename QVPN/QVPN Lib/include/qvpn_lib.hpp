@@ -29,11 +29,11 @@ namespace QVPN
 
 			static constexpr UInt major_ver_ = 0;
 			static constexpr UInt minor_ver_ = 5;
-			static constexpr UInt patch_ver_ = 1;
+			static constexpr UInt patch_ver_ = 2;
 
-			static constexpr std::string_view lib_ver_ = "0.5.1";
+			static constexpr std::string_view lib_ver_ = "0.5.2";
 
-			static constexpr std::string_view full_lib_name_ = "QVPN Library v0.5.1";
+			static constexpr std::string_view full_lib_name_ = "QVPN Library v0.5.2";
 
 			static constexpr UInt last_compatible_major_ver_ = 0;
 			static constexpr UInt last_compatible_minor_ver_ = 5;
@@ -51,6 +51,23 @@ namespace QVPN
 		};
 
 
+		template <class LoggerImpl>
+		concept is_logger = 
+			requires (LoggerImpl l, std::string_view data) {
+
+				{ l.info(data) } -> std::same_as<void>;
+				{ l.success(data) } -> std::same_as<void>;
+				{ l.fail(data) } -> std::same_as<void>;
+				{ l.warning(data) } -> std::same_as<void>;
+		};
+
+
+		enum class QVPNPlatform
+		{
+			WINDOWS = 0,
+			LINUX = 1,
+			ANDROID = 2,
+		};
 
 
 		// only ip4 and ip6

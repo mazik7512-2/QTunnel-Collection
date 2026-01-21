@@ -1,9 +1,9 @@
 {
     "addrs": [{
             "addr_type": 4,
-            "addr": "0.0.0.0",
-            "port": 1234,
-			"proto:" 6 
+            "addr": "127.0.0.1",
+            "port": 5151,
+			"proto": 6
         }
     ],
 

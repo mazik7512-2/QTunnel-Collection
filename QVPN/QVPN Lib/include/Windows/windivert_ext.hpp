@@ -152,7 +152,7 @@ namespace QVPN {
 		};
 
 
-		template <QVPN::Core::is_filter Filter, QVPN::Core::is_vpn_client_driver VPNDriver>
+		template <QVPN::Core::is_filter Filter, QVPN::Core::is_vpn_client_driver VPNDriver, QVPN::Core::is_logger Logger>
 		class WinDivertClientNetDriver_ : public Filter
 		{
 		public:
@@ -179,6 +179,7 @@ namespace QVPN {
 			
 			QVPN::Core::PacketPreParser pp;
 			VPNDriver driver_;
+			Logger logger_{};
 
 			void calculate_outgoing_filters()
 			{
@@ -202,12 +203,11 @@ namespace QVPN {
 				out_hDivert_ = WinDivertOpen(outgoing_filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
 				if (out_hDivert_ != INVALID_HANDLE_VALUE)
 				{
-					printf("Driver is working.\n");
-					
+					logger_.success("Driver is working.");
 				}
 				else
 				{
-					printf("Error opening driver.\n");
+					logger_.fail("Error opening driver.\n");
 					return;
 				}
 				outgoing_capture_loop(adapter_addr);
@@ -225,6 +225,8 @@ namespace QVPN {
 				PVOID payload;
 				UINT payload_len;
 
+				std::stringstream ss{};
+
 				while (true)
 				{
 					if (!WinDivertRecv(out_hDivert_, packet, sizeof(packet), &packet_len, &addr))
@@ -233,7 +235,7 @@ namespace QVPN {
 							GetLastError());
 						continue;
 					}
-
+					//TODO: добавить logger в сервер и изменить этот
 					//package.set_ip_source(adapter_addr);
 					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
 					auto package = pp.pre_parse(packet, packet + packet_len);
@@ -247,6 +249,8 @@ namespace QVPN {
 
 					auto qtunnel_proto_data = std::visit([](auto& p) {return p.collect_proto_data(); }, package);
 					
+					std::visit([&ss](auto& p) { ss << p.to_packet_friendly_view() << std::endl; }, package);
+					logger_.info(ss.str());
 
 					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data(ver, transport_proto, ip_src, port_src, ip_dest, port_dst, std::move(qtunnel_proto_data));
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
@@ -411,7 +415,9 @@ namespace QVPN {
 		using WinQVPNDriver = QVPN::Core::QVPNClientDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPN::NetTools::QVPN_Socket, QVPN::NetTools::QVPNNetTools>;
 
 		using WinDivertTrafficFilter = WinDivertTrafficFilter_<WinDivertTrafficFilterType>;
-		using WinDivertClientNetDriver = WinDivertClientNetDriver_<WinDivertTrafficFilter, WinQVPNDriver>;
+
+		template <QVPN::Core::is_logger Logger>
+		using WinDivertClientNetDriver = WinDivertClientNetDriver_<WinDivertTrafficFilter, WinQVPNDriver, Logger>;
 	}
 
 

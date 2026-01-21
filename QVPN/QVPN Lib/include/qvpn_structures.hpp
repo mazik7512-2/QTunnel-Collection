@@ -454,6 +454,8 @@ namespace QVPN {
 
 					{ t.recalculate_ip_checksum() } -> std::same_as<void>;
 
+					{ t.to_net_friendly_view() } -> std::same_as<std::string>;
+
 			};
 
 			template <class Ip4PacketImpl>
@@ -563,6 +565,8 @@ namespace QVPN {
 				ObjectType to_object() const;
 				ViewType to_view() const;
 
+				std::string to_net_friendly_view() const;
+
 			};
 
 
@@ -640,6 +644,8 @@ namespace QVPN {
 
 				ObjectType to_object() const;
 				ViewType to_view() const;
+
+				std::string to_net_friendly_view() const;
 
 			};
 
@@ -722,6 +728,8 @@ namespace QVPN {
 				{ t.set_sender_number(number) } -> std::same_as<void>;
 				{ t.set_receiver_number(number) } -> std::same_as<void>;
 				{ t.set_flags(flags) } -> std::same_as<void>;
+
+				{ t.to_transport_friendly_view() } -> std::same_as<std::string>;
 			};
 
 			template <class TcpImpl>
@@ -824,6 +832,8 @@ namespace QVPN {
 				ObjectType to_object() const;
 				ViewType to_view() const;
 
+				std::string to_transport_friendly_view() const;
+
 				// no checksum calcs
 				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
 				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
@@ -903,6 +913,8 @@ namespace QVPN {
 				ObjectType to_object() const;
 				ViewType to_view() const;
 
+				std::string to_transport_friendly_view() const;
+
 				// no checksum calcs
 				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
 				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
@@ -977,6 +989,8 @@ namespace QVPN {
 				UInt get_receiver_number() const;
 				UByte get_flags() const;
 
+				std::string to_udp_friendly_view() const;
+
 				void set_sender_number(UInt number);
 				void set_receiver_number(UInt number);
 				void set_flags(UByte flags);
@@ -991,6 +1005,8 @@ namespace QVPN {
 
 				ObjectType to_object() const;
 				ViewType to_view() const;
+
+				std::string to_transport_friendly_view() const;
 
 				// no checksum calcs
 				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UShort length);
@@ -1038,6 +1054,8 @@ namespace QVPN {
 				UInt get_receiver_number() const;
 				UByte get_flags() const;
 
+				std::string to_udp_friendly_view() const;
+
 				void set_sender_number(UInt number);
 				void set_receiver_number(UInt number);
 				void set_flags(UByte flags);
@@ -1052,6 +1070,8 @@ namespace QVPN {
 
 				ObjectType to_object() const;
 				ViewType to_view() const;
+
+				std::string to_transport_friendly_view() const;
 
 				// no checksum calcs
 				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UShort length);
@@ -1098,6 +1118,7 @@ namespace QVPN {
 				{ t.get_data() } -> std::same_as<std::pair<typename DataPacketImpl::DataIterator_t, typename DataPacketImpl::DataIterator_t>>;
 				{ ct.get_data() } -> std::same_as<std::pair<typename DataPacketImpl::ConstDataIterator_t, typename DataPacketImpl::ConstDataIterator_t>>;
 				{ t.set_data(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
+				{ ct.to_data_friendly_view() } -> std::same_as<std::string>;
 
 			}&& UnifiedPacketLike<DataPacketImpl>;
 
@@ -1129,6 +1150,8 @@ namespace QVPN {
 
 				ObjectType to_object() const;
 				ViewType to_view() const;
+
+				std::string to_data_friendly_view() const;
 			};
 
 
@@ -1160,6 +1183,8 @@ namespace QVPN {
 
 				ObjectType to_object() const;
 				ViewType to_view() const;
+
+				std::string to_data_friendly_view() const;
 			};
 
 
@@ -3747,6 +3772,20 @@ namespace QVPN {
 					set_tcp_urgent(scheme.get_urgent_pointer());
 				}
 
+				std::string to_packet_friendly_view() const
+				{
+					std::stringstream ss{};
+
+					auto net = to_net_friendly_view();
+					auto transport = to_transport_friendly_view();
+					auto data = to_data_friendly_view();
+
+					ss << net << transport << data << std::endl;
+
+					auto str = ss.str();
+					return str;
+				}
+
 			};
 
 			template <>
@@ -3826,6 +3865,19 @@ namespace QVPN {
 					QTunnelTCPViewScheme scheme(begin, end);
 				}
 
+				std::string to_packet_friendly_view() const
+				{
+					std::stringstream ss{};
+
+					auto net = to_net_friendly_view();
+					auto transport = to_transport_friendly_view();
+					auto data = to_data_friendly_view();
+
+					ss << net << transport << data << std::endl;
+
+					auto str = ss.str();
+					return str;
+				}
 
 			};
 
@@ -3917,6 +3969,20 @@ namespace QVPN {
 					set_tcp_urgent(scheme.get_urgent_pointer());
 				}
 
+				std::string to_packet_friendly_view() const
+				{
+					std::stringstream ss{};
+
+					auto net = to_net_friendly_view();
+					auto transport = to_transport_friendly_view();
+					auto data = to_data_friendly_view();
+
+					ss << net << transport << data << std::endl;
+
+					auto str = ss.str();
+					return str;
+				}
+
 			};
 
 			template <>
@@ -3988,6 +4054,20 @@ namespace QVPN {
 				void set_qtunnel_proto_data(UByte* begin, UByte* end)
 				{
 					QTunnelTCPViewScheme scheme(begin, end);
+				}
+
+				std::string to_packet_friendly_view() const
+				{
+					std::stringstream ss{};
+
+					auto net = to_net_friendly_view();
+					auto transport = to_transport_friendly_view();
+					auto data = to_data_friendly_view();
+
+					ss << net << transport << data << std::endl;
+
+					auto str = ss.str();
+					return str;
 				}
 
 			};
