@@ -191,28 +191,28 @@ namespace QVPN {
 				{
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
-					std::cout << WinColors::HEADER << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO)" << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::ENDC << WinColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << data << WinColors::DEFAULT << std::endl;
 				}
 
 				void success(std::string_view data)
 				{
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
-					std::cout << WinColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS)" << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << data << WinColors::DEFAULT << std::endl;
 				}
 
 				void fail(std::string_view data)
 				{
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
-					std::cout << WinColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL)" << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << data << WinColors::DEFAULT << std::endl;
 				}
 
 				void warning(std::string_view data)
 				{
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
-					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING)" << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << data << WinColors::DEFAULT << std::endl;
 				}
 			};
 		}

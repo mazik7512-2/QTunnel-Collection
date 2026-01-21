@@ -6,8 +6,22 @@ using QVPNServerSettings = QVPN::QVPNServerSettings;
 using QVPNServer = QVPN::QVPNServer<ServerDatabaseAdapter, ServerStatsAdatper>;
 using QVPNLayers = QVPN::QVPNLayersStrategy;
 
+
+void EnableANSI() {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) return;
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hOut, &dwMode)) return;
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+}
+
+
 int main(int argc, const char* argv[])
 {
+    EnableANSI();
     argparse::ArgumentParser program("QVPN Server App", "0.5");
 
     program.add_argument("-s", "--settings", "-c", "--config")

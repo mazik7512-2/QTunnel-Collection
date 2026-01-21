@@ -33,6 +33,7 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(int sock_family, int sock_type, int soc
 	if (result == 0)
 	{
 		socket_ = socket(sock_family, sock_type, sock_proto);
+		s_type_ = sock_type;
 		switch (sock_proto)
 		{
 		case IPPROTO_TCP:
@@ -148,17 +149,38 @@ std::pair<QVPN::Core::NetStatus, std::array<UByte, QVPN::NetTools::QVPN_Socket::
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::disconnect() const
 {
-	closesocket(socket_);
 	WSACleanup();
 	return QVPN::Core::NetStatus{ true, 0 };
 }
 
+bool QVPN::NetTools::QVPN_Socket::check_connected() const
+{
+	sockaddr_in peerAddr;
+	int addrLen = sizeof(peerAddr);
+	if (getpeername(socket_, (sockaddr*)&peerAddr, &addrLen) == 0) {
+		return true; 
+	}
+	return false;
+}
+
+void QVPN::NetTools::QVPN_Socket::disconnect_if_connected() const
+{
+	if (check_connected())
+		return;
+	disconnect();
+}
+
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::shutdown()
 {
-	auto res = ::shutdown(socket_, SD_SEND);
+	auto res = ::shutdown(socket_, SD_BOTH);
 	WSACleanup();
 	bool s = (res == 0) ? true : false;
 	return QVPN::Core::NetStatus{ s, res };
+}
+
+void QVPN::NetTools::QVPN_Socket::close_socket() const
+{
+	closesocket(socket_);
 }
 
 QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_family(QVPN::Core::NetProtocol net_proto)

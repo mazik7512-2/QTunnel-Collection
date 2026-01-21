@@ -332,7 +332,7 @@ std::pair<UByte*, UByte*> QVPN::Core::SplittedPacketView::get_raw_packet(size_t 
 
 size_t QVPN::Core::SplittedPacketView::size() const
 {
-    return data_size_;
+    return separators_.size();
 }
 
 std::pair<QVPN::Core::SplittedPacketView::DataIterator_t, QVPN::Core::SplittedPacketView::DataIterator_t> QVPN::Core::SplittedPacketView::to_bytes()

@@ -248,9 +248,6 @@ namespace QVPN {
 					auto port_dst = std::visit([](auto& p) { return p.get_dst_port(); }, package);
 
 					auto qtunnel_proto_data = std::visit([](auto& p) {return p.collect_proto_data(); }, package);
-					
-					std::visit([&ss](auto& p) { ss << p.to_packet_friendly_view() << std::endl; }, package);
-					logger_.info(ss.str());
 
 					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data(ver, transport_proto, ip_src, port_src, ip_dest, port_dst, std::move(qtunnel_proto_data));
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
@@ -280,7 +277,6 @@ namespace QVPN {
 			void start_capture_incoming_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
 			{
 				in_hDivert_ = WinDivertOpen(incoming_filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
-				printf(incoming_filters_data.c_str());
 				if (in_hDivert_ != INVALID_HANDLE_VALUE)
 				{
 					printf("Driver is working.\n");
@@ -363,8 +359,16 @@ namespace QVPN {
 
 			void init_driver(const QVPN::Core::IPv4Address& addr)
 			{
-				apply_default_outgoing_filter(addr);
-				apply_default_incoming_filter(addr);
+				bool success = driver_.connect();
+				success = driver_.init();
+
+				int n_tries = 20;
+				while (!success || n_tries > 0)
+				{
+					success = driver_.reconnect();
+					success = driver_.init();
+					n_tries--;
+				}
 			}
 			
 			void add_outgoing_traffic_filter(Filter_t filter)
@@ -381,11 +385,9 @@ namespace QVPN {
 
 			void start_capture_outgoing_traffic(const QVPN::Core::IPv4Address& adapter_addr, QVPN::Core::BaseTypes::ULong adapter_id)
 			{
-				driver_.connect();
-				driver_.init();
 				new_adapter_id = adapter_id;
-				//out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
-				start_capture_outgoing_traffic_(adapter_addr);
+				out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
+				//start_capture_outgoing_traffic_(adapter_addr);
 			}
 
 			void start_capture_incoming_traffic(const QVPN::Core::IPv4Address& adapter_addr)
@@ -412,12 +414,13 @@ namespace QVPN {
 
 		};
 
-		using WinQVPNDriver = QVPN::Core::QVPNClientDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPN::NetTools::QVPN_Socket, QVPN::NetTools::QVPNNetTools>;
+		template <QVPN::Core::is_logger Logger>
+		using WinQVPNDriver = QVPN::Core::QVPNClientDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPN::NetTools::QVPN_Socket, QVPN::NetTools::QVPNNetTools, Logger>;
 
 		using WinDivertTrafficFilter = WinDivertTrafficFilter_<WinDivertTrafficFilterType>;
 
 		template <QVPN::Core::is_logger Logger>
-		using WinDivertClientNetDriver = WinDivertClientNetDriver_<WinDivertTrafficFilter, WinQVPNDriver, Logger>;
+		using WinDivertClientNetDriver = WinDivertClientNetDriver_<WinDivertTrafficFilter, WinQVPNDriver<Logger>, Logger>;
 	}
 
 

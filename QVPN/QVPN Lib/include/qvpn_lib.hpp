@@ -399,14 +399,17 @@ namespace QVPN {
 
 		template <class SocketImpl, class Addr>
 		concept is_socket =
-			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr &addr, const BaseTypes::UShort source_port, int flags, int con_limit, const QVPNSocketSettings& sock_settings) {
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr &addr, const BaseTypes::UShort port, int flags, int con_limit, const QVPNSocketSettings& sock_settings) {
 
 			SocketImpl::buffer_size;
 
-			{ t.connect(addr, source_port) } -> std::same_as<NetStatus>;
+			{ t.reconnect(addr, port) } -> std::same_as<NetStatus>;
+			{ t.connect(addr, port) } -> std::same_as<NetStatus>;
 			{ t.disconnect() } -> std::same_as<NetStatus>;
+			{ t.close_socket() } -> std::same_as<void>;
+			{ t.disconnect_if_connected() } -> std::same_as<void>;
 
-			{ t.bind(addr, source_port) } -> std::same_as<NetStatus>;
+			{ t.bind(addr, port) } -> std::same_as<NetStatus>;
 			{ t.listen(con_limit) } -> std::same_as<NetStatus>;
 			{ t. template accept<Addr>() } -> std::same_as<SocketImpl>;
 

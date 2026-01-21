@@ -272,7 +272,7 @@ std::string_view QVPN::Core::QVPNWhitelist::get_random_host() const
 {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dist(0, whitelist_.size());
+    std::uniform_int_distribution<int> dist(0, whitelist_.size() - 1);
 
     return whitelist_[dist(gen)].get_host();
 }
