@@ -2745,8 +2745,8 @@ std::pair<QVPN::Core::DataStructures::TLSExtensionsView::ConstDataIterator_t, QV
 template <std::integral scheme_type, std::random_access_iterator Iter >
 void unified_parse_client_scheme(QVPN::Core::DataStructures::TLS13_HelloPacketScheme<scheme_type>& scheme, Iter first, Iter last)
 {
-	QVPN::Core::DataStructures::TLSRandomView r(first, last);
-	size_t start = 0;
+	size_t start = 2;
+	QVPN::Core::DataStructures::TLSRandomView r(first + start, last);
 	size_t end = start + r.get_tls_random_full_length();
 	scheme.random = std::make_pair<>(start, end);
 
@@ -3008,8 +3008,8 @@ std::pair<QVPN::Core::DataStructures::TLSServerNameIndicationExtensionView::Cons
 template <std::integral scheme_type, std::random_access_iterator Iter> 
 void unified_server_parse_scheme(QVPN::Core::DataStructures::TLS13_HelloPacketScheme<scheme_type>& scheme, Iter first, Iter last)
 {
+	size_t start = 2;
 	QVPN::Core::DataStructures::TLSRandomView r(first, last);
-	size_t start = 0;
 	size_t end = start + r.get_tls_random_full_length();
 	scheme.random = std::make_pair<>(start, end);
 

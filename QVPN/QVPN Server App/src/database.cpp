@@ -60,7 +60,8 @@ int check_user_callback(void* data, int argc, char** argv, char** azColName)
 	bool* res = static_cast<bool*>(data);
 	if (argc > 0)
 		*res = true;
-	*res = false;
+	else
+		*res = false;
 	return 0;
 }
 
@@ -68,7 +69,7 @@ bool SQLiteDatabase::check_user(std::string_view user)
 {
 	bool b = false;
 	std::stringstream ss{};
-	ss << "SELECT * FROM users WHERE key LIKE " << user;
+	ss << "SELECT * FROM users WHERE key LIKE '" << user << "'";
 	auto sql = ss.str();
 	auto exit = sqlite3_exec(db_, sql.c_str(), check_user_callback, &b, nullptr);
 	if (exit != SQLITE_OK)

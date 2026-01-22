@@ -1461,7 +1461,7 @@ namespace QVPN
 				
 				ss << "Start proccessing (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
 
-				logger_.info(ss.str());
+				logger_.info(ss.view());
 				auto receive_data = client_socket.receive();
 				auto& status = receive_data.status;
 				auto& data = receive_data.data;
@@ -1557,9 +1557,10 @@ namespace QVPN
 
 				std::stringstream ss{};
 				ss << "QVPN Server started on " << socket.get_local_addr().to_string() << ":" << socket.get_local_port();
-				logger_.success(ss.str());
-				ss.clear();
-				ss.flush();
+				logger_.success(ss.view());
+				ss.str("");
+
+				// TODO: сделать логер отдельными функциями + разобраться с потоком
 
 				while (true)
 				{
@@ -1582,14 +1583,7 @@ namespace QVPN
 
 						if (!status.success)
 						{
-							std::stringstream ss_disc{};
-							ss_disc << "Authorization failed from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
-							logger_.fail(ss_disc.view());
-
-							ss_disc.clear();
-
-							ss_disc << "Connection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ") closed";
-							logger_.info(ss_disc.view());
+							logger_auth_fail(client_socket);
 
 							client_socket.shutdown();
 							client_socket.close_socket();
@@ -1605,15 +1599,9 @@ namespace QVPN
 
 						if (rec.get_tls_record_type() != QVPN::Core::DataStructures::TLSRecordType::HANDSHAKE)
 						{
-							std::stringstream ss_disc{};
-							ss_disc << "Authorization failed from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
-							logger_.fail(ss_disc.view());
-
-							ss_disc.clear();
-
-							ss_disc << "Connection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ") closed";
-							logger_.info(ss_disc.view());
-							
+							logger_auth_fail(client_socket);
+							client_socket.shutdown();
+							client_socket.close_socket();
 							continue;
 						}
 
@@ -1622,15 +1610,9 @@ namespace QVPN
 
 						if (mes.get_tls_msg_type() != QVPN::Core::DataStructures::TLSMessageType::CLIENT_HELLO)
 						{
-							std::stringstream ss_disc{};
-							ss_disc << "Authorization failed from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
-							logger_.fail(ss_disc.view());
-
-							ss_disc.clear();
-
-							ss_disc << "Connection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ") closed";
-							logger_.info(ss_disc.view());
-
+							logger_auth_fail(client_socket);
+							client_socket.shutdown();
+							client_socket.close_socket();
 							continue;
 						}
 
@@ -1638,30 +1620,26 @@ namespace QVPN
 
 						TLS13_ClientHelloView client_hello(h_b, h_e);
 						auto crypto_data = client_hello.get_tls_session();
-						//TODO: разобраться со схемой парсинга ClientHello
+
 						// crypto method
 						auto [d_b, d_e] = crypto_data.get_tls_id();
 						QVPN::Core::QVPN_Crypto crypto_method = static_cast<QVPN_Crypto>((*(d_b) << 8) | *(d_b + 1));
-
+						int offset = 2;
 						// crypto key
-						UByte key_size = *(d_b + 2);
-						std::string_view key(reinterpret_cast<char*>(d_b + 3), reinterpret_cast<char*>(d_b + key_size));
+						UByte key_size = *(d_b + offset);
+						offset++;
+						std::string_view key(reinterpret_cast<char*>(d_b + 3), reinterpret_cast<char*>(d_b + key_size + offset));
+						offset += key_size;
 
 						// user
-						UByte user_size = *(d_b + key_size);
-						std::string_view user(reinterpret_cast<char*>(d_b + key_size + 1), reinterpret_cast<char*>(d_b + user_size));
+						UByte user_size = *(d_b + offset);
+						offset++;
+						std::string_view user(reinterpret_cast<char*>(d_b + offset), reinterpret_cast<char*>(d_b + user_size + offset));
+						offset += user_size;
 
 						if (!database.check_user(user)) //TODO: изменить поведение на отправку HTTP
 						{
-							std::stringstream ss_disc{};
-							ss_disc << "Authorization failed from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
-							logger_.fail(ss_disc.view());
-
-							ss_disc.clear();
-
-							ss_disc << "Connection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ") closed";
-							logger_.info(ss_disc.view());
-
+							logger_auth_fail(client_socket);
 							client_socket.shutdown();
 							client_socket.close_socket();
 							//client_socket.disconnect();
@@ -1670,16 +1648,43 @@ namespace QVPN
 
 						auto tls_data = TLS13_Record::generate_object_bytes<TLS13_RecordGenStrategy, TLS13_Message, TLS13_ServerHello>(std::move(rec_strategy), std::move(strategy));
 
-						auto res = socket.send(tls_data.data(), tls_data.data() + tls_data.size());
+						auto res = client_socket.send(tls_data.data(), tls_data.data() + tls_data.size());
 
 						if (res.success)
 						{
-							auto t = std::thread([this, &client_socket, &stats, &user]() { process_socket_(client_socket, stats, user); });
+							logger_auth_success(client_socket);
+							auto t = std::thread([this, &client_socket, &stats, &user]() { process_socket_(client_socket, stats, user); }); // TODO: вот тут проблема
 							socket_clients_threads_.emplace_back(std::move(t));
 						}
+						else
+						{
+							logger_auth_fail(client_socket);
+							client_socket.shutdown();
+							client_socket.close_socket();
+						}
+
 					}
 				}
 				clean_threads_();
+			}
+
+			void logger_auth_fail(Socket& socket)
+			{
+				std::stringstream ss{};
+				ss << "Authorization failed from (" << socket.get_remote_addr().to_string() << ":" << socket.get_remote_port() << ")";
+				logger_.fail(ss.view());
+
+				ss.str("");
+
+				ss << "Connection from (" << socket.get_remote_addr().to_string() << ":" << socket.get_remote_port() << ") closed";
+				logger_.info(ss.view());
+			}
+
+			void logger_auth_success(Socket& socket)
+			{
+				std::stringstream ss{};
+				ss << "Authorization successfull from (" << socket.get_remote_addr().to_string() << ":" << socket.get_remote_port() << ")";
+				logger_.success(ss.view());
 			}
 
 		public:

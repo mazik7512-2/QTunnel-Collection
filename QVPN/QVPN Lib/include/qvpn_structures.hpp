@@ -2898,7 +2898,7 @@ namespace QVPN {
 					requires std::is_same_v<Iter1, Iter2>
 				static TLS13_ClientHelloPacketLittleEndian generate_object(GenStrategy&& strategy, WListData host, Iter1 begin, Iter2 end)
 				{
-					auto obj_bytes = generate_object_bytes<GenStrategy, Iter1, Iter2>(std::forward<GenStrategy>(strategy), host, begin, end);
+					auto obj_bytes = generate_object_bytes<GenStrategy, WListData, Iter1, Iter2>(std::forward<GenStrategy>(strategy), host, begin, end);
 					return TLS13_ClientHelloPacketLittleEndian(obj_bytes.begin(), obj_bytes.end());
 				}
 
