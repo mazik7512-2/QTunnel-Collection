@@ -364,8 +364,8 @@ namespace QVPN {
 				if (success)
 					success = driver_.init();
 
-				int n_tries = 20; // TODO: цикл
-				while (n_tries > 0 || !success)
+				int n_tries = 20;
+				while (n_tries != 0 && !success)
 				{
 					success = driver_.reconnect();
 					if (success)

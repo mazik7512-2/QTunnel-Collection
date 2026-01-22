@@ -1468,7 +1468,7 @@ namespace QVPN
 				auto size = receive_data.size;
 				if (!status.success)
 					return false;
-				auto decoded_data = decode_data(data.data(), data.data() + size);
+				auto decoded_data = decode_data(data.data(), data.data() + size); //TODO: какая-то чушь с данными и где-то аналогично в client app
 
 				if (!decoded_data.has_value())
 					return false;
@@ -1653,7 +1653,7 @@ namespace QVPN
 						if (res.success)
 						{
 							logger_auth_success(client_socket);
-							auto t = std::thread([this, &client_socket, &stats, &user]() { process_socket_(client_socket, stats, user); }); // TODO: вот тут проблема
+							auto t = std::thread([this, &client_socket, &stats, &user]() { process_socket_(client_socket, stats, user); });
 							socket_clients_threads_.emplace_back(std::move(t));
 						}
 						else
