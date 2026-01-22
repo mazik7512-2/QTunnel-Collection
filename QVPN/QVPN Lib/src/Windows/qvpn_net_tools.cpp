@@ -121,8 +121,11 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remo
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::listen(int con_limit)
 {
+	int err = 0;
 	auto res = ::listen(socket_, con_limit);
 	bool s = (res == 0) ? true : false;
+	if (!s)
+		err = WSAGetLastError();
 	return QVPN::Core::NetStatus{ s , res };
 }
 
@@ -132,19 +135,22 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::send(const UByte* begin, cons
 	status.success = true;
 	auto res = ::send(socket_, reinterpret_cast<const char*>(begin), std::distance(begin, end), flags);
 	if (res == SOCKET_ERROR)
-		status.success = true;
-	status.status = res;
+	{
+		status.success = false;
+		status.status = WSAGetLastError();
+	}
 	return status;
 }
 
-std::pair<QVPN::Core::NetStatus, std::array<UByte, QVPN::NetTools::QVPN_Socket::buffer_size>> QVPN::NetTools::QVPN_Socket::receive(int flags)
+QVPN::NetTools::QVPN_Socket::ReceiveData QVPN::NetTools::QVPN_Socket::receive(int flags)
 {
 	QVPN::Core::NetStatus status{};
 	std::array<UByte, QVPN_Socket::buffer_size> buff{};
 	auto res = recv(socket_, reinterpret_cast<char *>(buff.data()), QVPN_Socket::buffer_size, flags);
-	status.status = res;
 	status.success = (res > 0) ? true : false;
-	return std::pair<QVPN::Core::NetStatus, std::array<UByte, QVPN_Socket::buffer_size>>(status, std::move(buff));
+	if (!status.success)
+		status.status = WSAGetLastError();
+	return ReceiveData{ status, res, std::move(buff) };
 }
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::disconnect() const
@@ -173,7 +179,6 @@ void QVPN::NetTools::QVPN_Socket::disconnect_if_connected() const
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::shutdown()
 {
 	auto res = ::shutdown(socket_, SD_BOTH);
-	WSACleanup();
 	bool s = (res == 0) ? true : false;
 	return QVPN::Core::NetStatus{ s, res };
 }

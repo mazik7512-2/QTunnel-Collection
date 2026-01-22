@@ -194,7 +194,8 @@ namespace QVPN {
 
 			void apply_default_outgoing_filter()
 			{
-				filters_out_.push_back(!Filter::dest(driver_.get_vpn_address()));
+				filters_out_.push_back(!Filter::source(driver_.get_vpn_address())); //for localhost server
+				filters_out_.push_back(!Filter::dest(driver_.get_vpn_address())); // for client outgoing traffic
 				filters_out_.push_back(Filter::outgoing_traffic());
 			}
 
@@ -360,13 +361,15 @@ namespace QVPN {
 			void init_driver(const QVPN::Core::IPv4Address& addr)
 			{
 				bool success = driver_.connect();
-				success = driver_.init();
+				if (success)
+					success = driver_.init();
 
 				int n_tries = 20;
-				while (!success || n_tries > 0)
+				while (n_tries > 0 || !success)
 				{
 					success = driver_.reconnect();
-					success = driver_.init();
+					if (success)
+						success = driver_.init();
 					n_tries--;
 				}
 			}

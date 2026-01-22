@@ -397,6 +397,15 @@ namespace QVPN {
 		};
 
 
+		struct ReceiveData
+		{
+			static constexpr BaseTypes::UInt buffer_size = 1 << 16;
+
+			NetStatus status;
+			int size;
+			std::array<BaseTypes::UByte, buffer_size> data;
+		};
+
 		template <class SocketImpl, class Addr>
 		concept is_socket =
 			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr &addr, const BaseTypes::UShort port, int flags, int con_limit, const QVPNSocketSettings& sock_settings) {
@@ -414,7 +423,7 @@ namespace QVPN {
 			{ t. template accept<Addr>() } -> std::same_as<SocketImpl>;
 
 			{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
-			{ t.receive(flags) } -> std::same_as<std::pair<NetStatus, std::array<BaseTypes::UByte, SocketImpl::buffer_size>>>;
+			{ t.receive(flags) } -> std::same_as<ReceiveData>;
 
 			{ t.get_local_addr() } -> std::same_as<const Addr&>;
 			{ t.get_local_port() } -> std::same_as<BaseTypes::UShort>;

@@ -278,6 +278,7 @@ namespace QVPN {
 
 			using TransportProtocol = QVPN::Core::TransportProtocol;
 			using QVPNSocketSettings = QVPN::Core::QVPNSocketSettings;
+			using ReceiveData = QVPN::Core::ReceiveData;
 		public:
 
 			QVPN_Socket();
@@ -385,7 +386,7 @@ namespace QVPN {
 
 			QVPN::Core::NetStatus send(const UByte* begin, const UByte* end, int flags = 0);
 
-			std::pair<QVPN::Core::NetStatus, std::array<UByte, QVPN_Socket::buffer_size>> receive(int flags = 0);
+			ReceiveData receive(int flags = 0);
 
 			QVPN::Core::NetStatus disconnect() const;
 

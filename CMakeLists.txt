@@ -149,12 +149,16 @@ file(GLOB whitelists_list "${CMAKE_CURRENT_SOURCE_DIR}/*.qwlist")
 if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 
 	message("QVPN Server App is building...")
+	
 	file(GLOB_RECURSE server_inc "${QVPN_SERVER_APP_PATH}/include/*.hpp")
 	file(GLOB_RECURSE server_src "${QVPN_SERVER_APP_PATH}/src/*.cpp")
 	add_executable("${QVPN_SERVER_APP_NAME}" ${server_inc} ${server_src})
 	set_target_properties(${QVPN_SERVER_APP_NAME} PROPERTIES
         LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
     )
+	
+	# set working directory for vc
+	set_target_properties("${QVPN_SERVER_APP_NAME}" PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE})
 	
 	# include server app headers
 	include_directories("${QVPN_SERVER_APP_PATH}/include")
@@ -228,6 +232,9 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
 	set_target_properties(${QVPN_CLIENT_APP_NAME} PROPERTIES
         LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
     )
+	
+	# set working directory for vs
+	set_target_properties("${QVPN_CLIENT_APP_NAME}" PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE})
 	
 	# link QVPN Library
 	target_link_libraries(${QVPN_CLIENT_APP_NAME} PRIVATE ${QVPN_LIBRARY_NAME})

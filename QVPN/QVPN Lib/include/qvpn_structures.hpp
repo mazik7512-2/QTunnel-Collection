@@ -1524,7 +1524,9 @@ namespace QVPN {
 					requires std::is_same_v<Iter1, Iter2>
 				static std::vector<UByte> generate_object_bytes(Iter1 begin, Iter2 end)
 				{
+					UByte size = std::distance(begin, end);
 					std::vector<UByte> obj_bytes;
+					obj_bytes.push_back(size);
 					std::copy(begin, end, std::back_inserter(obj_bytes));
 					return obj_bytes;
 				}

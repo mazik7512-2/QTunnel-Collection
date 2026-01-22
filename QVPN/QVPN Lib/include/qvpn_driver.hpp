@@ -860,13 +860,16 @@ namespace QVPN
 			QVPNClientDriver(QVPNClientSettings_<Iter> settings)
 				: settings_(std::move(settings))//, socket_(NetTools::create_socket())
 			{
+				logger_.info("Starting QVPN Client Driver...");
 				const auto net_proto = settings_.get_net_proto();
 				const auto t_proto = settings_.get_transport_proto();
 				socket_ = NetTools::create_socket(net_proto, t_proto);
+				logger_.success("QVPN Client Driver successfully started.");
 			}
 
 			bool connect()
 			{
+				logger_.success("QVPN Client successfully started");
 				std::stringstream ss{};
 				const auto addr = settings_.get_ip_address();
 				const auto port = settings_.get_port();
@@ -876,7 +879,7 @@ namespace QVPN
 					logger_.success(ss.str());
 				}
 				else {
-					ss << "Connection to QVPN Server (" << socket_.get_remote_addr().to_string() << ":" << socket_.get_remote_port() << ") failed";
+					ss << "Connection to QVPN Server (" << settings_.get_ip_address().to_string() << ":" << settings_.get_port() << ") failed";
 					logger_.fail(ss.str());
 				}
 				return res.success;
@@ -901,11 +904,13 @@ namespace QVPN
 
 			bool init()
 			{
-				logger_.info("Starting init connection to QVPN Server.");
+				logger_.info("Starting authorization on QVPN Server.");
 				using DataIter = std::vector<UByte>::const_iterator;
 				TLS13_RecordGenStrategy rec_strategy{};
 				TLS13_ClienthHelloGenStrategy client_strategy{};
 				std::vector<UByte> crypto_data{};
+
+				auto user = settings_.get_auth_data();
 
 				auto m = settings_.get_crypto_method();
 
@@ -913,7 +918,13 @@ namespace QVPN
 				crypto_data.push_back(static_cast<UByte>(m & 0xFF));
 
 				auto k = settings_.get_key();
+				UByte key_length = k.size();
+				crypto_data.push_back(key_length);
 				std::copy(k.begin(), k.end(), std::back_inserter(crypto_data));
+
+				UByte user_length = user.size();
+				crypto_data.push_back(user_length);
+				std::copy(user.begin(), user.end(), std::back_inserter(crypto_data));
 
 				auto wldata = settings_.get_whitelist_element();
 
@@ -922,16 +933,28 @@ namespace QVPN
 					(std::move(rec_strategy), std::move(client_strategy), wldata, crypto_data.begin(), crypto_data.end());
 
 				auto res = socket_.send(tls_data.data(), tls_data.data() + tls_data.size());
-				if (res.success)
-					logger_.success("Connected to QVPN Server.");
-				else
-					logger_.fail("Connection to QVPN Server failed.");
 
-				auto [status, server_hello_data] = socket_.receive();
+				logger_.info("Waiting for response from server...");
+				auto receive_data = socket_.receive();
+				auto& status = receive_data.status;
+				auto& server_hello_data = receive_data.data;
+				auto size = receive_data.size;
 				if (!status.success)
+				{
+					logger_.fail("Authorization failed.");
 					return false;
+				}
 				
-				TLS13_ServerHello sh(server_hello_data.data(), server_hello_data.data() + server_hello_data.size());
+				TLS13_ServerHello sh(server_hello_data.data(), server_hello_data.data() + size);
+				
+
+				if (status.success)
+					logger_.success("Authorization successfull.");
+				else
+				{
+					logger_.fail("Authorization failed.");
+					return false;
+				}
 
 				return res.success;
 			}
@@ -960,15 +983,17 @@ namespace QVPN
 			decltype(auto) get_data()
 			{
 				std::stringstream ss{};
-				auto [status, res] = socket_.receive();
-				ss << "Recevied from QVPN Server " << res.size() << " bytes.";
-				logger_.info(ss.str());
-				return res;
+				auto receive_data = socket_.receive();
+				ss << "Recevied from QVPN Server " << receive_data.size << " bytes.";
+				logger_.info(ss.view());
+				return receive_data.data;
 			}
 
 			bool disconnect() const
 			{
+				logger_.warning("Disconnection from QVPN Server");
 				auto r = socket_.shutdown();
+				auto r1 = socket_.close_socket();
 				auto res = socket_.disconnect();
 				return res.success;
 			}
@@ -1437,10 +1462,13 @@ namespace QVPN
 				ss << "Start proccessing (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
 
 				logger_.info(ss.str());
-				auto [status, data] = client_socket.receive();
+				auto receive_data = client_socket.receive();
+				auto& status = receive_data.status;
+				auto& data = receive_data.data;
+				auto size = receive_data.size;
 				if (!status.success)
 					return false;
-				auto decoded_data = decode_data(data.data(), data.data() + data.size());
+				auto decoded_data = decode_data(data.data(), data.data() + size);
 
 				if (!decoded_data.has_value())
 					return false;
@@ -1467,12 +1495,16 @@ namespace QVPN
 					}, packet);
 
 				server_socket.send(res_b, res_e);
-				auto [status1, server_data] = server_socket.receive();
+				auto server_receive = server_socket.receive();
+
+				auto& status1 = server_receive.status;
+				auto& server_data = server_receive.data;
+				auto server_size = server_receive.size;
 
 				if (!status1.success)
 					return false;
 
-				auto response = pp_.pre_parse(server_data.data(), server_data.data() + server_data.size());
+				auto response = pp_.pre_parse(server_data.data(), server_data.data() + size);
 
 				auto proto_data = std::visit([](auto& p) { return p.collect_proto_data(); }, response);
 
@@ -1531,7 +1563,6 @@ namespace QVPN
 
 				while (true)
 				{
-					//TODO: разбораться с receive и подключением
 					auto res = socket.listen();
 					if (res.success)
 					{
@@ -1539,44 +1570,102 @@ namespace QVPN
 						TLS13_DefaultServerHelloGenStrategy strategy{};
 
 						auto client_socket = socket.accept<Addr>();
-						auto [status, data] = socket.receive();
+
+						std::stringstream ss_ac{};
+						ss_ac << "Accepting connnection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
+						logger_.warning(ss_ac.view());
+
+						auto receive_data = client_socket.receive();
+						auto& status = receive_data.status;
+						auto& data = receive_data.data;
+						auto len = receive_data.size;
 
 						if (!status.success)
 						{
+							std::stringstream ss_disc{};
+							ss_disc << "Authorization failed from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
+							logger_.fail(ss_disc.view());
+
+							ss_disc.clear();
+
+							ss_disc << "Connection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ") closed";
+							logger_.info(ss_disc.view());
+
 							client_socket.shutdown();
 							client_socket.close_socket();
-							client_socket.disconnect();
+							//client_socket.disconnect();
 							continue;
 						}
 
 						std::stringstream ss1{};
 
-						ss1 << "Connection accepted from " << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port();
-						logger_.success(ss1.str());
-						auto rec = TLS13_RecordView(data.data(), data.data() + data.size());
+						ss1 << "Start authorization from " << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port();
+						logger_.info(ss1.view());
+						auto rec = TLS13_RecordView(data.data(), data.data() + len);
 
 						if (rec.get_tls_record_type() != QVPN::Core::DataStructures::TLSRecordType::HANDSHAKE)
+						{
+							std::stringstream ss_disc{};
+							ss_disc << "Authorization failed from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
+							logger_.fail(ss_disc.view());
+
+							ss_disc.clear();
+
+							ss_disc << "Connection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ") closed";
+							logger_.info(ss_disc.view());
+							
 							continue;
+						}
 
 						auto [mb, me] = rec.get_tls_record_data();
 						auto mes = TLS13_MessageView(mb, me);
 
 						if (mes.get_tls_msg_type() != QVPN::Core::DataStructures::TLSMessageType::CLIENT_HELLO)
+						{
+							std::stringstream ss_disc{};
+							ss_disc << "Authorization failed from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
+							logger_.fail(ss_disc.view());
+
+							ss_disc.clear();
+
+							ss_disc << "Connection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ") closed";
+							logger_.info(ss_disc.view());
+
 							continue;
+						}
 
 						auto [h_b, h_e] = mes.get_tls_msg_data();
 
 						TLS13_ClientHelloView client_hello(h_b, h_e);
-						auto key = client_hello.get_tls_session();
-						auto [k_b, k_e] = key.get_tls_id();
-						std::string_view user(reinterpret_cast<char*>(k_b), reinterpret_cast<char*>(k_e));
+						auto crypto_data = client_hello.get_tls_session();
+						//TODO: разобраться со схемой парсинга ClientHello
+						// crypto method
+						auto [d_b, d_e] = crypto_data.get_tls_id();
+						QVPN::Core::QVPN_Crypto crypto_method = static_cast<QVPN_Crypto>((*(d_b) << 8) | *(d_b + 1));
 
-						if (!database.check_user(user))
+						// crypto key
+						UByte key_size = *(d_b + 2);
+						std::string_view key(reinterpret_cast<char*>(d_b + 3), reinterpret_cast<char*>(d_b + key_size));
+
+						// user
+						UByte user_size = *(d_b + key_size);
+						std::string_view user(reinterpret_cast<char*>(d_b + key_size + 1), reinterpret_cast<char*>(d_b + user_size));
+
+						if (!database.check_user(user)) //TODO: изменить поведение на отправку HTTP
 						{
+							std::stringstream ss_disc{};
+							ss_disc << "Authorization failed from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
+							logger_.fail(ss_disc.view());
+
+							ss_disc.clear();
+
+							ss_disc << "Connection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ") closed";
+							logger_.info(ss_disc.view());
+
 							client_socket.shutdown();
 							client_socket.close_socket();
-							client_socket.disconnect();
-							return;
+							//client_socket.disconnect();
+							continue;
 						}
 
 						auto tls_data = TLS13_Record::generate_object_bytes<TLS13_RecordGenStrategy, TLS13_Message, TLS13_ServerHello>(std::move(rec_strategy), std::move(strategy));
@@ -1602,6 +1691,7 @@ namespace QVPN
 			QVPNServerDriver(QVPNServerSettings_<Iter> settings)
 				: settings_(std::move(settings))
 			{
+				logger_.info("Starting QVPN Server Driver...");
 				auto [b, e] = settings_.get_addrs();
 				std::stringstream ss{};
 				for (auto& i = b; b < e; ++i)
@@ -1609,11 +1699,11 @@ namespace QVPN
 					vpn_sockets_.emplace_back(std::move(NetTools::create_socket(i->get_net_proto(), i->get_transport_proto())));
 					auto& s = vpn_sockets_[vpn_sockets_.size() - 1];
 					s.bind(i->get_ip_address(), i->get_port());
-					ss << "Init sockets on " << s.get_local_addr().to_string() << ":" << s.get_local_port();
+					ss << "Init socket on " << s.get_local_addr().to_string() << ":" << s.get_local_port();
 					logger_.success(ss.str());
 					ss.clear();
 				}
-
+				logger_.success("QVPN Server Driver successfully started.");
 			}
 
 			template <is_database_adapter Database>
