@@ -3735,17 +3735,17 @@ QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian
 
 UShort QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian::get_tls_versions_full_length() const
 {
-	return get_tls_versions_length() + 1;
+	return get_tls_versions_length();
 }
 
-UByte QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian::get_tls_versions_length() const
+UShort QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian::get_tls_versions_length() const
 {
-	return static_cast<UShort>(versions_[0]);
+	return static_cast<UShort>(2);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian::get_tls_supported_version() const
 {
-	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(versions_.cbegin() + 1, versions_.cend());
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(versions_.cbegin(), versions_.cend());
 }
 
 std::pair<QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian::to_bytes() const
@@ -3774,17 +3774,17 @@ QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionLittleEndian
 
 UShort QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionView::get_tls_versions_full_length() const
 {
-	return get_tls_versions_length() + 1;
+	return get_tls_versions_length();
 }
 
-UByte QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionView::get_tls_versions_length() const
+UShort QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionView::get_tls_versions_length() const
 {
-	return static_cast<UByte>(data_[0]);
+	return static_cast<UByte>(2);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionView::get_tls_supported_versions() const
 {
-	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + 1, data_ + size_);
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
 
 std::pair<QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionView::ConstDataIterator_t, QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionView::ConstDataIterator_t> QVPN::Core::DataStructures::TLSSupportedVersionsServerHelloExtensionView::to_bytes() const

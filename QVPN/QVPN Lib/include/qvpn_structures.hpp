@@ -2144,8 +2144,8 @@ namespace QVPN {
 				template<std::random_access_iterator Iter>
 				TLSSupportedVersionsServerHelloExtensionLittleEndian(Iter first, Iter last)
 				{
-					auto length = static_cast<UByte>(first[0]);
-					std::copy(first, first + length + 1, std::back_inserter(versions_));
+					auto length = 2;
+					std::copy(first, first + 2, std::back_inserter(versions_));
 				}
 
 
@@ -2154,7 +2154,7 @@ namespace QVPN {
 				static TLSSupportedVersionsServerHelloExtensionLittleEndian generate_object(TLSProtocolVersion version);
 
 				UShort get_tls_versions_full_length() const;
-				UByte get_tls_versions_length() const;
+				UShort get_tls_versions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_supported_version() const;
 
 				/* Unified Packet implementaion */
@@ -2188,7 +2188,7 @@ namespace QVPN {
 
 
 				UShort get_tls_versions_full_length() const;
-				UByte get_tls_versions_length() const;
+				UShort get_tls_versions_length() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_supported_versions() const;
 
 				/* Unified Packet implementaion */
