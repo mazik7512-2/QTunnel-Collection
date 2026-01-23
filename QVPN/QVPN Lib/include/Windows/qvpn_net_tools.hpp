@@ -74,20 +74,30 @@ namespace QVPN {
 			inline QVPN::Core::NetData qvpn_connect_(SOCKET& socket, const QVPN::Core::IPv4Address& addr, const UShort port)
 			{
 				struct sockaddr_in serverAddr {};
-				int addr_len = 4;
+				int addr_len = sizeof(serverAddr);
 				serverAddr.sin_family = AF_INET;
 				serverAddr.sin_port = htons(port);
 				serverAddr.sin_addr.S_un.S_addr = htonl(addr.to_uint());//std::visit([](const auto& address) { return address.to_uint(); }, addr);
 
 				int res = connect(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+				int err = 0;
+				if (res == SOCKET_ERROR)
+					err = WSAGetLastError();
+				if (res == SOCKET_ERROR)
+				{
+					wprintf(L"connect function failed with error: %ld\n", err);
+					auto iResult = closesocket(socket);
+					if (iResult == SOCKET_ERROR)
+						wprintf(L"closesocket function failed with error: %ld\n", WSAGetLastError());
+				}
+
 				getsockname(socket, (sockaddr*)&serverAddr, &addr_len);
 
 				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin_addr.S_un.S_un_b, (UByte*)&serverAddr.sin_addr.S_un.S_un_b + addr_len);
 
 				bool s = (res == 0) ? true : false;
-				int err = 0;
-				if (!s)
-					err = WSAGetLastError();
+				
+					
 				return QVPN::Core::NetData{ s , err, net_addr, port };
 			}
 

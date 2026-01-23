@@ -1526,16 +1526,16 @@ namespace QVPN
 				if (!decoded_data.has_value())
 					return false;
 
+				ss.str("");
+				ss << "Received " << size << " bytes from(" << client_socket->get_remote_addr().to_string() << ":" << client_socket->get_remote_port() << ")";
+				logger_.info(ss.view());
 
-
+				// inverted proxy data
 				QTunnelProxyData proxy_data = decoded_data->create_and_inverse_addrs(*decoded_data);
 
 				QVPNSocketData key{ decoded_data->get_transport_proto(), decoded_data->get_src_addr(), decoded_data->get_src_port(), decoded_data->get_dst_addr(), decoded_data->get_dst_port() };
 				connect_if_not_to_server(key, sock_map);
 				auto [b, e] = decoded_data->get_raw_data();
-
-				ss.str("");
-				ss << "Received " << std::distance(b, e) << " bytes from(" << client_socket->get_remote_addr().to_string() << ":" << client_socket->get_remote_port() << ")";
 
 				auto& server_socket = sock_map[key];
 
@@ -1566,6 +1566,7 @@ namespace QVPN
 
 				auto proto_data = std::visit([](auto& p) { return p.collect_proto_data(); }, response);
 
+				/*
 				QTunnelProxyData new_proxy_data = std::visit([&proto_data](auto& p) 
 					{
 						auto net = p.get_protocol_version();
@@ -1577,10 +1578,10 @@ namespace QVPN
 						return QTunnelProxyData(net, transport, src, src_port, dst, dst_port, std::move(proto_data));
 					}
 				, response);
-
+				*/
 				auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, response);
 
-				encode_and_send(*client_socket, new_proxy_data, data_b, data_e);
+				encode_and_send(*client_socket, proxy_data, data_b, data_e);
 
 				// statistics
 				////
@@ -1605,6 +1606,14 @@ namespace QVPN
 				{
 					status = vpn_loop_iteration(client_socket, socket_map, stats, user);
 				}
+				std::stringstream ss{};
+
+				ss << "QTunnel from (" << client_socket->get_remote_addr().to_string() << ":" << client_socket->get_remote_port() << ") closed";
+				logger_.warning(ss.view());
+
+				client_socket->shutdown();
+				client_socket->close_socket();
+				client_socket->disconnect();
 			}
 
 			void listen_and_connect_socket_(Socket& socket, Database& database, Stats& stats)
