@@ -85,7 +85,10 @@ namespace QVPN {
 				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin_addr.S_un.S_un_b, (UByte*)&serverAddr.sin_addr.S_un.S_un_b + addr_len);
 
 				bool s = (res == 0) ? true : false;
-				return QVPN::Core::NetData{ s , res, net_addr, port };
+				int err = 0;
+				if (!s)
+					err = WSAGetLastError();
+				return QVPN::Core::NetData{ s , err, net_addr, port };
 			}
 
 			inline QVPN::Core::NetData qvpn_connect_(SOCKET& socket, const QVPN::Core::IPv6Address& addr, const UShort port)
@@ -103,7 +106,10 @@ namespace QVPN {
 				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin6_addr.u.Byte, (UByte*)&serverAddr.sin6_addr.u.Byte + addr_len);
 
 				bool s = (res == 0) ? true : false;
-				return QVPN::Core::NetData{ s , res, net_addr, port };
+				int err = 0;
+				if (!s)
+					err = WSAGetLastError();
+				return QVPN::Core::NetData{ s , err, net_addr, port };
 			}
 
 

@@ -232,8 +232,9 @@ namespace QVPN {
 				{
 					if (!WinDivertRecv(out_hDivert_, packet, sizeof(packet), &packet_len, &addr))
 					{
-						fprintf(stderr, "warning: failed to read packet (%d)\n",
-							GetLastError());
+						std::stringstream ss{};
+						ss << "[System] Failed to read packet. Error " << GetLastError();
+						logger_.fail(ss.view());
 						continue;
 					}
 					//TODO: добавить logger в сервер и изменить этот
@@ -321,6 +322,9 @@ namespace QVPN {
 
 					if (decoded_data.has_value())
 					{
+						if (!decoded_data->check_validity())
+							continue;
+
 						auto dst_addr = decoded_data->get_dst_addr();
 						auto dst_port = decoded_data->get_dst_port();
 

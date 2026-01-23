@@ -59,6 +59,9 @@ namespace QVPN
 				{ l.success(data) } -> std::same_as<void>;
 				{ l.fail(data) } -> std::same_as<void>;
 				{ l.warning(data) } -> std::same_as<void>;
+
+				{ l.set_prefix(data) } -> std::same_as<void>;
+				{ l.clear_prefix() } -> std::same_as<void>;
 		};
 
 

@@ -34,6 +34,9 @@ int main(int argc, const char* argv[])
     std::string path = program.get<std::string>("--settings");
     settings.parse_settings(path);
     
+    QVPNLayers layers{};
+    settings.apply_strategy(std::move(layers));
+
 	SQLiteDatabase database(settings.get_db_host());
     ServerDatabaseAdapter db_adapter(database);
     ServerStatsAdatper stats_adatper(database);

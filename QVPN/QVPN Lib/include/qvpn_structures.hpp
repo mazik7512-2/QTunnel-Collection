@@ -3483,6 +3483,8 @@ namespace QVPN {
 
 				UShort get_length() const
 				{
+					if (data.size() == 0)
+						return 0;
 					return static_cast<UShort>(data[0] << 8 | data[1]);
 				}
 
@@ -3602,6 +3604,37 @@ namespace QVPN {
 				{
 					//return std::pair<UByte*, UByte*>(proto_data.data.data(), proto_data.data.data() + proto_data.data.size())
 					return proto_data.to_bytes();
+				}
+
+				bool check_validity() const
+				{
+					bool b = false;
+					switch (net_protocol) {
+					case IPv4:
+						b = true;
+						break;
+					case IPv6:
+						return false; // TODO: доделать ipv6
+					case NET_UNDEFINED:
+						return false;
+						break;
+					default:
+						return false;
+					}
+
+					switch (transport_protocol) {
+					case TCP:
+						b = true;
+						break;
+					case UDP:
+						b = true;
+						break;
+					case TRANSPORT_UNDEFINED:
+						return false;
+					default:
+						return false;
+					}
+					return true;
 				}
 
 				static inline QTunnelProxy create_and_inverse_addrs(const QTunnelProxy<Addr>& proxy_data)
