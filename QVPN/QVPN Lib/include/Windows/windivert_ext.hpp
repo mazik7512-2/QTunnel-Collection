@@ -318,6 +318,18 @@ namespace QVPN {
 
 					auto package = pp.pre_parse(packet, packet + packet_len);
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
+
+					auto data_size = std::distance(data_b, data_e);
+					if (data_size == 0) // this is not our packet
+					{
+						if (!WinDivertSend(in_hDivert_, packet, sizeof(packet), &packet_len, &addr))
+						{
+							printf("warning: failed to reinject packet (%d)\n",
+								GetLastError());
+						}
+						continue;
+					}
+
 					auto decoded_data = driver_.decode_data(data_b, data_e);
 
 					if (decoded_data.has_value())

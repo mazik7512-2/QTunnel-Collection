@@ -3307,7 +3307,7 @@ namespace QVPN {
 				static TLS13_ApplicationDataLittleEndian generate_object(const ProxyData& proxy_data, Iter1 begin, Iter2 end)
 				{
 					auto obj_bytes = generate_object_bytes<ProxyData, Iter1, Iter2>(proxy_data, begin, end);
-					return TLS13_ApplicationDataLittleEndian(begin, end);
+					return TLS13_ApplicationDataLittleEndian(obj_bytes.begin(), obj_bytes.end());
 				}
 
 
@@ -3323,7 +3323,7 @@ namespace QVPN {
 				static TLS13_ApplicationDataLittleEndian generate_object(Iter1 begin, Iter2 end)
 				{
 					auto obj_bytes = generate_object_bytes<Iter1, Iter2>(begin, end);
-					return TLS13_ApplicationDataLittleEndian(begin, end);
+					return TLS13_ApplicationDataLittleEndian(obj_bytes.begin(), obj_bytes.end());
 				}
 
 				// default generators
@@ -3340,7 +3340,7 @@ namespace QVPN {
 				static TLS13_ApplicationDataLittleEndian generate_object(Iter begin, Iter end)
 				{
 					auto obj_bytes = generate_object_bytes<Iter>(begin, end);
-					return TLS13_ApplicationDataLittleEndian(begin, end);
+					return TLS13_ApplicationDataLittleEndian(obj_bytes.begin(), obj_bytes.end());
 				}
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_app_data() const;
@@ -3752,6 +3752,13 @@ namespace QVPN {
 					}
 					auto meta_data_size = ProxyData::source_addr.get_addr_size() * 2 + 4; // 2 addrs (src + dst) and 2 ports (src + dst)
 					data_.erase(data_.begin(), data_.begin() + meta_data_size);
+
+					// also proto data
+
+					UShort size = static_cast<UShort>(data_[0] << 8 | data_[1]);
+					ProxyData::proto_data = QTunnelProtoData(data_.data(), data_.data() + size); //TODO: размер ошибка
+					data_.erase(data_.begin(), data_.begin() + size);
+
 					//ProxyData::source_port = data_[0] << 8 | data_[1];
 
 				}
@@ -3766,6 +3773,8 @@ namespace QVPN {
 					ProxyData::source_port = src_port;
 					ProxyData::dst_addr = dst_addr;
 					ProxyData::dst_port = dst_port;
+
+					//TODO: Добавить proto data
 				}
 
 				std::pair<UByte*, UByte*> get_raw_data()

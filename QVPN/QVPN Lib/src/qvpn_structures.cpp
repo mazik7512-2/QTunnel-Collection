@@ -3671,6 +3671,7 @@ std::vector<UByte> QVPN::Core::DataStructures::QTunnelTCPViewScheme::generate_by
 	auto urgent = tcp_packet.get_tcp_urgent_pointer();
 
 	auto [b, e] = tcp_packet.get_tcp_options();
+	UShort options_size = static_cast<UShort>(std::distance(b, e));
 
 	res.push_back(seq >> 24 & 0xFF); res.push_back(seq >> 16 & 0xFF);  res.push_back(seq >> 8 & 0xFF); res.push_back(seq & 0xFF);
 	res.push_back(ack >> 24 & 0xFF); res.push_back(ack >> 16 & 0xFF);  res.push_back(ack >> 8 & 0xFF); res.push_back(ack & 0xFF);
@@ -3680,6 +3681,9 @@ std::vector<UByte> QVPN::Core::DataStructures::QTunnelTCPViewScheme::generate_by
 
 	res.push_back(window >> 8 & 0xFF); res.push_back(window & 0xFF);
 	res.push_back(urgent >> 8 & 0xFF); res.push_back(urgent & 0xFF);
+
+	res.push_back(options_size >> 8 & 0xFF);
+	res.push_back(options_size & 0xFF);
 
 	std::copy(b, e, std::back_inserter(res));
 
@@ -3703,6 +3707,11 @@ std::vector<UByte> QVPN::Core::DataStructures::QTunnelUDPViewScheme::generate_by
 	auto length = udp_packet.get_udp_length();
 	bytes.push_back(length >> 8 & 0xFF);
 	bytes.push_back(length & 0xFF);
+	
+	UShort size = 0;
+	bytes.push_back(size >> 8 & 0xFF);
+	bytes.push_back(size & 0xFF);
+
 	return bytes;
 }
 

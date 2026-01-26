@@ -83,13 +83,6 @@ namespace QVPN {
 				int err = 0;
 				if (res == SOCKET_ERROR)
 					err = WSAGetLastError();
-				if (res == SOCKET_ERROR)
-				{
-					wprintf(L"connect function failed with error: %ld\n", err);
-					auto iResult = closesocket(socket);
-					if (iResult == SOCKET_ERROR)
-						wprintf(L"closesocket function failed with error: %ld\n", WSAGetLastError());
-				}
 
 				getsockname(socket, (sockaddr*)&serverAddr, &addr_len);
 
