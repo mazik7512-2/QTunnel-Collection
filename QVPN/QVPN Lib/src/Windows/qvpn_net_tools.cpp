@@ -17,7 +17,7 @@ QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_raw_socket(QVPN
 {
 	QVPNMetaSocketData meta{};
 	QVPNSocketSettings sock_s(false);
-	auto sock = QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_socket_type(t_proto), meta.get_socket_proto(t_proto));
+	auto sock = QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_raw_socket_type(t_proto), meta.get_raw_socket_proto(t_proto));
 	sock.apply_settings(sock_s);
 	return sock;
 }
@@ -178,7 +178,7 @@ void QVPN::NetTools::QVPN_Socket::disconnect_if_connected() const
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::shutdown()
 {
-	auto res = ::shutdown(socket_, SD_BOTH);
+	auto res = ::shutdown(socket_, SD_SEND);
 	bool s = (res == 0) ? true : false;
 	return QVPN::Core::NetStatus{ s, res };
 }
@@ -206,4 +206,9 @@ QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData
 QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_raw_socket_type(QVPN::Core::TransportProtocol t_proto)
 {
 	return raw_types_[t_proto];
+}
+
+QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_raw_socket_proto(QVPN::Core::TransportProtocol t_proto)
+{
+	return raw_protos_[t_proto];
 }

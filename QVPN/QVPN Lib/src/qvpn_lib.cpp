@@ -320,7 +320,7 @@ QVPN::Core::NetAddr::NetAddr(std::string_view data)
     ip_ = Tools::parse_net_addr(data);
 }
 
-size_t QVPN::Core::NetAddr::get_addr_size()
+size_t QVPN::Core::NetAddr::get_addr_size() const
 {
     return ip_.size();
 }
@@ -397,14 +397,20 @@ std::string QVPN::Core::QVPNSocketData::to_string() const
     return str;
 }
 
-QVPN::Core::QVPNSocketSettings::QVPNSocketSettings(bool ip_data)
+QVPN::Core::QVPNSocketSettings::QVPNSocketSettings(bool ip_data, int timeout_ms)
 {
     ip_header_ = ip_data;
+    timeout_ = timeout_ms;
 }
 
 bool QVPN::Core::QVPNSocketSettings::ip_header() const
 {
     return ip_header_;
+}
+
+int QVPN::Core::QVPNSocketSettings::timeout_ms() const
+{
+    return timeout_;
 }
 
 
@@ -436,14 +442,26 @@ consteval QVPN::Core::QVPNLib::UInt QVPN::Core::QVPNLib::get_patch_version() con
     return patch_ver_;
 }
 
-consteval std::string_view QVPN::Core::QVPNLib::get_library_version() const
+constexpr std::string QVPN::Core::QVPNLib::get_library_version() const
 {
-    return lib_ver_;
+    std::string lib_ver(u_number_to_string(major_ver_));
+    lib_ver += ".";
+    lib_ver += u_number_to_string(minor_ver_);
+    lib_ver += ".";
+    lib_ver += u_number_to_string(patch_ver_);
+    return lib_ver;
 }
 
-consteval std::string_view QVPN::Core::QVPNLib::get_full_library_name() const
+constexpr std::string QVPN::Core::QVPNLib::get_full_library_name() const
 {
-    return full_lib_name_;
+    std::string full_lib_name(lib_name_);
+    full_lib_name += " v";
+    full_lib_name += u_number_to_string(major_ver_);
+    full_lib_name += ".";
+    full_lib_name += u_number_to_string(minor_ver_);
+    full_lib_name += ".";
+    full_lib_name += u_number_to_string(patch_ver_);
+    return full_lib_name;
 }
 
 consteval bool QVPN::Core::QVPNLib::is_compatible(UInt major, UInt minor, UInt patch) const

@@ -40,6 +40,7 @@ namespace QVPN {
 			std::unordered_map<QVPN::Core::TransportProtocol, int> raw_types_ = { {QVPN::Core::TransportProtocol::TCP, SOCK_RAW}, {QVPN::Core::TransportProtocol::UDP, SOCK_RAW} };
 			std::unordered_map<QVPN::Core::TransportProtocol, int> types_ = { {QVPN::Core::TransportProtocol::TCP, SOCK_STREAM }, {QVPN::Core::TransportProtocol::UDP, SOCK_DGRAM } };
 			std::unordered_map<QVPN::Core::TransportProtocol, int> protos_ = { {QVPN::Core::TransportProtocol::TCP, IPPROTO_TCP}, {QVPN::Core::TransportProtocol::UDP, IPPROTO_UDP} };
+			std::unordered_map<QVPN::Core::TransportProtocol, int> raw_protos_ = { {QVPN::Core::TransportProtocol::TCP, IPPROTO_IP}, {QVPN::Core::TransportProtocol::UDP, IPPROTO_IP} }; // Windows specified
 		public:
 
 			using SockParam = int;
@@ -49,6 +50,7 @@ namespace QVPN {
 			SockParam get_socket_proto(QVPN::Core::TransportProtocol t_proto);
 
 			SockParam get_raw_socket_type(QVPN::Core::TransportProtocol t_proto);
+			SockParam get_raw_socket_proto(QVPN::Core::TransportProtocol t_proto);
 
 		};
 
@@ -74,12 +76,13 @@ namespace QVPN {
 			inline QVPN::Core::NetData qvpn_connect_(SOCKET& socket, const QVPN::Core::IPv4Address& addr, const UShort port)
 			{
 				struct sockaddr_in serverAddr {};
+				memset(&serverAddr, 0, sizeof(serverAddr));
 				int addr_len = sizeof(serverAddr);
 				serverAddr.sin_family = AF_INET;
 				serverAddr.sin_port = htons(port);
 				serverAddr.sin_addr.S_un.S_addr = htonl(addr.to_uint());//std::visit([](const auto& address) { return address.to_uint(); }, addr);
 
-				int res = connect(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
+				int res = connect(socket, (sockaddr*)&serverAddr, addr_len);
 				int err = 0;
 				if (res == SOCKET_ERROR)
 					err = WSAGetLastError();
@@ -97,6 +100,7 @@ namespace QVPN {
 			inline QVPN::Core::NetData qvpn_connect_(SOCKET& socket, const QVPN::Core::IPv6Address& addr, const UShort port)
 			{
 				struct sockaddr_in6 serverAddr {};
+				memset(&serverAddr, 0, sizeof(serverAddr));
 				int addr_len = sizeof(serverAddr);
 				serverAddr.sin6_family = AF_INET6;
 				serverAddr.sin6_port = htons(port);
@@ -265,6 +269,7 @@ namespace QVPN {
 					case NetProtocol::IPv6:
 						return SocketAccept<NetProtocol::IPv6, QVPN::Core::NetAddr, Socket>{}(socket, net_proto, t_proto);
 					}
+					return Socket();
 				}
 			};
 
@@ -350,11 +355,12 @@ namespace QVPN {
 			{
 				if (check_connected())
 				{
-					shutdown();
+					//shutdown();
 					close_socket();
+
 					QVPNMetaSocketData meta{};
 					if (s_type_ == SOCK_RAW)
-						socket_ = socket(meta.get_socket_family(socket_data_.local_addr.get_addr_family()), meta.get_raw_socket_type(socket_data_.transport_proto), meta.get_socket_proto(socket_data_.transport_proto));
+						socket_ = socket(meta.get_socket_family(socket_data_.local_addr.get_addr_family()), meta.get_raw_socket_type(socket_data_.transport_proto), meta.get_raw_socket_proto(socket_data_.transport_proto));
 					else
 						socket_ = socket(meta.get_socket_family(socket_data_.local_addr.get_addr_family()), meta.get_socket_type(socket_data_.transport_proto), meta.get_socket_proto(socket_data_.transport_proto));
 				}
@@ -437,6 +443,10 @@ namespace QVPN {
 				char optval = static_cast<char>(settings.ip_header());
 				int optlen = sizeof(optval);
 				setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen);
+
+				int timeout = settings.timeout_ms();
+				optlen = sizeof(timeout);
+				setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), optlen);
 			}
 
 		};

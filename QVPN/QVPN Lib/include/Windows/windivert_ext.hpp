@@ -378,16 +378,13 @@ namespace QVPN {
 			{
 				bool success = driver_.connect();
 				if (success)
-					success = driver_.init();
-
-				int n_tries = 20;
-				while (n_tries != 0 && !success)
 				{
-					success = driver_.reconnect();
-					if (success)
-						success = driver_.init();
-					n_tries--;
+					success = driver_.init();
+					return;
 				}
+				success = driver_.try_reconnect();
+				if (success)
+					success = driver_.init();
 			}
 			
 			void add_outgoing_traffic_filter(Filter_t filter)

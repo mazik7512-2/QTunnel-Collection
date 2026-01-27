@@ -255,6 +255,9 @@ namespace QVPN {
 					{ t.get_dst_port() } -> std::same_as<UShort>;
 
 					{ t.get_proto_data() } -> std::same_as<std::pair<UByte*, UByte*>>;
+					{ t.get_proto_data_bytes() } -> std::same_as<std::pair<UByte*, UByte*>>;
+
+					{ t.get_proxy_data_size() } -> std::same_as<UShort>;
 
 					{ std::remove_const_t<std::remove_reference_t<ProxyDataImpl>>::create_and_inverse_addrs(cr_proxy_data) } -> std::same_as<std::remove_const_t<std::remove_reference_t<ProxyDataImpl>>>;
 			};
@@ -835,8 +838,8 @@ namespace QVPN {
 				std::string to_transport_friendly_view() const;
 
 				// no checksum calcs
-				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
-				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
+				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
+				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
 
 			};
 
@@ -916,8 +919,8 @@ namespace QVPN {
 				std::string to_transport_friendly_view() const;
 
 				// no checksum calcs
-				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
-				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent);
+				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
+				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
 
 			};
 
@@ -3274,6 +3277,86 @@ namespace QVPN {
 
 				// generators for qvpn
 
+				template <PacketBuilderDataLike PBData, ProxyDataLike ProxyData, std::random_access_iterator Iter1, std::random_access_iterator Iter2>
+					requires std::is_same_v<Iter1, Iter2>
+				static std::vector<UByte> generate_object_bytes(const PBData& pb_data, const ProxyData& proxy_data, Iter1 begin, Iter2 end)
+				{
+					std::vector<UByte> obj_bytes;
+					// pb data
+					obj_bytes.push_back(pb_data.get_packet_id());
+
+					auto offset = pb_data.get_offset();
+					obj_bytes.push_back(static_cast<UByte>(offset >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(offset & 0xFF));
+
+					auto orig_size = pb_data.get_original_size() + proxy_data.get_proxy_data_size();
+					obj_bytes.push_back(static_cast<UByte>(orig_size >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(orig_size & 0xFF));
+
+					// proxy data
+					obj_bytes.push_back(static_cast<UByte>(proxy_data.get_net_proto()));
+					obj_bytes.push_back(static_cast<UByte>(proxy_data.get_transport_proto()));
+
+					auto src_addr = proxy_data.get_src_addr().to_bytes();
+					std::copy(src_addr.begin(), src_addr.end(), std::back_inserter(obj_bytes));
+
+					UShort src_port = proxy_data.get_src_port();
+					obj_bytes.push_back(static_cast<UByte>(src_port >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(src_port & 0xFF));
+
+					auto dst_addr = proxy_data.get_dst_addr().to_bytes();
+					std::copy(dst_addr.begin(), dst_addr.end(), std::back_inserter(obj_bytes));
+
+					UShort dst_port = proxy_data.get_dst_port();
+					obj_bytes.push_back(static_cast<UByte>(dst_port >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(dst_port & 0xFF));
+
+					auto [b, e] = proxy_data.get_proto_data_bytes();
+					std::copy(b, e, std::back_inserter(obj_bytes));
+
+					// data
+					std::copy(begin, end, std::back_inserter(obj_bytes));
+					return obj_bytes;
+				}
+
+				template <PacketBuilderDataLike PBData, ProxyDataLike ProxyData, std::random_access_iterator Iter1, std::random_access_iterator Iter2 >
+				static TLS13_ApplicationDataLittleEndian generate_object(const PBData& pb_data, const ProxyData& proxy_data, Iter1 begin, Iter2 end)
+				{
+					auto obj_bytes = generate_object_bytes<PBData, ProxyData, Iter1, Iter2>(pb_data, proxy_data, begin, end);
+					return TLS13_ApplicationDataLittleEndian(obj_bytes.begin(), obj_bytes.end());
+				}
+
+
+				template <PacketBuilderDataLike PBData, std::random_access_iterator Iter1, std::random_access_iterator Iter2>
+					requires std::is_same_v<Iter1, Iter2>
+				static std::vector<UByte> generate_object_bytes(const PBData& pb_data, Iter1 begin, Iter2 end)
+				{
+					std::vector<UByte> obj_bytes;
+
+					// pb data
+					obj_bytes.push_back(pb_data.get_packet_id());
+
+					auto offset = pb_data.get_offset();
+					obj_bytes.push_back(static_cast<UByte>(offset >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(offset & 0xFF));
+
+					auto orig_size = pb_data.get_original_size();
+					obj_bytes.push_back(static_cast<UByte>(orig_size >> 8 & 0xFF));
+					obj_bytes.push_back(static_cast<UByte>(orig_size & 0xFF));
+
+					// data
+					std::copy(begin, end, std::back_inserter(obj_bytes));
+					return obj_bytes;
+				}
+
+				template <PacketBuilderDataLike PBData, std::random_access_iterator Iter1, std::random_access_iterator Iter2 >
+				static TLS13_ApplicationDataLittleEndian generate_object(const PBData& pb_data, Iter1 begin, Iter2 end)
+				{
+					auto obj_bytes = generate_object_bytes<PBData, Iter1, Iter2>(pb_data, begin, end);
+					return TLS13_ApplicationDataLittleEndian(obj_bytes.begin(), obj_bytes.end());
+				}
+
+
 				template <ProxyDataLike ProxyData, std::random_access_iterator Iter1, std::random_access_iterator Iter2>
 					requires std::is_same_v<Iter1, Iter2>
 				static std::vector<UByte> generate_object_bytes(const ProxyData& proxy_data, Iter1 begin, Iter2 end)
@@ -3481,6 +3564,15 @@ namespace QVPN {
 
 			// QTunnel
 
+
+			template <class Scheme>
+			concept QTunnelSchemeLike =
+				requires (const Scheme s) {
+					
+					{ s.get_scheme_data_length() } -> std::same_as<UShort>;
+
+			};
+
 			class QTunnelTCPViewScheme
 			{
 			private:
@@ -3502,6 +3594,8 @@ namespace QVPN {
 
 				std::pair<UByte*, UByte*> get_options() const;
 
+				UShort get_scheme_data_length() const;
+
 				static std::vector<UByte> generate_bytes(TcpPacketView tcp_packet);
 
 			};
@@ -3517,6 +3611,8 @@ namespace QVPN {
 
 				UShort get_length() const;
 
+				UShort get_scheme_data_length() const;
+
 				static std::vector<UByte> generate_bytes(UdpPacketView udp_packet);
 
 			};
@@ -3529,11 +3625,15 @@ namespace QVPN {
 
 				QTunnelProtoData() = default;
 
-				QTunnelProtoData(UByte* begin, UByte* end)
+				QTunnelProtoData(UShort length, UByte* begin, UByte* end)
 				{
-					UShort length = static_cast<UShort>(std::distance(begin, end));
 					data.push_back(length >> 8 & 0xFF);
 					data.push_back(length & 0xFF);
+					std::copy(begin, end, std::back_inserter(data));
+				}
+
+				QTunnelProtoData(UByte* begin, UByte* end)
+				{
 					std::copy(begin, end, std::back_inserter(data));
 				}
 
@@ -3559,13 +3659,12 @@ namespace QVPN {
 				{
 					auto length = get_length();
 					auto start = sizeof(length);
-					return std::pair<UByte*, UByte*>(data.data() + start, data.data() + length);
+					return std::pair<UByte*, UByte*>(data.data() + start, data.data() + data.size());
 				}
 
 				std::pair<UByte*, UByte*> to_bytes()
 				{
-					auto length = get_length();
-					return std::pair<UByte*, UByte*>(data.data(), data.data() + length);
+					return std::pair<UByte*, UByte*>(data.data(), data.data() + data.size());
 				}
 
 			};
@@ -3670,6 +3769,11 @@ namespace QVPN {
 				std::pair<UByte*, UByte*> get_proto_data() const
 				{
 					//return std::pair<UByte*, UByte*>(proto_data.data.data(), proto_data.data.data() + proto_data.data.size())
+					return proto_data.get_proto_data();
+				}
+
+				std::pair<UByte*, UByte*> get_proto_data_bytes() const
+				{
 					return proto_data.to_bytes();
 				}
 
@@ -3704,9 +3808,15 @@ namespace QVPN {
 					return true;
 				}
 
+				UShort get_proxy_data_size() const
+				{
+					UShort size = sizeof(net_protocol) + sizeof(transport_protocol) + source_addr.get_addr_size() + sizeof(source_port) + dst_addr.get_addr_size() + sizeof(dst_port) + proto_data.get_length() + 2; // 2 - size of proto data length field
+					return size;
+				}
+
 				static inline QTunnelProxy create_and_inverse_addrs(const QTunnelProxy<Addr>& proxy_data)
 				{
-					auto [b, e] = proxy_data.get_proto_data();
+					auto [b, e] = proxy_data.get_proto_data_bytes();
 					return QTunnelProxy(proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_src_addr(),
 						proxy_data.get_src_port(), b, e);
 					//return res;
@@ -3756,7 +3866,7 @@ namespace QVPN {
 					// also proto data
 
 					UShort size = static_cast<UShort>(data_[0] << 8 | data_[1]);
-					ProxyData::proto_data = QTunnelProtoData(data_.data(), data_.data() + size); //TODO: размер ошибка
+					ProxyData::proto_data = QTunnelProtoData(size, data_.data() + 2, data_.data() + size); //TODO: размер ошибка
 					data_.erase(data_.begin(), data_.begin() + size);
 
 					//ProxyData::source_port = data_[0] << 8 | data_[1];

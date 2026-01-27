@@ -24,20 +24,44 @@ namespace QVPN
 		{
 			using UInt = BaseTypes::UInt;
 
-			static constexpr std::string_view lib_name_ = "QVPN Library";
+			static constexpr std::string_view lib_name_ = "QVPN Library/Framework";
 			static constexpr std::string_view short_lib_name_ = "QVPN Lib";
 
 			static constexpr UInt major_ver_ = 0;
 			static constexpr UInt minor_ver_ = 5;
-			static constexpr UInt patch_ver_ = 2;
+			static constexpr UInt patch_ver_ = 5;
 
-			static constexpr std::string_view lib_ver_ = "0.5.2";
+			//static constexpr std::string_view lib_ver_ = "0.5.5";
 
-			static constexpr std::string_view full_lib_name_ = "QVPN Library v0.5.2";
+			//static constexpr std::string_view full_lib_name_ = "QVPN Library v0.5.5";
 
 			static constexpr UInt last_compatible_major_ver_ = 0;
 			static constexpr UInt last_compatible_minor_ver_ = 5;
 			static constexpr UInt last_compatible_patch_ver_ = 0;
+
+		private:
+			template<typename T>
+			constexpr static std::string u_number_to_string(T value)
+			{
+				T temp = value;
+				constexpr UInt max_size = 20; //(максимум 20 цифр для 64 - битного числа)
+
+				// Обрабатываем 0 отдельно
+				if (temp == 0) {
+					return "0";
+				}
+
+				// Создаем строку из буфера
+				std::string result;
+				while (temp != 0) {
+					auto t = temp % 10;
+					temp /= 10;
+					result += static_cast<UInt>(t);
+				}
+
+				return result;
+			}
+
 
 		public:
 			consteval std::string_view get_short_library_name() const;
@@ -45,8 +69,8 @@ namespace QVPN
 			consteval UInt get_major_version() const;
 			consteval UInt get_minor_version() const;
 			consteval UInt get_patch_version() const;
-			consteval std::string_view get_library_version() const;
-			consteval std::string_view get_full_library_name() const;
+			constexpr std::string get_library_version() const;
+			constexpr std::string get_full_library_name() const;
 			consteval bool is_compatible(UInt major, UInt minor, UInt patch) const;
 		};
 
@@ -233,7 +257,7 @@ namespace QVPN
 			NetAddr(const IPv6Address& data);
 			NetAddr(std::string_view data);
 
-			size_t get_addr_size();
+			size_t get_addr_size() const;
 			NetProtocol get_addr_family() const;
 
 			IPv4Address to_ipv4() const;
@@ -393,10 +417,12 @@ namespace QVPN {
 		class QVPNSocketSettings
 		{
 			bool ip_header_ = false;
+			int timeout_ = 0;
 
 		public:
-			QVPNSocketSettings(bool ip_data = false);
+			QVPNSocketSettings(bool ip_data = false, int timeout_ms = 0);
 			bool ip_header() const;
+			int timeout_ms() const;
 		};
 
 
@@ -457,6 +483,16 @@ namespace QVPN {
 			typename PreParserImpl::NoNetPacketType;
 
 				{ pp.pre_parse() }; //TODO: Как сюда засунуть шаблонный параметр?
+
+		};
+
+		template <class PacketBuilderDataImpl>
+		concept PacketBuilderDataLike =
+			requires (PacketBuilderDataImpl p) {
+
+				{ p.get_packet_id() } -> std::same_as<BaseTypes::UByte>;
+				{ p.get_offset() } -> std::same_as<BaseTypes::UShort>;
+				{ p.get_original_size() } -> std::same_as<BaseTypes::UShort>;
 
 		};
 
