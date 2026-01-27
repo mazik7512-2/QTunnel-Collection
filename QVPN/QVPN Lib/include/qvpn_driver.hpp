@@ -1781,22 +1781,22 @@ namespace QVPN
 
 				auto proto_data = std::visit([](auto& p) { return p.collect_proto_data(); }, response);
 
-				/*
-				QTunnelProxyData new_proxy_data = std::visit([&proto_data](auto& p) 
+				
+				QTunnelProxyData new_proxy_data = std::visit([&proto_data, &proxy_data](auto& p) 
 					{
 						auto net = p.get_protocol_version();
 						auto transport = p.get_transport_protocol();
 						auto src = p.get_src_addr();
 						auto src_port = p.get_src_port();
-						auto dst = p.get_dst_addr();
-						auto dst_port = p.get_dst_port();
+						auto dst = proxy_data.get_dst_addr();
+						auto dst_port = proxy_data.get_dst_port();
 						return QTunnelProxyData(net, transport, src, src_port, dst, dst_port, std::move(proto_data));
 					}
 				, response);
-				*/
+				
 				auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, response);
 
-				encode_and_send(*client_socket, proxy_data, data_b, data_e);
+				encode_and_send(*client_socket, new_proxy_data, data_b, data_e);
 
 				// statistics
 				////
