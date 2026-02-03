@@ -65,7 +65,6 @@ std::unique_ptr<QVPN::PcapExt::PcapNetDriver::AdapterList_t> QVPN::PcapExt::Pcap
 
 void packet_handler(u_char* args, const struct pcap_pkthdr* pkthdr, const u_char* packet) 
 {
-
 	std::cout << packet << std::endl;
 
 }

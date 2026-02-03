@@ -230,7 +230,7 @@ namespace QVPN
 
 			using UByte = Core::BaseTypes::UByte;
 			using AddrBytes_t = std::vector<UByte>;
-			using AddrInt_t = std::vector<UByte>;
+			using AddrInt_t = Core::BaseTypes::UInt;
 
 		private:
 
@@ -417,12 +417,12 @@ namespace QVPN {
 		class QVPNSocketSettings
 		{
 			bool ip_header_ = false;
-			int timeout_ = 0;
+			int recv_timeout_ = 0;
 
 		public:
-			QVPNSocketSettings(bool ip_data = false, int timeout_ms = 0);
+			QVPNSocketSettings(bool ip_data = false, int receive_timeout_ms = 0);
 			bool ip_header() const;
-			int timeout_ms() const;
+			int receive_timeout_ms() const;
 		};
 
 
@@ -463,6 +463,9 @@ namespace QVPN {
 			{ t.get_transport_protocol() } -> std::same_as<TransportProtocol>;
 
 			{ t.apply_settings(sock_settings) } -> std::same_as<void>;
+
+			{ t.send_to(addr, port, begin, end) } -> std::same_as<NetStatus>;
+			{ t.recv_from(addr, port) } -> std::same_as<ReceiveData>;
 		};
 
 

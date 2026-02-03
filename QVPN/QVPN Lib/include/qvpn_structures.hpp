@@ -561,6 +561,19 @@ namespace QVPN {
 				void set_src_addr(const NetAddr& net_addr);
 				void set_dst_addr(const NetAddr& net_addr);
 
+				template <class IPv4GenStrategy>
+				static std::vector<UByte> generate_object_bytes(const IPv4GenStrategy& strategy, const IPv4Address& src, const IPv4Address& dst, TransportProtocol proto, UShort total_length)
+				{
+					//TODO: доделать
+				}
+
+				template <class IPv4GenStrategy>
+				static ObjectType generate_object(const IPv4GenStrategy& strategy, const IPv4Address& src, const IPv4Address& dst, TransportProtocol proto, UShort total_length)
+				{
+					auto obj_bytes = generate_object_bytes<IPv4GenStrategy>(strategy, src, dst, proto, total_length);
+					return ObjectType(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
+				}
+
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
@@ -3596,7 +3609,7 @@ namespace QVPN {
 
 				UShort get_scheme_data_length() const;
 
-				static std::vector<UByte> generate_bytes(TcpPacketView tcp_packet);
+				static std::vector<UByte> generate_object_bytes(TcpPacketView tcp_packet);
 
 			};
 
@@ -3613,7 +3626,7 @@ namespace QVPN {
 
 				UShort get_scheme_data_length() const;
 
-				static std::vector<UByte> generate_bytes(UdpPacketView udp_packet);
+				static std::vector<UByte> generate_object_bytes(UdpPacketView udp_packet);
 
 			};
 
@@ -3963,7 +3976,7 @@ namespace QVPN {
 				QTunnelProtoData collect_proto_data()
 				{
 					auto tcp_view = TcpPacket::to_view();
-					auto bytes = QTunnelTCPViewScheme::generate_bytes(tcp_view);
+					auto bytes = QTunnelTCPViewScheme::generate_object_bytes(tcp_view);
 					QTunnelProtoData res(bytes.data(), bytes.data() + bytes.size());
 					return res;
 				}
@@ -4070,7 +4083,7 @@ namespace QVPN {
 				QTunnelProtoData collect_proto_data()
 				{
 					auto view = UdpPacket::to_view();
-					auto bytes = QTunnelUDPViewScheme::generate_bytes(view);
+					auto bytes = QTunnelUDPViewScheme::generate_object_bytes(view);
 					QTunnelProtoData res(bytes.data(), bytes.data() + bytes.size());
 					return res;
 				}
@@ -4160,7 +4173,7 @@ namespace QVPN {
 				QTunnelProtoData collect_proto_data()
 				{
 					auto tcp_view = TcpPacket_View::to_view();
-					auto bytes = QTunnelTCPViewScheme::generate_bytes(tcp_view);
+					auto bytes = QTunnelTCPViewScheme::generate_object_bytes(tcp_view);
 					QTunnelProtoData res(bytes.data(), bytes.data() + bytes.size());
 					return res;
 				}
@@ -4261,7 +4274,7 @@ namespace QVPN {
 				QTunnelProtoData collect_proto_data()
 				{
 					auto view = UdpPacket_View::to_view();
-					auto bytes = QTunnelUDPViewScheme::generate_bytes(view);
+					auto bytes = QTunnelUDPViewScheme::generate_object_bytes(view);
 					QTunnelProtoData res(bytes.data(), bytes.data() + bytes.size());
 					return res;
 				}

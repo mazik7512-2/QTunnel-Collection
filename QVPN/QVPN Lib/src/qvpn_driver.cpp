@@ -535,3 +535,11 @@ std::array<UByte, QVPN::Core::packet_builder_data_size> QVPN::Core::PacketBuilde
 
     return res;
 }
+
+QVPN::Core::BaseTypes::UShort QVPN::Core::PortGenerator::get_random_port()
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<UInt> dist(0, (1 << 16) - 1);
+    return dist(gen);
+}

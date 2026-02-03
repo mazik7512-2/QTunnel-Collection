@@ -372,7 +372,9 @@ std::string QVPN::Core::NetAddr::to_string() const
 
 QVPN::Core::NetAddr::AddrInt_t QVPN::Core::NetAddr::to_uint() const
 {
-    return ip_;
+    if (get_addr_family() == NetProtocol::IPv4)
+        return ip_[0] << 24 | ip_[1] << 16 | ip_[2] << 8 | ip_[3];
+    return 0;
 }
 
 bool QVPN::Core::NetAddr::operator==(const NetAddr& other) const
@@ -397,10 +399,10 @@ std::string QVPN::Core::QVPNSocketData::to_string() const
     return str;
 }
 
-QVPN::Core::QVPNSocketSettings::QVPNSocketSettings(bool ip_data, int timeout_ms)
+QVPN::Core::QVPNSocketSettings::QVPNSocketSettings(bool ip_data, int receive_timeout_ms)
 {
     ip_header_ = ip_data;
-    timeout_ = timeout_ms;
+    recv_timeout_ = receive_timeout_ms;
 }
 
 bool QVPN::Core::QVPNSocketSettings::ip_header() const
@@ -408,9 +410,9 @@ bool QVPN::Core::QVPNSocketSettings::ip_header() const
     return ip_header_;
 }
 
-int QVPN::Core::QVPNSocketSettings::timeout_ms() const
+int QVPN::Core::QVPNSocketSettings::receive_timeout_ms() const
 {
-    return timeout_;
+    return recv_timeout_;
 }
 
 

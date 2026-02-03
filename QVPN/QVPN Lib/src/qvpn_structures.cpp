@@ -3667,7 +3667,7 @@ UShort QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_scheme_data_length(
 	return static_cast<UShort>(data_[0] << 8 & 0xFF | data_[1]);
 }
 
-std::vector<UByte> QVPN::Core::DataStructures::QTunnelTCPViewScheme::generate_bytes(TcpPacketView tcp_packet)
+std::vector<UByte> QVPN::Core::DataStructures::QTunnelTCPViewScheme::generate_object_bytes(TcpPacketView tcp_packet)
 {
 	UShort size = 0;
 	std::vector<UByte> res{};
@@ -3720,7 +3720,7 @@ UShort QVPN::Core::DataStructures::QTunnelUDPViewScheme::get_scheme_data_length(
 	return static_cast<UShort>(data_[0] << 8 | data_[1]);
 }
 
-std::vector<UByte> QVPN::Core::DataStructures::QTunnelUDPViewScheme::generate_bytes(UdpPacketView udp_packet)
+std::vector<UByte> QVPN::Core::DataStructures::QTunnelUDPViewScheme::generate_object_bytes(UdpPacketView udp_packet)
 {
 	std::vector<UByte> bytes{};
 
