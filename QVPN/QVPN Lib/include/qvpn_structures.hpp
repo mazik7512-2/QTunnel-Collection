@@ -495,6 +495,40 @@ namespace QVPN {
 
 			}&& UnifiedIpPacketLike<Ip4PacketImpl>&& UnifiedPacketLike<Ip4PacketImpl>;
 
+
+			template <class IPv4GenStrategyImpl>
+			concept IPv4GenStrategyLike =
+				requires (const IPv4GenStrategyImpl ct) {
+
+					{ ct.get_ver() } -> std::same_as<NetProtocol>;
+					{ ct.get_header_length() } -> std::same_as<UByte>;
+					{ ct.get_dscp() } -> std::same_as<UByte>;
+					{ ct.get_ecn() } -> std::same_as<UByte>;
+					{ ct.get_qos() } -> std::same_as<UByte>;
+					{ ct.get_id() } -> std::same_as<UShort>;
+					{ ct.get_additional_headers() } -> std::same_as<std::vector<UByte>>;
+
+			};
+
+
+			class IPv4DefaultGenStrategy
+			{
+			private:
+				mutable UShort last_id_ = 0;
+			public:
+
+				NetProtocol get_ver() const;
+				UByte get_header_length() const;
+				UByte get_dscp() const;
+				UByte get_ecn() const;
+				UByte get_qos() const;
+				UShort get_id() const;
+				std::vector<UByte> get_additional_headers() const;
+
+				UShort get_next_id() const;
+
+			};
+
 			class Ipv4PacketView;
 
 			class Ipv4PacketLittleEndian {
@@ -507,8 +541,8 @@ namespace QVPN {
 			public:
 
 				/* Unified Packet implementaion */
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 				using ObjectType = Ipv4PacketLittleEndian;
 				using ViewType = Ipv4PacketView;
@@ -561,16 +595,68 @@ namespace QVPN {
 				void set_src_addr(const NetAddr& net_addr);
 				void set_dst_addr(const NetAddr& net_addr);
 
-				template <class IPv4GenStrategy>
-				static std::vector<UByte> generate_object_bytes(const IPv4GenStrategy& strategy, const IPv4Address& src, const IPv4Address& dst, TransportProtocol proto, UShort total_length)
+				template <IPv4GenStrategyLike IPv4GenStrategy>
+				static std::vector<UByte> generate_object_bytes(const IPv4GenStrategy& strategy, const NetAddr& src, const NetAddr& dst, TransportProtocol proto, UShort total_length, bool DF, bool MF, UShort offset)
 				{
-					//TODO: доделать
+					std::vector<UByte> obj_bytes{};
+
+					auto add_headers = strategy.get_additional_headers();
+					auto size = add_headers.size() / 4; 
+
+					auto ver = strategy.get_ver();
+					auto h_length = strategy.get_header_length();
+					auto total_h_length = h_length + size;
+					auto first_byte = static_cast<UByte>(ver << 4 | total_h_length & 0xF);
+					obj_bytes.push_back(first_byte);
+
+					auto qos = static_cast<UByte>(strategy.get_qos());
+					obj_bytes.push_back(qos);
+
+					auto len = total_length + total_h_length;
+
+					obj_bytes.push_back(static_cast<UByte>(len >> 8));
+					obj_bytes.push_back(static_cast<UByte>(len & 0xFF));
+
+					UShort id = 0;
+					if (MF)
+						id = strategy.get_id();
+					else
+						id = strategy.get_next_id();
+
+					obj_bytes.push_back(static_cast<UByte>(id >> 8));
+					obj_bytes.push_back(static_cast<UByte>(id & 0xFF));
+
+					UByte flags_offset = 0 << 7 | DF << 6 | MF << 5 | (offset >> 11) & 0b11111;
+					obj_bytes.push_back(flags_offset);
+					obj_bytes.push_back(static_cast<UByte>(offset & 0xFF));
+
+					obj_bytes.push_back(static_cast<UByte>(proto));
+
+					// checksum bytes
+					obj_bytes.push_back(0);
+					obj_bytes.push_back(0);
+
+					auto src4 = src.to_ipv4();
+					auto b_src = src4.to_bytes();
+					std::copy(b_src.begin(), b_src.end(), std::back_inserter(obj_bytes));
+
+					auto dst4 = dst.to_ipv4();
+					auto b_dst = dst4.to_bytes();
+					std::copy(b_dst.begin(), b_dst.end(), std::back_inserter(obj_bytes));
+
+					std::copy(add_headers.begin(), add_headers.end(), std::back_inserter(obj_bytes));
+
+					ViewType ip4(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
+					ip4.recalculate_ip_checksum();
+
+					return obj_bytes;
+
 				}
 
-				template <class IPv4GenStrategy>
-				static ObjectType generate_object(const IPv4GenStrategy& strategy, const IPv4Address& src, const IPv4Address& dst, TransportProtocol proto, UShort total_length)
+				template <IPv4GenStrategyLike IPv4GenStrategy>
+				static ObjectType generate_object(const IPv4GenStrategy& strategy, const NetAddr& src, const NetAddr& dst, TransportProtocol proto, UShort total_length, bool DF, bool MF, UShort offset)
 				{
-					auto obj_bytes = generate_object_bytes<IPv4GenStrategy>(strategy, src, dst, proto, total_length);
+					auto obj_bytes = generate_object_bytes<IPv4GenStrategy>(strategy, src, dst, proto, total_length, DF, MF, offset);
 					return ObjectType(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
 				}
 
@@ -653,6 +739,21 @@ namespace QVPN {
 
 				void set_src_addr(const NetAddr& net_addr);
 				void set_dst_addr(const NetAddr& net_addr);
+
+
+				template <IPv4GenStrategyLike IPv4GenStrategy>
+				static std::vector<UByte> generate_object_bytes(const IPv4GenStrategy& strategy, const NetAddr& src, const NetAddr& dst, TransportProtocol proto, UShort total_length, bool DF, bool MF, UShort offset)
+				{
+					return ObjectType::generate_object_bytes(strategy, src, dst, proto, total_length, DF, MF, offset);
+				}
+
+
+				template <IPv4GenStrategyLike IPv4GenStrategy>
+				static ObjectType generate_object(const IPv4GenStrategy& strategy, const NetAddr& src, const NetAddr& dst, TransportProtocol proto, UShort total_length, bool DF, bool MF, UShort offset)
+				{
+					return ObjectType::generate_object(strategy, src, dst, proto, total_length, DF, MF, offset);
+				}
+
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -790,8 +891,8 @@ namespace QVPN {
 
 			public:
 
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 				using ObjectType = TcpPacketLittleEndian;
 				using ViewType = TcpPacketView;
@@ -974,8 +1075,8 @@ namespace QVPN {
 
 			public:
 
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 				using ObjectType = UdpPacketLittleEndian;
 				using ViewType = UdpPacketView;
@@ -1148,8 +1249,8 @@ namespace QVPN {
 
 			public:
 
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 				using ObjectType = DataPacketLittleEndian;
 				using ViewType = DataPacketView;
@@ -1265,8 +1366,8 @@ namespace QVPN {
 			class Http1PacketRequestLittleEndian
 			{
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 				std::vector<UByte> data_;
@@ -1326,8 +1427,8 @@ namespace QVPN {
 			class Http1PacketResponseLittleEndian
 			{
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 				std::vector<UByte> data_;
@@ -1405,8 +1506,8 @@ namespace QVPN {
 			class TLSRandomLittleEndian final {
 
 			public:
-				using DataIterator_t = std::array<UByte, 32>::iterator;
-				using ConstDataIterator_t = std::array<UByte, 32>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 				std::array<UByte, 32> random_bytes_;
@@ -1519,8 +1620,8 @@ namespace QVPN {
 			// Session ID
 			class TLSSessionIDLittleEndian final {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 
@@ -1552,7 +1653,7 @@ namespace QVPN {
 				static std::vector<UByte> generate_object(Iter1 begin, Iter2 end)
 				{
 					auto obj_bytes = generate_object_bytes<Iter1, Iter2>(begin, end);
-					return TLSSessionIDLittleEndian(obj_bytes.begin(), obj_bytes.end());
+					return TLSSessionIDLittleEndian(obj_bytes.data(), obj_bytes.end());
 				}
 
 				static std::vector<UByte> generate_object_bytes(UByte length = 32);
@@ -1618,8 +1719,8 @@ namespace QVPN {
 
 			class TLSCipherSuitLittleEndian final {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 				std::vector<UByte> ciphers_;
@@ -1681,8 +1782,8 @@ namespace QVPN {
 
 			class TLSCompressionLittleEndian final {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 				std::vector<UByte> compressions_;
@@ -1762,8 +1863,8 @@ namespace QVPN {
 			// Структура для расширений
 			class TLSExtensionLittleEndian {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 				std::vector<UByte> data_;
@@ -1904,8 +2005,8 @@ namespace QVPN {
 			class TLSExtensionsLittleEndian final
 			{
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 				std::vector<UByte> extensions_;
@@ -2013,8 +2114,8 @@ namespace QVPN {
 
 			class TLSSupportedVersionsEntryLittleEndian final {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 
@@ -2077,8 +2178,8 @@ namespace QVPN {
 			// Client hello Supported Versions Extension
 			class TLSSupportedVersionsClientHelloExtensionLittleEndian {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 
@@ -2146,8 +2247,8 @@ namespace QVPN {
 			// Server hello Supported Versions Extension
 			class TLSSupportedVersionsServerHelloExtensionLittleEndian {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 
@@ -2215,8 +2316,8 @@ namespace QVPN {
 			// Key Share Entry
 			class TLSKeyShareEntryLittleEndian final {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 
@@ -2283,8 +2384,8 @@ namespace QVPN {
 			// Key Share Extension
 			class TLSKeyShareClientHelloLittleEndian {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 
@@ -2348,8 +2449,8 @@ namespace QVPN {
 
 			class TLSServerNameIndicationEntryLittleEndian final {
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 				std::vector<UByte> data_;
@@ -2410,8 +2511,8 @@ namespace QVPN {
 			class TLSServerNameIndicationExtensionLittleEndian {
 
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 				std::vector<UByte> data_;
@@ -2556,8 +2657,8 @@ namespace QVPN {
 			class TLS13_RecordLittleEndian
 			{
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 
 			private:
 
@@ -2719,8 +2820,8 @@ namespace QVPN {
 			{
 			public:
 
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 				using OverlayProtocolType = TLSRecordType;
 
 			private:
@@ -2856,8 +2957,8 @@ namespace QVPN {
 			{
 
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 				using OverlayProtocolType = TLSMessageType;
 
 			private:
@@ -3152,8 +3253,8 @@ namespace QVPN {
 			class TLS13_ServerHelloPacketLittleEndian
 			{
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 				using OverlayProtocolType = TLSMessageType;
 
 			private:
@@ -3270,8 +3371,8 @@ namespace QVPN {
 			class TLS13_ApplicationDataLittleEndian
 			{
 			public:
-				using DataIterator_t = std::vector<UByte>::iterator;
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
 				using OverlayProtocolType = TLSRecordType;
 
 			private:
@@ -3920,7 +4021,7 @@ namespace QVPN {
 			private:
 
 				using Ipv4Packet::ConstDataIterator_t;
-				std::vector<UByte> data_;
+				mutable std::vector<UByte> data_;
 
 			public:
 
@@ -3935,8 +4036,9 @@ namespace QVPN {
 
 				}
 
-				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				std::pair<FullPacket::ConstDataIterator_t, FullPacket::ConstDataIterator_t> bytes() const
 				{
+					data_.clear();
 					auto [b1, e1] = Ipv4Packet::to_bytes();
 					std::copy(b1, e1, std::back_inserter(data_));
 
@@ -3946,7 +4048,13 @@ namespace QVPN {
 					auto [b3, e3] = DataPacket::to_bytes();
 					std::copy(b3, e3, std::back_inserter(data_));
 
-					return std::make_pair<>(data_.cbegin(), data_.cend());
+					return std::make_pair<>(data_.data(), data_.data() + data_.size());
+				}
+
+				UShort get_full_packet_length() const
+				{
+					auto size = Ipv4Packet::get_ip_total_length();
+					return size;
 				}
 
 				void recalculate_checksums()
@@ -4027,7 +4135,7 @@ namespace QVPN {
 			{
 			private:
 
-				std::vector<UByte> data_;
+				mutable std::vector<UByte> data_;
 
 			public:
 
@@ -4042,7 +4150,7 @@ namespace QVPN {
 
 				}
 
-				std::pair<Ipv4Packet::ConstDataIterator_t, Ipv4Packet::ConstDataIterator_t> bytes()
+				std::pair<Ipv4Packet::ConstDataIterator_t, Ipv4Packet::ConstDataIterator_t> bytes() const
 				{
 					auto [b1, e1] = Ipv4Packet::to_bytes();
 					std::copy(b1, e1, std::back_inserter(data_));
@@ -4053,7 +4161,14 @@ namespace QVPN {
 					auto [b3, e3] = DataPacket::to_bytes();
 					std::copy(b3, e3, std::back_inserter(data_));
 
-					return std::make_pair<>(data_.cbegin(), data_.cend());
+					return std::make_pair<>(data_.data(), data_.data() + data_.size());
+				}
+
+
+				UShort get_full_packet_length() const
+				{
+					auto size = Ipv4Packet::get_ip_total_length();
+					return size;
 				}
 
 				void recalculate_checksums()
@@ -4138,12 +4253,18 @@ namespace QVPN {
 
 				}
 
-				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				std::pair<FullPacket::ConstDataIterator_t, FullPacket::ConstDataIterator_t> bytes() const
 				{
 					auto [b1, e1] = Ipv4Packet_View::to_bytes();
 					auto [b2, e2] = TcpPacket_View::to_bytes();
 					auto [b3, e3] = DataPacket_View::to_bytes();
 					return std::make_pair<>(b1, e3);
+				}
+
+				UShort get_full_packet_length() const
+				{
+					auto size = Ipv4Packet_View::get_ip_total_length();
+					return size;
 				}
 
 				void recalculate_checksums()
@@ -4239,13 +4360,21 @@ namespace QVPN {
 
 				}
 
-				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				std::pair<FullPacket::ConstDataIterator_t, FullPacket::ConstDataIterator_t> bytes() const
 				{
 					auto [b1, e1] = Ipv4Packet_View::to_bytes();
 					auto [b2, e2] = UdpPacket_View::to_bytes();
 					auto [b3, e3] = DataPacket_View::to_bytes();
 					return std::make_pair<>(b1, e3);
 				}
+
+
+				UShort get_full_packet_length() const
+				{
+					auto size = Ipv4Packet_View::get_ip_total_length();
+					return size;
+				}
+
 
 				void recalculate_checksums()
 				{
@@ -4348,11 +4477,11 @@ namespace QVPN {
 
 			private:
 
-				std::vector<UByte> data_{};
+				mutable std::vector<UByte> data_{};
 
 			public:
 
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using ConstDataIterator_t = const UByte*;
 
 			public:
 				template <std::random_access_iterator Iter>
@@ -4369,13 +4498,15 @@ namespace QVPN {
 
 				}
 
-				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				std::pair<NoNetPacket::ConstDataIterator_t, NoNetPacket::ConstDataIterator_t> bytes() const
 				{
 					auto [t_b, t_e] = TcpPacket::to_bytes();
 					auto [d_b, d_e] = TcpPacket::to_bytes();
 					std::copy(t_b, t_e, std::back_inserter(data_));
 					std::copy(d_b, d_e, std::back_inserter(data_));
-					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
+					ConstDataIterator_t start = data_.data();
+					ConstDataIterator_t end = data_.data() + data_.size();
+					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(start, end);
 				}
 
 				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
@@ -4422,11 +4553,11 @@ namespace QVPN {
 			{
 			private:
 
-				std::vector<UByte> data_{};
+				mutable std::vector<UByte> data_{};
 
 			public:
 
-				using ConstDataIterator_t = std::vector<UByte>::const_iterator;
+				using ConstDataIterator_t = const UByte*;
 
 			public:
 				template <std::random_access_iterator Iter>
@@ -4443,13 +4574,13 @@ namespace QVPN {
 
 				}
 
-				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				std::pair<NoNetPacket::ConstDataIterator_t, NoNetPacket::ConstDataIterator_t> bytes() const
 				{
 					auto [t_b, t_e] = UdpPacket::to_bytes();
 					auto [d_b, d_e] = UdpPacket::to_bytes();
 					std::copy(t_b, t_e, std::back_inserter(data_));
 					std::copy(d_b, d_e, std::back_inserter(data_));
-					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.cbegin(), data_.cend());
+					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.data(), data_.data() + data_.size());
 				}
 
 				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
@@ -4513,7 +4644,7 @@ namespace QVPN {
 
 				}
 
-				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				std::pair<NoNetPacket::ConstDataIterator_t, NoNetPacket::ConstDataIterator_t> bytes() const
 				{
 					auto [t_b, t_e] = TcpPacket_View::to_bytes();
 					auto [d_b, d_e] = TcpPacket_View::to_bytes();
@@ -4582,7 +4713,7 @@ namespace QVPN {
 
 				}
 
-				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes()
+				std::pair<NoNetPacket::ConstDataIterator_t, NoNetPacket::ConstDataIterator_t> bytes() const
 				{
 					auto [t_b, t_e] = UdpPacket_View::to_bytes();
 					auto [d_b, d_e] = UdpPacket_View::to_bytes();

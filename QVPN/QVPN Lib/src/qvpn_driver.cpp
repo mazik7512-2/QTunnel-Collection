@@ -215,7 +215,7 @@ size_t QVPN::Core::SplittedPacket::size() const
 
 std::pair<QVPN::Core::SplittedPacket::DataIterator_t, QVPN::Core::SplittedPacket::DataIterator_t> QVPN::Core::SplittedPacket::to_bytes()
 {
-    return std::pair<DataIterator_t, DataIterator_t>(data_.begin(), data_.end());
+    return std::pair<DataIterator_t, DataIterator_t>(data_.data(), data_.data() + data_.size());
 }
 
 
