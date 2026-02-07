@@ -881,6 +881,15 @@ namespace QVPN {
 			}&& UnifiedTransportLike<TcpImpl>&& UnifiedPacketLike<TcpImpl>;
 
 
+			enum TCPFlags : UByte
+			{
+				FIN = 0x01,
+				SYN = 0x02,
+				ACK = 0x10,
+				SYN_ACK = 0x12,
+			};
+
+
 			class TcpPacketView;
 
 			class TcpPacketLittleEndian
@@ -3980,25 +3989,11 @@ namespace QVPN {
 					// also proto data
 
 					UShort size = static_cast<UShort>(data_[0] << 8 | data_[1]);
-					ProxyData::proto_data = QTunnelProtoData(size, data_.data() + 2, data_.data() + size); //TODO: размер ошибка
+					ProxyData::proto_data = QTunnelProtoData(size, data_.data() + 2, data_.data() + size);
 					data_.erase(data_.begin(), data_.begin() + size);
 
 					//ProxyData::source_port = data_[0] << 8 | data_[1];
 
-				}
-
-				QTunnelData(NetProtocol net, TransportProtocol transport, Addr src_addr, UShort src_port, Addr dst_addr, UShort dst_port, std::vector<UByte>&& data)
-					: QTunnelProxy<Addr>()
-				{
-					data_ = std::move(data);
-					ProxyData::net_protocol = net;
-					ProxyData::transport_protocol = transport;
-					ProxyData::source_addr = src_addr;
-					ProxyData::source_port = src_port;
-					ProxyData::dst_addr = dst_addr;
-					ProxyData::dst_port = dst_port;
-
-					//TODO: Добавить proto data
 				}
 
 				std::pair<UByte*, UByte*> get_raw_data()

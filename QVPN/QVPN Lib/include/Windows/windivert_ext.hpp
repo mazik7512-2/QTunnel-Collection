@@ -237,7 +237,7 @@ namespace QVPN {
 						logger_.fail(ss.view());
 						continue;
 					}
-					//TODO: добавить logger в сервер и изменить этот
+
 					//package.set_ip_source(adapter_addr);
 					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
 					auto package = pp.pre_parse(packet, packet + packet_len);

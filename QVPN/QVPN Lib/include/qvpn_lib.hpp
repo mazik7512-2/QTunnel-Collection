@@ -75,14 +75,32 @@ namespace QVPN
 		};
 
 
+		enum LoggerVerboseLevel : BaseTypes::UByte
+		{
+			SILENCE = 0,
+
+			IMPORTANT = 0x1, // success and fails
+			WARNING = 0x2,  // warnings
+			INFO = 0x4, // info
+
+			IMPORTANT_AND_WARNING = IMPORTANT | WARNING,
+			WARNING_AND_INFO = WARNING | INFO,
+			IMPORTANT_AND_INFO = IMPORTANT | INFO,
+
+			ALL = IMPORTANT | WARNING | INFO
+		};
+
+
 		template <class LoggerImpl>
 		concept is_logger = 
-			requires (LoggerImpl l, std::string_view data) {
+			requires (LoggerImpl l, std::string_view data, LoggerVerboseLevel level) {
 
 				{ l.info(data) } -> std::same_as<void>;
 				{ l.success(data) } -> std::same_as<void>;
 				{ l.fail(data) } -> std::same_as<void>;
 				{ l.warning(data) } -> std::same_as<void>;
+
+				{ l.set_verbosity(level) } -> std::same_as<void>;
 
 				{ l.set_prefix(data) } -> std::same_as<void>;
 				{ l.clear_prefix() } -> std::same_as<void>;
