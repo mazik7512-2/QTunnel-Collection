@@ -31,7 +31,11 @@ namespace QVPN {
 
 		using UByte = QVPN::Core::BaseTypes::UByte;
 		using UShort = QVPN::Core::BaseTypes::UShort;
+		using UInt = QVPN::Core::BaseTypes::UInt;
+		using ULong = QVPN::Core::BaseTypes::ULong;
 		using QVPNSocketData = QVPN::Core::QVPNSocketData;
+
+
 
 		class QVPN_Socket;
 
@@ -61,6 +65,16 @@ namespace QVPN {
 
 			static QVPN::NetTools::QVPN_Socket create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
 			static QVPN::NetTools::QVPN_Socket create_raw_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
+
+			static UShort hton(UShort num);
+			static UShort ntoh(UShort num);
+
+			static UInt hton(UInt num);
+			static UInt ntoh(UInt num);
+
+			static ULong hton(ULong num);
+			static ULong ntoh(ULong num);
+
 		};
 
 
@@ -146,22 +160,25 @@ namespace QVPN {
 
 			inline QVPN::Core::NetData qvpn_bind_(SOCKET& socket, const QVPN::Core::IPv4Address& addr, const UShort port)
 			{
+				int err = 0;
 				struct sockaddr_in serverAddr {};
 				int addr_len = 4;
 				serverAddr.sin_family = AF_INET;
 				serverAddr.sin_port = htons(port);
 				serverAddr.sin_addr.S_un.S_addr = htonl(addr.to_uint());//std::visit([](const auto& address) { return address.to_uint(); }, addr);
 				int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-
+				if (res == SOCKET_ERROR)
+					err = WSAGetLastError();
 				getsockname(socket, (sockaddr*)&serverAddr, &addr_len);
 				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin_addr.S_un.S_un_b, (UByte*)&serverAddr.sin_addr.S_un.S_un_b + addr_len);
 
 				bool s = (res == 0) ? true : false;
-				return QVPN::Core::NetData{ s , res, net_addr, port };
+				return QVPN::Core::NetData{ s , err, net_addr, port };
 			}
 
 			inline QVPN::Core::NetData qvpn_bind_(SOCKET& socket, const QVPN::Core::IPv6Address& addr, const UShort port)
 			{
+				int err = 0;
 				struct sockaddr_in6 serverAddr {};
 				int addr_len = sizeof(serverAddr);
 				serverAddr.sin6_family = AF_INET6;
@@ -170,12 +187,13 @@ namespace QVPN {
 				auto bytes = addr.to_bytes();
 				std::memcpy(&serverAddr.sin6_addr.u.Byte, bytes.data(), bytes.size());
 				int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-
+				if (res == SOCKET_ERROR)
+					err = WSAGetLastError();
 				getsockname(socket, (sockaddr*)&serverAddr, &addr_len);
 				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin6_addr.u.Byte, (UByte*)&serverAddr.sin6_addr.u.Byte + addr_len);
 
 				bool s = (res == 0) ? true : false;
-				return QVPN::Core::NetData{ s , res, net_addr, port };
+				return QVPN::Core::NetData{ s , err, net_addr, port };
 			}
 
 			inline QVPN::Core::NetData qvpn_bind_(SOCKET& socket, const QVPN::Core::NetAddr& addr, const UShort port)

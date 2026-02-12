@@ -1551,7 +1551,8 @@ namespace QVPN
 		};
 
 
-		template <NetProtocol Net, TransportProtocol Transport>
+		template <NetProtocol Net, TransportProtocol Transport, class Socket, class NetTools>
+		requires is_net_tools<NetTools, Socket>
 		class ConnectionInstaller
 		{
 		public:
@@ -1564,8 +1565,8 @@ namespace QVPN
 		};
 
 		// ipv4 + tcp spec
-		template <>
-		class ConnectionInstaller<NetProtocol::IPv4, TransportProtocol::TCP>
+		template <class Socket, class NetTools>
+		class ConnectionInstaller<NetProtocol::IPv4, TransportProtocol::TCP, Socket, NetTools>
 		{
 			using TCPScheme = QVPN::Core::DataStructures::QTunnelTCPViewScheme;
 			using SchemeAdapter = QVPN::Core::DataStructures::QTunnelTransportSchemeAdapter<TransportProtocol::TCP>;
@@ -1591,7 +1592,7 @@ namespace QVPN
 				SchemeAdapter scheme(b, e);
 
 				// syn gen
-				auto tcp_syn = generate_transport_header<Addr>(data, scheme.get_seq() - 2, 0, TCPFlags::SYN);
+				auto tcp_syn = generate_transport_header<Addr>(data, scheme.get_seq() - NetTools::hton(static_cast<UShort>(2)), 0, TCPFlags::SYN);
 				auto [bt_syn, et_syn] = tcp_syn.to_bytes();
 				auto syn_size = std::distance(bt_syn, et_syn);
 				auto ipv4_syn = generate_net_header<Addr>(data, syn_size);
@@ -1603,7 +1604,7 @@ namespace QVPN
 				auto syn_res = socket.send_to(data.get_dst_addr(), data.get_dst_port(), b1_syn, e1_syn);
 				if (!syn_res.success)
 					return syn_res;
-
+				// TODO: скорее всего send блокируется системой
 				QVPN::Core::ReceiveData rec_data = socket.recv_from(data.get_dst_addr(), data.get_dst_port());
 				if (!rec_data.status.success)
 					return rec_data.status;
@@ -1616,7 +1617,7 @@ namespace QVPN
 					return NetStatus{ false, -1 };
 
 				// ack gen
-				auto tcp_ack = generate_transport_header<Addr>(data, scheme.get_seq() - 1, ack + 1, TCPFlags::ACK);
+				auto tcp_ack = generate_transport_header<Addr>(data, scheme.get_seq() - NetTools::hton(static_cast<UShort>(1)), ack + NetTools::hton(static_cast<UInt>(1)), TCPFlags::ACK);
 				auto [bt_ack, et_ack] = tcp_ack.to_bytes();
 				auto ack_size = std::distance(bt_ack, et_ack);
 				auto ipv4_ack = generate_net_header<Addr>(data, ack_size);
@@ -1757,15 +1758,14 @@ namespace QVPN
 					sock_data.local_port = port;
 					auto it = response_sockets_.find(sock_data);
 					if (it == response_sockets_.end())
-						legal_addr = false;
+					{
+						response_sockets_[sock_data] = response_socket;
+						legal_addr = true;
+					}
 					else
 						legal_addr = true;
 				}
-				auto res = response_socket.bind(sock_data.local_addr, sock_data.local_port);
-				
-				if (res.success)
-					response_sockets_[sock_data] = response_socket;
-				return res;
+				return true;
 			}
 
 
@@ -1773,7 +1773,7 @@ namespace QVPN
 			bool estabilish_connection(const QTunnelProxyData& data, Socket& socket)
 			{
 				std::stringstream ss{};
-				using ConInst = ConnectionInstaller<Net, Transport>;
+				using ConInst = ConnectionInstaller<Net, Transport, Socket, NetTools>;
 				auto res = ConInst:: template install_connection<Addr, Socket>(data, socket);
 				if (res.success)
 				{
@@ -1839,22 +1839,17 @@ namespace QVPN
 			std::optional<Socket> connect_to_server_impl_(Socket& response_socket, QVPNSocketData& key, const QTunnelProxyData& proxy_data)
 			{
 				std::stringstream ss{};
-				auto socket = NetTools::create_raw_socket(key.remote_addr.get_addr_family(), key.transport_proto); // TODO: возможно стоит не устанавливать соединение, а наоборот сбрасывать
+				auto socket = NetTools::create_raw_socket(key.remote_addr.get_addr_family(), key.transport_proto); 
 				//auto res = socket.connect(key.remote_addr, key.remote_port); 
-				auto res = add_to_response_socket_map(response_socket, key);
+				add_to_response_socket_map(response_socket, key);
 
 				//auto res = socket.bind(vpn_socket.get_local_addr(), PortGenerator::get_random_port());
-				if (res.success)
-				{
-					ss << "Socket to (" << key.remote_addr.to_string() << ":" << key.remote_port << ") created";
-					logger_.success(ss.str());
 
-					install_connection_by_protocols(proxy_data, socket);
-					return socket;
-				}
-				ss << "Socket to (" << key.remote_addr.to_string() << ":" << key.remote_port << ") cannot be created." << " Error " << res.status;
-				logger_.fail(ss.str());
-				return std::nullopt;
+				ss << "Socket to (" << key.remote_addr.to_string() << ":" << key.remote_port << ") created";
+				logger_.success(ss.str());
+
+				install_connection_by_protocols(proxy_data, socket);
+				return socket;
 			}
 
 			void connect_to_server_(Socket& response_socket, QVPNSocketData& key, std::unordered_map<QVPNSocketData, Socket>& sock_map, const QTunnelProxyData& proxy_data)
@@ -1981,7 +1976,7 @@ namespace QVPN
 			}
 
 
-			std::variant<FullTcpPacket, FullUdpPacket> generate_response_packet(const QTunnelProxyData& data, UByte* begin, UByte* end)
+			std::variant<FullTcpPacket, FullUdpPacket> generate_sender_packet(const QTunnelProxyData& data, UByte* begin, UByte* end)
 			{
 				auto packet_data_size = static_cast<UShort>(std::distance(begin, end));
 				auto t_header = generate_transport_header(data);
@@ -2024,17 +2019,17 @@ namespace QVPN
 					logger_.info(ss.view());
 					return true;
 				}
-
+				QTunnelProxyData original_proxy_data = decoded_data->create(*decoded_data);
 				// inverted proxy data
 				QTunnelProxyData proxy_data = decoded_data->create_and_inverse_addrs(*decoded_data);
 
 				QVPNSocketData key{ decoded_data->get_transport_proto(), decoded_data->get_src_addr(), decoded_data->get_src_port(), decoded_data->get_dst_addr(), decoded_data->get_dst_port() };
-				connect_if_not_to_server(*client_socket, key, sock_map, proxy_data);
+				connect_if_not_to_server(*client_socket, key, sock_map, original_proxy_data);
 				auto [b, e] = decoded_data->get_raw_data();
 
 				auto& server_socket = sock_map[key];
 
-				auto packet = generate_response_packet(proxy_data, b, e);
+				auto packet = generate_sender_packet(original_proxy_data, b, e);
 
 				auto [res_b, res_e] = std::visit([](auto& p)
 					{
@@ -2310,8 +2305,8 @@ namespace QVPN
 					auto t = std::thread([this, &s, &database, &stats]() { listen_and_connect_socket_(s, database, stats); });
 					socket_threads_.emplace_back(std::move(t));
 				}
-				auto r_t = std::thread([this]() { listen_response_sockets_(); });
-				response_threads_.emplace_back(std::move(r_t));
+				//auto r_t = std::thread([this]() { listen_response_sockets_(); });
+				//response_threads_.emplace_back(std::move(r_t));
 			}
 
 			bool base_send_data(Socket& socket, const UByte* begin, const UByte* end)

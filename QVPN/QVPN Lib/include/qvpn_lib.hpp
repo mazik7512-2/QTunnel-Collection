@@ -489,13 +489,24 @@ namespace QVPN {
 
 		template <class NetToolsImpl, class Socket>
 		concept is_net_tools =
-			requires (NetToolsImpl t, NetProtocol net_proto, TransportProtocol t_proto) {
+			requires (NetToolsImpl t, NetProtocol net_proto, TransportProtocol t_proto, BaseTypes::UShort us, BaseTypes::UInt ui, BaseTypes::ULong ul) {
 
 				{ NetToolsImpl::create_socket(net_proto, t_proto) } -> std::same_as<Socket>;
 				{ NetToolsImpl::create_raw_socket(net_proto, t_proto) } -> std::same_as<Socket>;
 
+				{ NetToolsImpl::hton(us) } -> std::same_as<BaseTypes::UShort>;
+				{ NetToolsImpl::hton(ui) } -> std::same_as<BaseTypes::UInt>;
+				{ NetToolsImpl::hton(ul) } -> std::same_as<BaseTypes::ULong>;
+
+				{ NetToolsImpl::ntoh(us) } -> std::same_as<BaseTypes::UShort>;
+				{ NetToolsImpl::ntoh(ui) } -> std::same_as<BaseTypes::UInt>;
+				{ NetToolsImpl::ntoh(ul) } -> std::same_as<BaseTypes::ULong>;
 		};
 
+
+		template <typename T>
+		concept is_net_number = std::integral<T> || std::floating_point<T>;
+		
 		template <class PreParserImpl>
 		concept is_preparser =
 			requires (PreParserImpl pp) {

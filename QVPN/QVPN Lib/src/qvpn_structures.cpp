@@ -309,7 +309,7 @@ UByte QVPN::Core::DataStructures::TcpPacketLittleEndian::get_tcp_header_length()
 
 UByte QVPN::Core::DataStructures::TcpPacketLittleEndian::get_tcp_reserved() const
 {
-	return header_[12] & 0xF;
+	return header_[12] & 0x7;
 }
 
 UByte QVPN::Core::DataStructures::TcpPacketLittleEndian::get_tcp_flags() const

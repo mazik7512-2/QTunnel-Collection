@@ -1,9 +1,12 @@
 #include <qvpn_net_tools.hpp>
+#include <WinSock2.h>
 
 
 using QVPNNetTools = QVPN::NetTools::QVPNNetTools;
 using UByte = QVPN::Core::BaseTypes::UByte;
 using UShort = QVPN::Core::BaseTypes::UShort;
+using UInt = QVPN::Core::BaseTypes::UInt;
+using ULong = QVPN::Core::BaseTypes::ULong;
 using QVPNSocketSettings = QVPN::Core::QVPNSocketSettings;
 
 
@@ -20,6 +23,36 @@ QVPN::NetTools::QVPN_Socket QVPN::NetTools::QVPNNetTools::create_raw_socket(QVPN
 	auto sock = QVPN::NetTools::QVPN_Socket(meta.get_socket_family(net_proto), meta.get_raw_socket_type(t_proto), meta.get_raw_socket_proto(t_proto));
 	sock.apply_settings(sock_s);
 	return sock;
+}
+
+UShort QVPN::NetTools::QVPNNetTools::hton(UShort num)
+{
+	return htons(num);
+}
+
+UShort QVPN::NetTools::QVPNNetTools::ntoh(UShort num)
+{
+	return ntohs(num);
+}
+
+UInt QVPN::NetTools::QVPNNetTools::hton(UInt num)
+{
+	return htonl(num);
+}
+
+UInt QVPN::NetTools::QVPNNetTools::ntoh(UInt num)
+{
+	return ntohl(num);
+}
+
+ULong QVPN::NetTools::QVPNNetTools::hton(ULong num)
+{
+	return htonll(num);
+}
+
+ULong QVPN::NetTools::QVPNNetTools::ntoh(ULong num)
+{
+	return ntohll(num);
 }
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket()

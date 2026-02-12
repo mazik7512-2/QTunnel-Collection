@@ -3945,6 +3945,13 @@ namespace QVPN {
 					//return res;
 				}
 
+				static inline QTunnelProxy create(const QTunnelProxy<Addr>& proxy_data)
+				{
+					auto [b, e] = proxy_data.get_proto_data_bytes();
+					return QTunnelProxy(proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_src_addr(), proxy_data.get_src_port(), proxy_data.get_dst_addr(),
+						proxy_data.get_dst_port(), b, e);
+				}
+
 			};
 
 
