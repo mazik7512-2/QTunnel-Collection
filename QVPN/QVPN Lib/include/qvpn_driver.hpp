@@ -1064,7 +1064,7 @@ namespace QVPN
 			{
 				std::stringstream ss{};
 				bool success = false;
-				while (reconnect_number != 0 && !success)
+				while (!success && reconnect_number > 0)
 				{
 					ss.str("");
 					ss << "Try reconnect to (" << settings_.get_ip_address().to_string() << ":" << settings_.get_port() << "). Remaining " << reconnect_number << " tries...";
@@ -1687,7 +1687,7 @@ namespace QVPN
 			std::vector<std::thread> response_threads_{};
 			std::vector<std::thread> socket_clients_threads_{};
 
-			std::unordered_map<QVPNSocketData, Socket> response_sockets_;
+			std::unordered_map<QVPNSocketData, std::pair<Socket, Socket>> response_sockets_;
 
 			QVPNPacketManager packet_manager_;
 
@@ -1744,7 +1744,7 @@ namespace QVPN
 				return vpn_sockets_[dist(gen)];
 			}
 
-			decltype(auto) add_to_response_socket_map(Socket& response_socket, QVPNSocketData& remote_key)
+			decltype(auto) add_to_response_socket_map(Socket& response_socket, Socket& raw_socket, QVPNSocketData& remote_key)
 			{
 				QVPNSocketData sock_data(remote_key);
 				QVPNSocketSettings settings(true, 3000);
@@ -1759,11 +1759,9 @@ namespace QVPN
 					auto it = response_sockets_.find(sock_data);
 					if (it == response_sockets_.end())
 					{
-						response_sockets_[sock_data] = response_socket;
+						response_sockets_[sock_data] = std::make_pair<>(response_socket, raw_socket);
 						legal_addr = true;
 					}
-					else
-						legal_addr = true;
 				}
 				return true;
 			}
@@ -1841,14 +1839,14 @@ namespace QVPN
 				std::stringstream ss{};
 				auto socket = NetTools::create_raw_socket(key.remote_addr.get_addr_family(), key.transport_proto); 
 				//auto res = socket.connect(key.remote_addr, key.remote_port); 
-				add_to_response_socket_map(response_socket, key);
+				add_to_response_socket_map(response_socket, socket, key);
 
 				//auto res = socket.bind(vpn_socket.get_local_addr(), PortGenerator::get_random_port());
 
 				ss << "Socket to (" << key.remote_addr.to_string() << ":" << key.remote_port << ") created";
 				logger_.success(ss.str());
 
-				install_connection_by_protocols(proxy_data, socket);
+				//install_connection_by_protocols(proxy_data, socket); // dont need to install con?
 				return socket;
 			}
 
@@ -2233,11 +2231,12 @@ namespace QVPN
 			{
 				while (true)
 				{
-					for (auto& [key, sock] : response_sockets_)
+					for (auto& [key, socks] : response_sockets_)
 					{
+						auto [resp_sock, sock] = socks;
 						auto rec_data = sock.recv_from(key.local_addr, key.local_port);
 						if (rec_data.status.success)
-							vpn_response_loop_iteration<>(sock, key, rec_data.data.data(), rec_data.data.data() + rec_data.size);
+							vpn_response_loop_iteration<>(resp_sock, key, rec_data.data.data(), rec_data.data.data() + rec_data.size);
 						else
 						{
 							std::stringstream ss{};
@@ -2305,8 +2304,8 @@ namespace QVPN
 					auto t = std::thread([this, &s, &database, &stats]() { listen_and_connect_socket_(s, database, stats); });
 					socket_threads_.emplace_back(std::move(t));
 				}
-				//auto r_t = std::thread([this]() { listen_response_sockets_(); });
-				//response_threads_.emplace_back(std::move(r_t));
+				auto r_t = std::thread([this]() { listen_response_sockets_(); });
+				response_threads_.emplace_back(std::move(r_t));
 			}
 
 			bool base_send_data(Socket& socket, const UByte* begin, const UByte* end)

@@ -18,7 +18,7 @@ void EnableANSI() {
     SetConsoleMode(hOut, dwMode);
 }
 
-
+//TODO: ПЕРЕДЕЛАТЬ Server Driver на очередь с ключом пакетов по портам и адресам
 int main(int argc, const char* argv[])
 {
     EnableANSI();

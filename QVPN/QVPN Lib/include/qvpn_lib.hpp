@@ -92,7 +92,7 @@ namespace QVPN
 
 
 		template <class LoggerImpl>
-		concept is_logger = 
+		concept is_logger =
 			requires (LoggerImpl l, std::string_view data, LoggerVerboseLevel level) {
 
 				{ l.info(data) } -> std::same_as<void>;
@@ -112,6 +112,73 @@ namespace QVPN
 			WINDOWS = 0,
 			LINUX = 1,
 			ANDROID = 2,
+		};
+
+
+		enum QVPNClientWorkMode
+		{
+			CLIENT_VPN = 0, // vpn mode
+			CLIENT_PROXY_NODE = 1, // send data through server proxy node, no traffic modification
+			CLIENT_ANTI_DPI_NODE = 2, // send data through server proxy node with "broken" headers
+			CLIENT_ANTI_DPI = 3, // dpi bypass, works without server
+			CLIENT_DPI_TERROR = 99, // DPI Terror mode, spam packets (must use for turn on bypass mode on DPI, needed many many many clients\servers with this mode)
+		};
+
+		enum QVPNServerWorkMode
+		{
+			SERVER_VPN = 0, // vpn mode
+			SERVER_PROXY_NODE = 1, // receive data from client with CLIENT_PROXY_NODE and resend to original destination
+			SERVER_ANTI_DPI_NODE = 2, // receive data from client with CLIENT_ANTI_DPI_NODE, fix packet and send to original destination
+			SERVER_DPI_TERROR = 99, // DPI Terror mode, spam packets (must use for turn on bypass mode on DPI, needed many many many clients\servers with this mode)
+		};
+
+	}
+
+}
+
+namespace std {
+	template<>
+	struct hash<QVPN::Core::QVPNClientWorkMode> {
+		size_t operator()(const QVPN::Core::QVPNClientWorkMode& obj) const {
+			return hash<int>()(static_cast<int>(obj));
+		}
+	};
+
+	template<>
+	struct hash<QVPN::Core::QVPNServerWorkMode> {
+		size_t operator()(const QVPN::Core::QVPNServerWorkMode& obj) const {
+			return hash<int>()(static_cast<int>(obj));
+		}
+	};
+}
+
+namespace QVPN {
+
+	namespace Core {
+
+
+		class QVPNModeVerbose
+		{
+		private:
+			static inline std::unordered_map<QVPNClientWorkMode, std::string_view> client_verboses_ = { {QVPNClientWorkMode::CLIENT_VPN, "QVPN Mode"}, {QVPNClientWorkMode::CLIENT_PROXY_NODE, "Proxy Mode"},
+				{QVPNClientWorkMode::CLIENT_ANTI_DPI_NODE, "Anti DPI through server Mode"}, {QVPNClientWorkMode::CLIENT_ANTI_DPI, "Anti DPI Mode"}, {QVPNClientWorkMode::CLIENT_DPI_TERROR, "DPI Terror Mode"} };
+
+			static inline std::unordered_map<std::string_view, QVPNClientWorkMode> client_modes_ = { {"QVPN Mode", QVPNClientWorkMode::CLIENT_VPN}, {"Proxy Mode", QVPNClientWorkMode::CLIENT_PROXY_NODE},
+				{"Anti DPI through server Mode", QVPNClientWorkMode::CLIENT_ANTI_DPI_NODE}, {"Anti DPI Mode", QVPNClientWorkMode::CLIENT_ANTI_DPI}, {"DPI Terror Mode", QVPNClientWorkMode::CLIENT_DPI_TERROR} };
+
+			static inline std::unordered_map<QVPNServerWorkMode, std::string_view> server_verboses_ = { {QVPNServerWorkMode::SERVER_VPN, "QVPN Mode"}, {QVPNServerWorkMode::SERVER_PROXY_NODE, "Proxy Mode"},
+				{QVPNServerWorkMode::SERVER_ANTI_DPI_NODE, "Anti DPI server Mode"}, {QVPNServerWorkMode::SERVER_DPI_TERROR, "DPI Terror Mode"} };
+
+			static inline std::unordered_map<std::string_view, QVPNServerWorkMode> server_modes_ = { {"QVPN Mode", QVPNServerWorkMode::SERVER_VPN,}, {"Proxy Mode", QVPNServerWorkMode::SERVER_PROXY_NODE},
+				{"Anti DPI server Mode", QVPNServerWorkMode::SERVER_ANTI_DPI_NODE}, {"DPI Terror Mode", QVPNServerWorkMode::SERVER_DPI_TERROR} };
+
+		public:
+
+			static std::string_view get_client_mode_verbose(QVPNClientWorkMode mode);
+			static std::string_view get_server_mode_verbose(QVPNServerWorkMode mode);
+
+			static QVPNClientWorkMode get_client_mode_by_verbose(std::string_view mode);
+			static QVPNServerWorkMode get_server_mode_by_verbose(std::string_view mode);
 		};
 
 
@@ -666,4 +733,5 @@ namespace std
 		}
 
 	};
+	
 }

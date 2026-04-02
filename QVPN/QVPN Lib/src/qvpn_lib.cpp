@@ -476,3 +476,23 @@ consteval bool QVPN::Core::QVPNLib::is_compatible(UInt major, UInt minor, UInt p
         return false;
     return true;
 }
+
+std::string_view QVPN::Core::QVPNModeVerbose::get_client_mode_verbose(QVPNClientWorkMode mode)
+{
+    return client_verboses_[mode];
+}
+
+std::string_view QVPN::Core::QVPNModeVerbose::get_server_mode_verbose(QVPNServerWorkMode mode)
+{
+    return server_verboses_[mode];
+}
+
+QVPN::Core::QVPNClientWorkMode QVPN::Core::QVPNModeVerbose::get_client_mode_by_verbose(std::string_view mode)
+{
+    return client_modes_[mode];
+}
+
+QVPN::Core::QVPNServerWorkMode QVPN::Core::QVPNModeVerbose::get_server_mode_by_verbose(std::string_view mode)
+{
+    return server_modes_[mode];
+}
