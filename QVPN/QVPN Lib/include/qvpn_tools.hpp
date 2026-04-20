@@ -167,6 +167,7 @@ namespace QVPN {
 
 			};
 
+			// windows spec
 			template<>
 			class QVPNLogger<QVPNPlatform::WINDOWS>
 			{
@@ -249,8 +250,93 @@ namespace QVPN {
 					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
 				}
 			};
+
+			// linux spec
+			template<>
+			class QVPNLogger<QVPNPlatform::LINUX>
+			{
+				using sys_clock = std::chrono::system_clock;
+				struct LinuxColors
+				{
+					constexpr static std::string_view HEADER = "\033[95m";
+					constexpr static std::string_view OKBLUE = "\033[94m";
+					constexpr static std::string_view OKCYAN = "\033[96m";
+					constexpr static std::string_view OKGREEN = "\033[92m";
+					constexpr static std::string_view WARNING = "\033[93m";
+					constexpr static std::string_view FAIL = "\033[91m";
+					constexpr static std::string_view ENDC = "\033[0m";
+					constexpr static std::string_view BOLD = "\033[1m";
+					constexpr static std::string_view UNDERLINE = "\033[4m";
+					constexpr static std::string_view DEFAULT = "\033[0m";
+				};
+
+				std::string prefix_;
+				LoggerVerboseLevel verbose_ = LoggerVerboseLevel::ALL;
+
+			public:
+
+				void set_verbosity(LoggerVerboseLevel level)
+				{
+					verbose_ = level;
+				}
+
+				void set_prefix(std::string_view prefix)
+				{
+					prefix_ = prefix;
+				}
+
+				void clear_prefix()
+				{
+					prefix_.clear();
+				}
+
+				void info(std::string_view data)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::INFO);
+					if (l != LoggerVerboseLevel::INFO)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					std::cout << LinuxColors::ENDC << LinuxColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
+				}
+
+				void success(std::string_view data)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::IMPORTANT);
+					if (l != LoggerVerboseLevel::IMPORTANT)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					std::cout << LinuxColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
+				}
+
+				void fail(std::string_view data)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::IMPORTANT);
+					if (l != LoggerVerboseLevel::IMPORTANT)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					std::cout << LinuxColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
+				}
+
+				void warning(std::string_view data)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::WARNING);
+					if (l != LoggerVerboseLevel::WARNING)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					std::cout << LinuxColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
+				}
+			};
 		}
 		
+
 		class PacketPreParser
 		{
 		private:

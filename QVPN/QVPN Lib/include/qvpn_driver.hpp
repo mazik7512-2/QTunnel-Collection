@@ -998,9 +998,18 @@ namespace QVPN
 
 		};
 
+
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger, QVPN::Core::QVPNClientWorkMode work_mode>
+			requires is_socket<Socket, Addr> && is_net_tools<NetTools, Socket>
+		class QVPNClientDriver
+		{
+
+		};
+
+		// vpn spec
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
 			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
-		class QVPNClientDriver
+		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_VPN>
 		{
 		private:
 
@@ -1276,6 +1285,38 @@ namespace QVPN
 
 		};
 
+
+		// proxy spec
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_PROXY_NODE>
+		{
+
+		};
+
+		// anti dpi node spec
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_ANTI_DPI_NODE>
+		{
+
+		};
+
+		// anti dpi spec
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_ANTI_DPI>
+		{
+
+		};
+
+		// dpi terror spec
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_DPI_TERROR>
+		{
+
+		};
 
 		template <is_adapter_driver AdapterDriver, is_net_driver NetDriver>
 		class VPNClient : public AdapterDriver, public NetDriver
@@ -1653,10 +1694,17 @@ namespace QVPN
 
 		};
 
-
-		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger, QVPN::Core::QVPNServerWorkMode work_mode>
 			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
 		class QVPNServerDriver
+		{
+
+		};
+
+		// vpn spec
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+		class QVPNServerDriver<Iter, Addr, Socket, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_VPN>
 		{
 		private:
 			using TLS13_Record = QVPN::Core::DataStructures::TLS13_RecordLittleEndian;
@@ -2378,6 +2426,30 @@ namespace QVPN
 
 		};
 
+
+		// proxy spec
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+		class QVPNServerDriver<Iter, Addr, Socket, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_PROXY_NODE>
+		{
+
+		};
+
+		// anti dpi node spec
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+		class QVPNServerDriver<Iter, Addr, Socket, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_ANTI_DPI_NODE>
+		{
+
+		};
+
+		// dpi terror spec
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+		class QVPNServerDriver<Iter, Addr, Socket, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_DPI_TERROR>
+		{
+
+		};
 
 		template <std::random_access_iterator Iter, class VPNServerDriver, is_database_adapter Database, is_statistic_adapter Stats>
 			requires is_vpn_server_driver<VPNServerDriver, Database, Stats>

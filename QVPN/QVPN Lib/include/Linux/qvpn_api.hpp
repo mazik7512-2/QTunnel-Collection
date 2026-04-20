@@ -1,8 +1,6 @@
 #pragma once
 
 #include <qvpn_lib.hpp>
-#include <windivert_ext.hpp>
-#include <wintun_ext.hpp>
 #include <qvpn_net_tools.hpp>
 #include <qvpn_driver.hpp>
 #include <qvpn_tools.hpp>
@@ -10,7 +8,7 @@
 namespace QVPN
 {
 
-	using QVPNLogger = QVPN::Core::Tools::QVPNLogger<QVPN::Core::QVPNPlatform::WINDOWS>;
+	using QVPNLogger = QVPN::Core::Tools::QVPNLogger<QVPN::Core::QVPNPlatform::LINUX>;
 
 	namespace details
 	{
@@ -21,11 +19,12 @@ namespace QVPN
 		using QVPNServerDriver = QVPN::Core::QVPNServerDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPNSocket, QVPNNetTools, Database, Stats, QVPNLogger, QVPN::Core::QVPNServerWorkMode::SERVER_VPN>;
 	}
 
+	/*
 	using QVPNClientSettings = QVPN::Core::QVPNClientSettings;
 	using QVPNClientDriver = QVPN::WinDivertExt::QVPNClientNetDriver<QVPNLogger>;
 	using QVPNClient = QVPN::Core::VPNClient<QVPN::WinTunExt::WinTunDriver, QVPNClientDriver>;
 	using QVPNLayersStrategy = QVPN::Core::DefaultLayersStrategy<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr>;
-
+	*/
 	using QVPNServerSettings = QVPN::Core::QVPNServerSettings;
 
 	using NoDatabaseAdapter = QVPN::Core::NoDatabaseAdapter;

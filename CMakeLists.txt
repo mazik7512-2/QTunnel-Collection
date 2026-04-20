@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 4.1)  # Минимальная версия пр�
 # C++
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64")
 
 # Project
 set(PROJECT_NAME "QVPN Collection")
@@ -12,7 +13,6 @@ project(${PROJECT_NAME}
 	DESCRIPTION "QVPN Project"
 	LANGUAGES CXX
 )
-
 
 # Build options
 
@@ -126,6 +126,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	set(WINDIVERT_DLL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/windivert/x64/windivert.dll")
 	set(WINDIVERT_DRIVER_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/windivert/x64/WinDivert64.sys")
 
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+
 endif()
 
 # Libs
@@ -185,6 +187,10 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 					"${TARGET_DIRECTORY}/sqlite3.dll" 
 			COMMENT "Copying sqlite3.dll ${TARGET_DIRECTORY} directory\n"
 			)
+
+	elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+
+
 	endif()
 	# Копирование всех белых списков с расширением qwlist для server app
 	foreach(file_ IN ITEMS ${whitelists_list})
@@ -296,6 +302,10 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 				${TARGET_DIRECTORY}/WinDivert64.sys
 		COMMENT "Copying WinDivert64.sys to ${TARGET_DIRECTORY} directory\n"
 	)
+
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+
+
 
 endif()
 

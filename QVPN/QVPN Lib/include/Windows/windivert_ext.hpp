@@ -153,7 +153,7 @@ namespace QVPN {
 
 
 		template <QVPN::Core::is_filter Filter, QVPN::Core::is_vpn_client_driver VPNDriver, QVPN::Core::is_logger Logger>
-		class WinDivertClientNetDriver_ : public Filter
+		class WinDivertClientVPNNetDriver_ : public Filter
 		{
 		public:
 
@@ -368,7 +368,7 @@ namespace QVPN {
 
 		public:
 
-			WinDivertClientNetDriver_(QVPN::Core::QVPNClientSettings settings)
+			WinDivertClientVPNNetDriver_(QVPN::Core::QVPNClientSettings settings)
 				: driver_(std::move(settings))
 			{
 
@@ -431,12 +431,12 @@ namespace QVPN {
 		};
 
 		template <QVPN::Core::is_logger Logger>
-		using WinQVPNDriver = QVPN::Core::QVPNClientDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPN::NetTools::QVPN_Socket, QVPN::NetTools::QVPNNetTools, Logger>;
+		using QVPNClientDriver = QVPN::Core::QVPNClientDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPN::NetTools::QVPN_Socket, QVPN::NetTools::QVPNNetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_VPN>;
 
 		using WinDivertTrafficFilter = WinDivertTrafficFilter_<WinDivertTrafficFilterType>;
 
 		template <QVPN::Core::is_logger Logger>
-		using WinDivertClientNetDriver = WinDivertClientNetDriver_<WinDivertTrafficFilter, WinQVPNDriver<Logger>, Logger>;
+		using QVPNClientNetDriver = WinDivertClientVPNNetDriver_<WinDivertTrafficFilter, QVPNClientDriver<Logger>, Logger>;
 	}
 
 

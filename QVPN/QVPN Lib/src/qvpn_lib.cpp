@@ -1,6 +1,5 @@
 #include "qvpn_lib.hpp"
 #include <sstream>
-#include <qvpn_defs.hpp>
 #include <fstream>
 #include <random>
 #include <qvpn_tools.hpp>
