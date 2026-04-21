@@ -11,7 +11,7 @@
 
 #include <utility>
 
-using SOCKET = int;
+using SOCKET = long int;
 
 
 namespace std

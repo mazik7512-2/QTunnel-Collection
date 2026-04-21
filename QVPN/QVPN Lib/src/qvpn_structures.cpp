@@ -3,6 +3,7 @@
 #include <iostream>
 #include <qvpn_tools.hpp>
 #include <ctime>
+#include <string.h>
 
 
 using Byte = QVPN::Core::DataStructures::Byte;
@@ -1704,10 +1705,10 @@ QVPN::Core::DataStructures::TransportIpv4PseudoHeaderTypesBuffer QVPN::Core::Dat
 	constexpr auto addr_size = sizeof(src);
 	constexpr auto proto_size = sizeof(protocol);
 	constexpr auto length_size = sizeof(length);
-	std::memcpy(&src, data, addr_size);
-	std::memcpy(&dst, data + addr_size, addr_size);
+	memcpy(&src, data, addr_size);
+	memcpy(&dst, data + addr_size, addr_size);
 	protocol = data[9];
-	std::memcpy(&length, &data[10], length_size);
+	memcpy(&length, &data[10], length_size);
 	return TransportIpv4PseudoHeaderTypesBuffer({src, dst, zero, protocol, length});
 }
 

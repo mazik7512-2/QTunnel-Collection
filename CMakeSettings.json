@@ -22,7 +22,6 @@
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_x64" ],
       "wslPath": "Ubuntu",
-      "intelliSenseMode": "windows-clang-x86",
       "variables": [
         {
           "name": "QVPN_BUILD_SERVER",
@@ -32,6 +31,11 @@
         {
           "name": "QVPN_BUILD_ALL",
           "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "QVPN_BUILD_LIB",
+          "value": "True",
           "type": "BOOL"
         }
       ]
@@ -47,8 +51,7 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_clang_x64" ],
-      "wslPath": "Ubuntu",
-      "variables": []
+      "wslPath": "Ubuntu"
     }
   ]
 }

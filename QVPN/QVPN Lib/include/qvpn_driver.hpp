@@ -7,6 +7,7 @@
 #include <qvpn_tools.hpp>
 #include <algorithm>
 #include <thread>
+#include <fstream>
 
 #include <nlohmann/json.hpp>
 
@@ -475,8 +476,8 @@ namespace QVPN
 			// 40 - size of qtunnel data (net proto - 1 byte, transport proto - 1 byte, src_net addr - 16 bytes (max), src_port - 2 bytes, dst_net_addr - 16 bytes (max), dst_port - 2 bytes, 
 			// 2 bytes - size of transport proto data
 			// 256 bytes - size of max add data size //?
-			constexpr static UByte packet_builder_data_size = packet_builder_data_size;
-			constexpr static UShort data_meta_qvpn_size = packet_builder_data_size + 5 + 40 + 256;
+			constexpr static UByte packet_manager_data_size = packet_builder_data_size;
+			constexpr static UShort data_meta_qvpn_size = packet_manager_data_size + 5 + 40 + 256;
 
 		private:
 
@@ -555,7 +556,7 @@ namespace QVPN
 			void build_packet(Iter begin, Iter end)
 			{
 				auto size = std::distance(begin, end);
-				if (size <= QVPNPacketManager::packet_builder_data_size)
+				if (size <= QVPNPacketManager::packet_manager_data_size)
 					return;
 				auto p_id = static_cast<UByte>(begin[0]);
 				auto it = packets_.find(p_id);
@@ -954,7 +955,7 @@ namespace QVPN
 			}
 
 			QVPNClientSettings_(std::string_view path)
-				: QVPNLayersSettings<Iter>()
+				: QVPNLayersSettings<Iter, AddrType>()
 			{
 				parse_settings(path);
 			}
@@ -1422,7 +1423,7 @@ namespace QVPN
 			{
 				using NetProtocol = QVPN::Core::NetProtocol;
 				std::ifstream f{};
-				f.open(path);
+				f.open(path.data());
 
 				if (!f.is_open())
 					return;
@@ -1597,9 +1598,9 @@ namespace QVPN
 		class ConnectionInstaller
 		{
 		public:
-			template <is_addr Addr, class Socket>
-				requires is_socket<Socket, Addr>
-			static NetStatus install_connection(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Socket& socket)
+			template <is_addr Addr, class Sock>
+				requires is_socket<Sock, Addr>
+			static NetStatus install_connection(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Sock& socket)
 			{
 				return NetStatus{ true, 0 };
 			}
@@ -1623,9 +1624,9 @@ namespace QVPN
 			using FullPacket = QVPN::Core::DataStructures::Ipv4TcpPacket;
 		public:
 
-			template <is_addr Addr, class Socket>
-			requires is_socket<Socket, Addr>
-			static NetStatus install_connection(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Socket& socket)
+			template <is_addr Addr, class Sock>
+			requires is_socket<Sock, Addr>
+			static NetStatus install_connection(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Sock& socket)
 			{
 				UByte* dummy_data = nullptr;
 
@@ -1746,8 +1747,6 @@ namespace QVPN
 
 			using NoNetTcpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::TcpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
 			using NoNetUdpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::UdpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
-
-			using IPv4GenStrategy = QVPN::Core::DataStructures::IPv4DefaultGenStrategy;
 
 			using IPv4PacketObject = QVPN::Core::DataStructures::Ipv4PacketLittleEndian;
 			using IPv4PacketView = QVPN::Core::DataStructures::Ipv4PacketView;
@@ -2151,7 +2150,7 @@ namespace QVPN
 						TLS13_RecordGenStrategy rec_strategy{};
 						TLS13_DefaultServerHelloGenStrategy strategy{};
 
-						auto client_socket = socket.accept<Addr>();
+						auto client_socket = socket.template accept<Addr>();
 
 						std::stringstream ss_ac{};
 						ss_ac << "Accepting connnection from (" << client_socket.get_remote_addr().to_string() << ":" << client_socket.get_remote_port() << ")";
@@ -2250,8 +2249,8 @@ namespace QVPN
 				clean_threads_();
 			}
 
-			template <std::random_access_iterator Iter>
-			void vpn_response_loop_iteration(Socket& socket, const QVPNSocketData& key, Iter begin, Iter end)
+			template <std::random_access_iterator Iterator>
+			void vpn_response_loop_iteration(Socket& socket, const QVPNSocketData& key, Iterator begin, Iterator end)
 			{
 				auto response = pp_.pre_parse(begin, end);
 
@@ -2344,8 +2343,8 @@ namespace QVPN
 				logger_.success("QVPN Server Driver successfully started.");
 			}
 
-			template <is_database_adapter Database>
-			void init(Database& database, Stats& stats)
+			template <is_database_adapter DB>
+			void init(DB& database, Stats& stats)
 			{
 				for (auto& s : vpn_sockets_)
 				{

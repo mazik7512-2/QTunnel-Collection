@@ -43,8 +43,8 @@ namespace QVPN {
 				UTF8 = 65001,
 				UNKNOWN = 9999
 			};
-			
-			
+
+
 
 			// not all http methods
 			enum class HttpRequestType
@@ -245,7 +245,7 @@ namespace QVPN {
 
 			template <class ProxyDataImpl>
 			concept ProxyDataLike =
-				requires (ProxyDataImpl t, const ProxyDataImpl& cr_proxy_data) {
+				requires (ProxyDataImpl t, const ProxyDataImpl & cr_proxy_data) {
 
 					{ t.get_net_proto() } -> std::same_as<NetProtocol>;
 					{ t.get_transport_proto() } -> std::same_as<TransportProtocol>;
@@ -408,8 +408,8 @@ namespace QVPN {
 
 			public:
 
-				template<class U, class AdapterHandle> requires is_adapter_criteria<U, AdapterHandle>
-				std::shared_ptr<Adapter<AdapterHandle>> get_default_adapter()
+				template<class U, class AdapterHandler> requires is_adapter_criteria<U, AdapterHandler>
+				std::shared_ptr<Adapter<AdapterHandler>> get_default_adapter()
 				{
 					for (const auto& it : *this)
 					{
@@ -444,7 +444,7 @@ namespace QVPN {
 
 			template <class IpPacketImpl>
 			concept UnifiedIpPacketLike =
-				requires (IpPacketImpl t, const NetAddr& net_addr) {
+				requires (IpPacketImpl t, const NetAddr & net_addr) {
 
 					{ t.get_src_addr() } -> std::same_as<NetAddr>;
 					{ t.get_dst_addr() } -> std::same_as<NetAddr>;
@@ -595,63 +595,9 @@ namespace QVPN {
 				void set_src_addr(const NetAddr& net_addr);
 				void set_dst_addr(const NetAddr& net_addr);
 
+				// forward declaration из-за неполного viewtype
 				template <IPv4GenStrategyLike IPv4GenStrategy>
-				static std::vector<UByte> generate_object_bytes(const IPv4GenStrategy& strategy, const NetAddr& src, const NetAddr& dst, TransportProtocol proto, UShort total_length, bool DF, bool MF, UShort offset)
-				{
-					std::vector<UByte> obj_bytes{};
-
-					auto add_headers = strategy.get_additional_headers();
-					auto size = add_headers.size() / 4; 
-
-					auto ver = strategy.get_ver();
-					auto h_length = strategy.get_header_length();
-					auto total_h_length = h_length + size;
-					auto first_byte = static_cast<UByte>(ver << 4 | total_h_length & 0xF);
-					obj_bytes.push_back(first_byte);
-
-					auto qos = static_cast<UByte>(strategy.get_qos());
-					obj_bytes.push_back(qos);
-
-					auto len = total_length + total_h_length;
-
-					obj_bytes.push_back(static_cast<UByte>(len >> 8));
-					obj_bytes.push_back(static_cast<UByte>(len & 0xFF));
-
-					UShort id = 0;
-					if (MF)
-						id = strategy.get_id();
-					else
-						id = strategy.get_next_id();
-
-					obj_bytes.push_back(static_cast<UByte>(id >> 8));
-					obj_bytes.push_back(static_cast<UByte>(id & 0xFF));
-
-					UByte flags_offset = 0 << 7 | DF << 6 | MF << 5 | (offset >> 11) & 0b11111;
-					obj_bytes.push_back(flags_offset);
-					obj_bytes.push_back(static_cast<UByte>(offset & 0xFF));
-
-					obj_bytes.push_back(static_cast<UByte>(proto));
-
-					// checksum bytes
-					obj_bytes.push_back(0);
-					obj_bytes.push_back(0);
-
-					auto src4 = src.to_ipv4();
-					auto b_src = src4.to_bytes();
-					std::copy(b_src.begin(), b_src.end(), std::back_inserter(obj_bytes));
-
-					auto dst4 = dst.to_ipv4();
-					auto b_dst = dst4.to_bytes();
-					std::copy(b_dst.begin(), b_dst.end(), std::back_inserter(obj_bytes));
-
-					std::copy(add_headers.begin(), add_headers.end(), std::back_inserter(obj_bytes));
-
-					ViewType ip4(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
-					ip4.recalculate_ip_checksum();
-
-					return obj_bytes;
-
-				}
+				static inline std::vector<UByte> generate_object_bytes(const IPv4GenStrategy& strategy, const NetAddr& src, const NetAddr& dst, TransportProtocol proto, UShort total_length, bool DF, bool MF, UShort offset);
 
 				template <IPv4GenStrategyLike IPv4GenStrategy>
 				static ObjectType generate_object(const IPv4GenStrategy& strategy, const NetAddr& src, const NetAddr& dst, TransportProtocol proto, UShort total_length, bool DF, bool MF, UShort offset)
@@ -766,14 +712,72 @@ namespace QVPN {
 
 			};
 
+			// Определение вне класса, иначе не работает ViewType, т.к. не полный Тип
+			template<IPv4GenStrategyLike IPv4GenStrategy>
+			inline std::vector<UByte> Ipv4PacketLittleEndian::generate_object_bytes(const IPv4GenStrategy& strategy, const NetAddr& src, const NetAddr& dst, TransportProtocol proto, UShort total_length, bool DF, bool MF, UShort offset)
+			{
+				std::vector<UByte> obj_bytes{};
+
+				auto add_headers = strategy.get_additional_headers();
+				auto size = add_headers.size() / 4;
+
+				auto ver = strategy.get_ver();
+				auto h_length = strategy.get_header_length();
+				auto total_h_length = h_length + size;
+				auto first_byte = static_cast<UByte>(ver << 4 | total_h_length & 0xF);
+				obj_bytes.push_back(first_byte);
+
+				auto qos = static_cast<UByte>(strategy.get_qos());
+				obj_bytes.push_back(qos);
+
+				auto len = total_length + total_h_length;
+
+				obj_bytes.push_back(static_cast<UByte>(len >> 8));
+				obj_bytes.push_back(static_cast<UByte>(len & 0xFF));
+
+				UShort id = 0;
+				if (MF)
+					id = strategy.get_id();
+				else
+					id = strategy.get_next_id();
+
+				obj_bytes.push_back(static_cast<UByte>(id >> 8));
+				obj_bytes.push_back(static_cast<UByte>(id & 0xFF));
+
+				UByte flags_offset = 0 << 7 | DF << 6 | MF << 5 | (offset >> 11) & 0b11111;
+				obj_bytes.push_back(flags_offset);
+				obj_bytes.push_back(static_cast<UByte>(offset & 0xFF));
+
+				obj_bytes.push_back(static_cast<UByte>(proto));
+
+				// checksum bytes
+				obj_bytes.push_back(0);
+				obj_bytes.push_back(0);
+
+				auto src4 = src.to_ipv4();
+				auto b_src = src4.to_bytes();
+				std::copy(b_src.begin(), b_src.end(), std::back_inserter(obj_bytes));
+
+				auto dst4 = dst.to_ipv4();
+				auto b_dst = dst4.to_bytes();
+				std::copy(b_dst.begin(), b_dst.end(), std::back_inserter(obj_bytes));
+
+				std::copy(add_headers.begin(), add_headers.end(), std::back_inserter(obj_bytes));
+
+				ViewType ip4(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
+				ip4.recalculate_ip_checksum();
+
+				return obj_bytes;
+
+			}
+
 			template <Ip4PacketLike Ip4PacketImpl>
 			class Ipv4Packet_ : public Ip4PacketImpl {
 
 			public:
 
 				Ipv4Packet_(UByte* begin, UByte* end)
-					: Ip4PacketImpl(begin, end) {
-				}
+					: Ip4PacketImpl(begin, end) {}
 
 			};
 
@@ -1053,8 +1057,7 @@ namespace QVPN {
 			public:
 
 				TcpPacket_(UByte* begin, UByte* end)
-					: TcpImpl(begin, end) {
-				}
+					: TcpImpl(begin, end) {}
 
 			};
 
@@ -1211,8 +1214,7 @@ namespace QVPN {
 			public:
 
 				UdpPacket_(UByte* begin, UByte* end)
-					: UdpImpl(begin, end) {
-				}
+					: UdpImpl(begin, end) {}
 
 
 			};
@@ -1319,8 +1321,7 @@ namespace QVPN {
 			{
 			public:
 				DataPacket_(UByte* begin, UByte* end)
-					: DataPacketImpl(begin, end) {
-				}
+					: DataPacketImpl(begin, end) {}
 			};
 
 
@@ -1659,7 +1660,7 @@ namespace QVPN {
 
 				template <std::random_access_iterator Iter1, std::random_access_iterator Iter2>
 					requires std::is_same_v<Iter1, Iter2>
-				static std::vector<UByte> generate_object(Iter1 begin, Iter2 end)
+				static TLSSessionIDLittleEndian generate_object(Iter1 begin, Iter2 end)
 				{
 					auto obj_bytes = generate_object_bytes<Iter1, Iter2>(begin, end);
 					return TLSSessionIDLittleEndian(obj_bytes.data(), obj_bytes.end());
@@ -1985,8 +1986,7 @@ namespace QVPN {
 
 				template<class ... FuncArgs>
 				TLSExtensionWrapper(FuncArgs&& ... args)
-					: args_(std::forward<FuncArgs>(args)...) {
-				}
+					: args_(std::forward<FuncArgs>(args)...) {}
 
 				std::tuple<Args...>& get_args()
 				{
@@ -2778,14 +2778,14 @@ namespace QVPN {
 					requires TLSPacketGeneratorLike<TLSUnderlayingPacketGenerator, Args...> //&& TLSPacketGeneratorLike<TLSPacketGenerator, Args...>
 				static std::vector<UByte> generate_object_bytes(TLSRecordGenStrategy&& rec_strategy, Args&& ... args)
 				{
-					return TLS13_RecordLittleEndian::generate_object_bytes<TLSRecordGenerationStrategy, TLSPacketGenerator, TLSUnderlayingPacketGenerator, Args...>(std::forward<TLSRecordGenStrategy>(rec_strategy), std::forward<Args>(args)...);
+					return TLS13_RecordLittleEndian::generate_object_bytes<TLSRecordGenStrategy, TLSPacketGenerator, TLSUnderlayingPacketGenerator, Args...>(std::forward<TLSRecordGenStrategy>(rec_strategy), std::forward<Args>(args)...);
 				}
 
 				template <TLSRecordGenerationStrategy TLSRecordGenStrategy, class TLSPacketGenerator, class TLSUnderlayingPacketGenerator, class ... Args>
 					requires TLSPacketGeneratorLike<TLSUnderlayingPacketGenerator, Args...> //&& TLSPacketGeneratorLike<TLSPacketGenerator, Args...>
 				static TLS13_RecordLittleEndian generate_object(TLSRecordGenStrategy&& strategy, Args&& ... args)
 				{
-					return TLS13_RecordLittleEndian::generate_object<TLSRecordGenerationStrategy, TLSPacketGenerator, TLSUnderlayingPacketGenerator, Args...>(std::forward<TLSRecordGenStrategy>(strategy), std::forward<Args>(args)...);
+					return TLS13_RecordLittleEndian::generate_object<TLSRecordGenStrategy, TLSPacketGenerator, TLSUnderlayingPacketGenerator, Args...>(std::forward<TLSRecordGenStrategy>(strategy), std::forward<Args>(args)...);
 				}
 
 
@@ -3643,8 +3643,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: NetLayer(begin, end), TransportLayer(NetLayer::get_next_protocol_byte(), end), DataLayer(TransportLayer::get_next_protocol_byte(), end) {
-				}
+					: NetLayer(begin, end), TransportLayer(NetLayer::get_next_protocol_byte(), end), DataLayer(TransportLayer::get_next_protocol_byte(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -3691,7 +3690,7 @@ namespace QVPN {
 			template <class Scheme>
 			concept QTunnelSchemeLike =
 				requires (const Scheme s) {
-					
+
 					{ s.get_scheme_data_length() } -> std::same_as<UShort>;
 
 			};
@@ -3804,8 +3803,7 @@ namespace QVPN {
 			{
 			public:
 				QTunnelTransportSchemeAdapter(UByte* begin, UByte* end)
-					: QTunnelTCPViewScheme(begin, end) {
-				}
+					: QTunnelTCPViewScheme(begin, end) {}
 			};
 
 			template <>
@@ -3813,8 +3811,7 @@ namespace QVPN {
 			{
 			public:
 				QTunnelTransportSchemeAdapter(UByte* begin, UByte* end)
-					: QTunnelUDPViewScheme(begin, end) {
-				}
+					: QTunnelUDPViewScheme(begin, end) {}
 			};
 
 			template <QVPN::Core::is_addr Addr>
@@ -4028,8 +4025,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: Ipv4Packet(begin, end), TcpPacket(Ipv4Packet::get_next_protocol_byte(), end), DataPacket(TcpPacket::get_next_protocol_byte(), end) {
-				}
+					: Ipv4Packet(begin, end), TcpPacket(Ipv4Packet::get_next_protocol_byte(), end), DataPacket(TcpPacket::get_next_protocol_byte(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -4142,8 +4138,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: Ipv4Packet(begin, end), UdpPacket(Ipv4Packet::get_next_protocol_byte(), end), DataPacket(UdpPacket::get_next_protocol_byte(), end) {
-				}
+					: Ipv4Packet(begin, end), UdpPacket(Ipv4Packet::get_next_protocol_byte(), end), DataPacket(UdpPacket::get_next_protocol_byte(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -4245,8 +4240,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: Ipv4Packet_View(begin, end), TcpPacket_View(Ipv4Packet_View::get_next_protocol_byte(), end), DataPacket_View(TcpPacket_View::get_next_protocol_byte(), end) {
-				}
+					: Ipv4Packet_View(begin, end), TcpPacket_View(Ipv4Packet_View::get_next_protocol_byte(), end), DataPacket_View(TcpPacket_View::get_next_protocol_byte(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -4352,8 +4346,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: Ipv4Packet_View(begin, end), UdpPacket_View(Ipv4Packet_View::get_next_protocol_byte(), end), DataPacket_View(UdpPacketView::get_next_protocol_byte(), end) {
-				}
+					: Ipv4Packet_View(begin, end), UdpPacket_View(Ipv4Packet_View::get_next_protocol_byte(), end), DataPacket_View(UdpPacketView::get_next_protocol_byte(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -4531,13 +4524,13 @@ namespace QVPN {
 				}
 
 				template <std::random_access_iterator Iter>
-				NoNetPacket new_packet_by_payload(Iter begin, Iter end) const
+				NoNetPacket new_packet_by_payload(const NetAddr& src, const NetAddr& dst, UShort length, Iter begin, Iter end) const
 				{
 					auto [t_b, t_e] = TcpPacket::to_bytes();
 					NoNetPacket np(t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					np.set_transport_length(size);
-					np.recalculate_checksums();
+					np.recalculate_checksums(src, dst, length);
 					return np;
 				}
 
@@ -4605,13 +4598,13 @@ namespace QVPN {
 				}
 
 				template <std::random_access_iterator Iter>
-				NoNetPacket new_packet_by_payload(Iter begin, Iter end) const
+				NoNetPacket new_packet_by_payload(const NetAddr& src, const NetAddr& dst, UShort length, Iter begin, Iter end) const
 				{
-					auto [t_b, t_e] = TcpPacket::to_bytes();
+					auto [t_b, t_e] = UdpPacket::to_bytes();
 					NoNetPacket np(t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					np.set_transport_length(size);
-					np.recalculate_checksums();
+					np.recalculate_checksums(src, dst, length);
 					return np;
 				}
 
@@ -4634,7 +4627,7 @@ namespace QVPN {
 			public:
 				template <std::random_access_iterator Iter>
 				NoNetPacket(Iter begin, Iter end)
-					: TcpPacket_View(begin, end), DataPacket_View(TcpPacket::get_next_protocol_byte(), end)
+					: TcpPacket_View(begin, end), DataPacket_View(TcpPacket_View::get_next_protocol_byte(), end)
 				{
 
 				}
@@ -4673,13 +4666,13 @@ namespace QVPN {
 				}
 
 				template <std::random_access_iterator Iter>
-				NoNetPacket new_packet_by_payload(Iter begin, Iter end) const
+				NoNetPacket new_packet_by_payload(const NetAddr& src, const NetAddr& dst, UShort length, Iter begin, Iter end) const
 				{
-					auto [t_b, t_e] = TcpPacket::to_bytes();
+					auto [t_b, t_e] = TcpPacket_View::to_bytes();
 					NoNetPacket np(t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					np.set_transport_length(size);
-					np.recalculate_checksums();
+					np.recalculate_checksums(src, dst, length);
 					return np;
 				}
 
@@ -4703,7 +4696,7 @@ namespace QVPN {
 			public:
 				template <std::random_access_iterator Iter>
 				NoNetPacket(Iter begin, Iter end)
-					: UdpPacket_View(begin, end), DataPacket_View(UdpPacket::get_next_protocol_byte(), end)
+					: UdpPacket_View(begin, end), DataPacket_View(UdpPacket_View::get_next_protocol_byte(), end)
 				{
 
 				}
@@ -4742,13 +4735,13 @@ namespace QVPN {
 				}
 
 				template <std::random_access_iterator Iter>
-				NoNetPacket new_packet_by_payload(Iter begin, Iter end) const
+				NoNetPacket new_packet_by_payload(const NetAddr& src, const NetAddr& dst, UShort length, Iter begin, Iter end) const
 				{
-					auto [t_b, t_e] = TcpPacket::to_bytes();
+					auto [t_b, t_e] = UdpPacket_View::to_bytes();
 					NoNetPacket np(t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					np.set_transport_length(size);
-					np.recalculate_checksums();
+					np.recalculate_checksums(src, dst, length);
 					return np;
 				}
 
@@ -4772,6 +4765,7 @@ namespace QVPN {
 
 			using NoNetPacketTcpView = NoNetPacket<TcpPacket_View, DataPacket_View>;
 			using NoNetPacketUdpView = NoNetPacket<UdpPacket_View, DataPacket_View>;
+
 		}
 	}
 }

@@ -11,7 +11,7 @@ set(PROJECT_NAME "QVPN Collection")
 project(${PROJECT_NAME}   
 	VERSION 0.5
 	DESCRIPTION "QVPN Project"
-	LANGUAGES CXX
+	LANGUAGES CXX C
 )
 
 # Build options
@@ -155,10 +155,17 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	file(GLOB_RECURSE server_inc "${QVPN_SERVER_APP_PATH}/include/*.hpp")
 	file(GLOB_RECURSE server_src "${QVPN_SERVER_APP_PATH}/src/*.cpp")
 	add_executable("${QVPN_SERVER_APP_NAME}" ${server_inc} ${server_src})
-	set_target_properties(${QVPN_SERVER_APP_NAME} PROPERTIES
-        LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
-    )
-	
+
+	if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+		set_target_properties(${QVPN_SERVER_APP_NAME} PROPERTIES
+			LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
+		)
+
+	elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+
+		
+
+	endif()
 	# set working directory for vc
 	set_target_properties("${QVPN_SERVER_APP_NAME}" PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE})
 	
@@ -171,14 +178,17 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	target_link_libraries(${QVPN_SERVER_APP_NAME} PRIVATE argparse)
 	
 	# Подключение sqlite3 к Server App
-
 	set(SQLITE3_PATH "${CMAKE_CURRENT_SOURCE_DIR}/include/sqlite3")
-	#include_directories(${SQLITE3_PATH})
-	#link_directories(${SQLITE3_PATH})
-	target_include_directories(${QVPN_SERVER_APP_NAME} PRIVATE ${SQLITE3_PATH})
-	target_link_directories(${QVPN_SERVER_APP_NAME} PRIVATE ${SQLITE3_PATH})
+
 	
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+
+		
+		#include_directories(${SQLITE3_PATH})
+		#link_directories(${SQLITE3_PATH})
+		target_include_directories(${QVPN_SERVER_APP_NAME} PRIVATE ${SQLITE3_PATH})
+		target_link_directories(${QVPN_SERVER_APP_NAME} PRIVATE ${SQLITE3_PATH})
+
 		# Копирование sqlite3.dll
 		add_custom_command(
 			TARGET ${QVPN_SERVER_APP_NAME} POST_BUILD
@@ -190,6 +200,13 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 
 	elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 
+		# Создаем библиотеку из локального файла
+		add_library(sqlite3 STATIC ${SQLITE3_PATH}/sqlite3.c)
+
+		# Указываем, где искать заголовочный файл sqlite3.h
+		target_include_directories(sqlite3 PUBLIC ${SQLITE3_PATH})
+
+		target_link_libraries(${QVPN_SERVER_APP_NAME} PRIVATE sqlite3)
 
 	endif()
 	# Копирование всех белых списков с расширением qwlist для server app

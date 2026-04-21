@@ -23,8 +23,9 @@ namespace QVPN
 	using QVPNClientSettings = QVPN::Core::QVPNClientSettings;
 	using QVPNClientDriver = QVPN::WinDivertExt::QVPNClientNetDriver<QVPNLogger>;
 	using QVPNClient = QVPN::Core::VPNClient<QVPN::WinTunExt::WinTunDriver, QVPNClientDriver>;
-	using QVPNLayersStrategy = QVPN::Core::DefaultLayersStrategy<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr>;
 	*/
+	using QVPNLayersStrategy = QVPN::Core::DefaultLayersStrategy<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr>;
+	
 	using QVPNServerSettings = QVPN::Core::QVPNServerSettings;
 
 	using NoDatabaseAdapter = QVPN::Core::NoDatabaseAdapter;
