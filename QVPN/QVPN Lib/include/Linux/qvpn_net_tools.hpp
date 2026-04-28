@@ -108,7 +108,7 @@ namespace QVPN {
 
 				getsockname(socket, (sockaddr*)&localAddr, &localAddrLen);
 
-				QVPN::Core::NetAddr net_addr((UByte*)&localAddr.sin_addr.s_addr, (UByte*)&localAddr.sin_addr.s_addr + localAddrLen);
+				QVPN::Core::NetAddr net_addr((UByte*)&localAddr.sin_addr.s_addr, (UByte*)&localAddr.sin_addr.s_addr + addr.get_addr_size());
 
 				bool s = (res == 0) ? true : false;
 				
@@ -133,7 +133,7 @@ namespace QVPN {
 
 				getsockname(socket, (sockaddr*)&localAddr, &localAddrLen);
 
-				QVPN::Core::NetAddr net_addr((UByte*)&localAddr.sin6_addr.__in6_u.__u6_addr8, (UByte*)&localAddr.sin6_addr.__in6_u.__u6_addr8 + localAddrLen);
+				QVPN::Core::NetAddr net_addr((UByte*)&localAddr.sin6_addr.__in6_u.__u6_addr8, (UByte*)&localAddr.sin6_addr.__in6_u.__u6_addr8 + addr.get_addr_size());
 
 				bool s = (res == 0) ? true : false;
 				int err = 0;
@@ -171,7 +171,7 @@ namespace QVPN {
 				if (res == SO_ERROR)
 					err = errno;
 				getsockname(socket, (sockaddr*)&serverAddr, &addr_len);
-				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin_addr.s_addr, (UByte*)&serverAddr.sin_addr.s_addr + addr_len);
+				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin_addr.s_addr, (UByte*)&serverAddr.sin_addr.s_addr + addr.get_addr_size());
 
 				bool s = (res == 0) ? true : false;
 				return QVPN::Core::NetData{ s , err, net_addr, port };
@@ -191,7 +191,7 @@ namespace QVPN {
 				if (res == SO_ERROR)
 					err = errno;
 				getsockname(socket, (sockaddr*)&serverAddr, &addr_len);
-				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin6_addr.__in6_u.__u6_addr8, (UByte*)&serverAddr.sin6_addr.__in6_u.__u6_addr8 + addr_len);
+				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin6_addr.__in6_u.__u6_addr8, (UByte*)&serverAddr.sin6_addr.__in6_u.__u6_addr8 + addr.get_addr_size());
 
 				bool s = (res == 0) ? true : false;
 				return QVPN::Core::NetData{ s , err, net_addr, port };
@@ -274,9 +274,9 @@ namespace QVPN {
 					getsockname(sock, (sockaddr*)&sock_addr, &addr_len);
 					getpeername(sock, (sockaddr*)&clientAddr, &clientAddrLen);
 
-					QVPN::Core::NetAddr net_addr((UByte*)&sock_addr.sin6_addr.__in6_u.__u6_addr8, (UByte*)&sock_addr.sin6_addr.__in6_u.__u6_addr8 + addr_len);
+					QVPN::Core::NetAddr net_addr((UByte*)&sock_addr.sin6_addr.__in6_u.__u6_addr8, (UByte*)&sock_addr.sin6_addr.__in6_u.__u6_addr8 + 16);
 
-					QVPN::Core::NetAddr addr((UByte*)&clientAddr.sin6_addr.__in6_u.__u6_addr8, (UByte*)&clientAddr.sin6_addr.__in6_u.__u6_addr8 + addr_len);
+					QVPN::Core::NetAddr addr((UByte*)&clientAddr.sin6_addr.__in6_u.__u6_addr8, (UByte*)&clientAddr.sin6_addr.__in6_u.__u6_addr8 + 16);
 					UShort port = clientAddr.sin6_port;
 					return Socket(sock, addr, port, net_addr, ntohs(sock_addr.sin6_port), SERVER_MOD, t_proto);
 				}
@@ -406,9 +406,11 @@ namespace QVPN {
 					bool s = true;
 					std::array<UByte, QVPN::Core::ReceiveData::buffer_size> data{};
 					sockaddr_in sock_addr{};
+					/* // sock_addr - out param
 					sock_addr.sin_family = AF_INET;
 					sock_addr.sin_addr.s_addr = htonl(addr.to_uint());
 					sock_addr.sin_port = htons(port);
+					*/
 					socklen_t addr_len = sizeof(sock_addr);
 					int err = 0;
 					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), 0, (sockaddr*)&sock_addr, &addr_len);
@@ -432,10 +434,12 @@ namespace QVPN {
 					bool s = true;
 					std::array<UByte, QVPN::Core::ReceiveData::buffer_size> data{};
 					sockaddr_in6 sock_addr{};
+					/* // sock_addr - out param
 					auto addr_bytes = addr.to_bytes();
 					memcpy(sock_addr.sin6_addr.__in6_u.__u6_addr8, addr_bytes.data(), addr_bytes.size());
 					sock_addr.sin6_family = AF_INET6;
 					sock_addr.sin6_port = htons(port);
+					*/
 					socklen_t addr_len = sizeof(sock_addr);
 					int err = 0;
 					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), 0, (sockaddr*)&sock_addr, &addr_len);

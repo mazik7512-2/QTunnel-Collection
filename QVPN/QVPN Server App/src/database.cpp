@@ -15,12 +15,14 @@ void SQLiteDatabase::add_statistic_data(std::string_view user, NetProtocol net_p
 	char* msg_error;
 	std::stringstream ss{};
 	ss << "INSERT INTO stats VALUES('" << src_addr.to_string() << "', " << src_port << ", '" << dst_addr.to_string() << "', " << dst_port << ", ";
-	ss << net_proto << ", " << transport_proto << ", " << traffic_size << ", " << user << ");";
+	ss << net_proto << ", " << transport_proto << ", " << traffic_size << ", '" << user << "');";
 	auto sql = ss.str();
 	auto exit = sqlite3_exec(db_, sql.c_str(), NULL, nullptr, &msg_error);
 	if (exit != SQLITE_OK)
 	{
-		std::cerr << "Error inserting stats data" << std::endl;
+		std::cerr << "Error inserting stats data." << std::endl;
+		std::cerr << "Error data: " << msg_error << std::endl;
+		std::cerr << "SQL Query: " << sql << std::endl;
 		sqlite3_free(msg_error);
 	}
 

@@ -9,6 +9,7 @@ using QVPNClient = QVPN::QVPNClient;
 using QVPNLayers = QVPN::QVPNLayersStrategy;
 
 void EnableANSI() {
+#ifdef _WIN32 || _WIN64
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return;
 
@@ -17,6 +18,7 @@ void EnableANSI() {
 
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
     SetConsoleMode(hOut, dwMode);
+#endif   
 }
 
 int main(int argc, const char* argv[])
@@ -26,7 +28,7 @@ int main(int argc, const char* argv[])
 
     program.add_argument("-s", "--settings", "-c", "--config")
         .help("”кажите путь до файла с настройками (по умолчанию) client_settings.json")
-        .default_value(std::string("Z:\\Files\\Projects\\C++\\MaxVPN\\build\\bin\\Windows\\client_settings.json"));
+        .default_value(std::string("client_settings.json"));
     
     program.parse_args(argc, argv);
 

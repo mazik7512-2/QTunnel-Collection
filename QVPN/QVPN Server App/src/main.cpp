@@ -28,7 +28,7 @@ int main(int argc, const char* argv[])
 
     program.add_argument("-s", "--settings", "-c", "--config")
         .help("”кажите путь до файла с настройками (по умолчанию) server_settings.json")
-        .default_value(std::string("Z:\\Files\\Projects\\C++\\MaxVPN\\build\\bin\\Windows\\server_settings.json")); //TODO: переделать пути на относительные
+        .default_value(std::string("server_settings.json"));
 
     program.parse_args(argc, argv);
     

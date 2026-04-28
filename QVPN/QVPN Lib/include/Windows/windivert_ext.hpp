@@ -242,8 +242,8 @@ namespace QVPN {
 					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
 					auto package = pp.pre_parse(packet, packet + packet_len);
 
-					auto ver = std::visit([](auto& p) { return p.get_ip_version(); }, package);
-					auto transport_proto = std::visit([](auto& p) { return p.get_ip_protocol(); }, package);
+					auto ver = std::visit([](auto& p) { return p.get_protocol_version(); }, package);
+					auto transport_proto = std::visit([](auto& p) { return p.get_transport_protocol(); }, package);
 					auto ip_src = std::visit([](auto& p) { return p.get_src_addr(); }, package);
 					auto port_src = std::visit([](auto& p) { return p.get_src_port(); }, package);
 					auto ip_dest = std::visit([](auto& p) { return p.get_dst_addr(); }, package);

@@ -259,8 +259,8 @@ namespace QVPN {
 			bool operator==(const IPv4Address& other) const;
 
 			//static consteval int get_addr_family();
-			consteval NetProtocol get_addr_family();
-			consteval size_t get_addr_size();
+			NetProtocol get_addr_family() const;
+			size_t get_addr_size() const;
 
 			AddrBytes_t to_bytes() const;
 			std::string to_string() const;
@@ -300,8 +300,8 @@ namespace QVPN {
 			IPv6Address(std::string_view data);
 
 			//static consteval int get_addr_family();
-			consteval NetProtocol get_addr_family();
-			consteval size_t get_addr_size();
+			NetProtocol get_addr_family() const;
+			size_t get_addr_size() const;
 
 			AddrBytes_t to_bytes() const;
 			std::string to_string() const;

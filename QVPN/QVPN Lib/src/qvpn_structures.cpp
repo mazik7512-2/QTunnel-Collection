@@ -3867,3 +3867,168 @@ UShort QVPN::Core::DataStructures::IPv4DefaultGenStrategy::get_next_id() const
 {
 	return ++last_id_;
 }
+
+UByte* QVPN::Core::DataStructures::DummyNetPacket::get_next_protocol_byte() const
+{
+	return nullptr;
+}
+
+QVPN::Core::NetAddr QVPN::Core::DataStructures::DummyNetPacket::get_src_addr() const
+{
+	return NetAddr();
+}
+
+QVPN::Core::NetAddr QVPN::Core::DataStructures::DummyNetPacket::get_dst_addr() const
+{
+	return NetAddr();
+}
+
+void QVPN::Core::DataStructures::DummyNetPacket::set_src_addr(const NetAddr& src)
+{
+
+}
+
+void QVPN::Core::DataStructures::DummyNetPacket::set_dst_addr(const NetAddr& dst)
+{
+
+}
+
+QVPN::Core::NetProtocol QVPN::Core::DataStructures::DummyNetPacket::get_protocol_version() const
+{
+	return NetProtocol::NET_UNDEFINED;
+}
+
+QVPN::Core::TransportProtocol QVPN::Core::DataStructures::DummyNetPacket::get_transport_protocol() const
+{
+	return TransportProtocol::TRANSPORT_UNDEFINED;
+}
+
+void QVPN::Core::DataStructures::DummyNetPacket::recalculate_ip_checksum()
+{
+
+}
+
+std::string QVPN::Core::DataStructures::DummyNetPacket::to_net_friendly_view() const
+{
+	return std::string("This is dummy packet. If you see this, you did something wrong.");
+}
+
+std::pair<QVPN::Core::DataStructures::DummyNetPacket::ConstDataIterator_t, QVPN::Core::DataStructures::DummyNetPacket::ConstDataIterator_t> QVPN::Core::DataStructures::DummyNetPacket::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(static_cast<ConstDataIterator_t>(nullptr), static_cast<ConstDataIterator_t>(nullptr));
+}
+
+std::pair<QVPN::Core::DataStructures::DummyNetPacket::DataIterator_t, QVPN::Core::DataStructures::DummyNetPacket::DataIterator_t> QVPN::Core::DataStructures::DummyNetPacket::to_bytes()
+{
+	return std::pair<DataIterator_t, DataIterator_t>(static_cast<DataIterator_t>(nullptr), static_cast<DataIterator_t>(nullptr));
+}
+
+UShort QVPN::Core::DataStructures::DummyTransportPacket::get_src_port() const
+{
+	return 0;
+}
+
+UShort QVPN::Core::DataStructures::DummyTransportPacket::get_dst_port() const
+{
+	return 0;
+}
+
+UShort QVPN::Core::DataStructures::DummyTransportPacket::get_transport_length() const
+{
+	return 0;
+}
+
+void QVPN::Core::DataStructures::DummyTransportPacket::set_dst_port(UShort port)
+{
+
+}
+
+void QVPN::Core::DataStructures::DummyTransportPacket::set_transport_length(UShort length)
+{
+
+}
+
+void QVPN::Core::DataStructures::DummyTransportPacket::recalculate_transport_checksum(const TransportIpv4PseudoHeader& pseudo_header, ConstDataIterator_t begin, ConstDataIterator_t end)
+{
+
+}
+
+UByte* QVPN::Core::DataStructures::DummyTransportPacket::get_next_protocol_byte() const
+{
+	return nullptr;
+}
+
+UInt QVPN::Core::DataStructures::DummyTransportPacket::get_sender_number() const
+{
+	return 0;
+}
+
+UInt QVPN::Core::DataStructures::DummyTransportPacket::get_receiver_number() const
+{
+	return 0;
+}
+
+UByte QVPN::Core::DataStructures::DummyTransportPacket::get_flags() const
+{
+	return 0;
+}
+
+void QVPN::Core::DataStructures::DummyTransportPacket::set_sender_number(UInt number)
+{
+
+}
+
+void QVPN::Core::DataStructures::DummyTransportPacket::set_receiver_number(UInt number)
+{
+
+}
+
+void QVPN::Core::DataStructures::DummyTransportPacket::set_flags(UByte flags)
+{
+
+}
+
+std::string QVPN::Core::DataStructures::DummyTransportPacket::to_transport_friendly_view() const
+{
+	return std::string("This is dummy packet. If you see this, you did something wrong.");
+}
+
+std::pair<QVPN::Core::DataStructures::DummyTransportPacket::ConstDataIterator_t, QVPN::Core::DataStructures::DummyTransportPacket::ConstDataIterator_t> QVPN::Core::DataStructures::DummyTransportPacket::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(static_cast<ConstDataIterator_t>(nullptr), static_cast<ConstDataIterator_t>(nullptr));
+}
+
+std::pair<QVPN::Core::DataStructures::DummyTransportPacket::DataIterator_t, QVPN::Core::DataStructures::DummyTransportPacket::DataIterator_t> QVPN::Core::DataStructures::DummyTransportPacket::to_bytes()
+{
+	return std::pair<DataIterator_t, DataIterator_t>(static_cast<DataIterator_t>(nullptr), static_cast<DataIterator_t>(nullptr));
+}
+
+std::pair<QVPN::Core::DataStructures::DummyDataPacket::DataIterator_t, QVPN::Core::DataStructures::DummyDataPacket::DataIterator_t> QVPN::Core::DataStructures::DummyDataPacket::get_data()
+{
+	return std::pair<DataIterator_t, DataIterator_t>(static_cast<DataIterator_t>(nullptr), static_cast<DataIterator_t>(nullptr));
+}
+
+std::pair<QVPN::Core::DataStructures::DummyDataPacket::ConstDataIterator_t, QVPN::Core::DataStructures::DummyDataPacket::ConstDataIterator_t> QVPN::Core::DataStructures::DummyDataPacket::get_data() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(static_cast<ConstDataIterator_t>(nullptr), static_cast<ConstDataIterator_t>(nullptr));
+}
+
+void QVPN::Core::DataStructures::DummyDataPacket::set_data(UByte* begin, UByte* end)
+{
+
+}
+
+std::string QVPN::Core::DataStructures::DummyDataPacket::to_data_friendly_view() const
+{
+	return std::string("This is dummy packet. If you see this, you did something wrong.");
+}
+
+std::pair<QVPN::Core::DataStructures::DummyDataPacket::ConstDataIterator_t, QVPN::Core::DataStructures::DummyDataPacket::ConstDataIterator_t> QVPN::Core::DataStructures::DummyDataPacket::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(static_cast<ConstDataIterator_t>(nullptr), static_cast<ConstDataIterator_t>(nullptr));
+}
+
+std::pair<QVPN::Core::DataStructures::DummyDataPacket::DataIterator_t, QVPN::Core::DataStructures::DummyDataPacket::DataIterator_t> QVPN::Core::DataStructures::DummyDataPacket::to_bytes()
+{
+	return std::pair<DataIterator_t, DataIterator_t>(static_cast<DataIterator_t>(nullptr), static_cast<DataIterator_t>(nullptr));
+}

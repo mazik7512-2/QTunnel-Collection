@@ -45,7 +45,7 @@ namespace QVPN {
 			std::unordered_map<QVPN::Core::TransportProtocol, int> raw_types_ = { {QVPN::Core::TransportProtocol::TCP, SOCK_RAW}, {QVPN::Core::TransportProtocol::UDP, SOCK_RAW} };
 			std::unordered_map<QVPN::Core::TransportProtocol, int> types_ = { {QVPN::Core::TransportProtocol::TCP, SOCK_STREAM }, {QVPN::Core::TransportProtocol::UDP, SOCK_DGRAM } };
 			std::unordered_map<QVPN::Core::TransportProtocol, int> protos_ = { {QVPN::Core::TransportProtocol::TCP, IPPROTO_TCP}, {QVPN::Core::TransportProtocol::UDP, IPPROTO_UDP } };
-			std::unordered_map<QVPN::Core::TransportProtocol, int> raw_protos_ = { {QVPN::Core::TransportProtocol::TCP, IPPROTO_RAW}, {QVPN::Core::TransportProtocol::UDP, IPPROTO_RAW } };
+			std::unordered_map<QVPN::Core::TransportProtocol, int> raw_protos_ = { {QVPN::Core::TransportProtocol::TCP, IPPROTO_TCP}, {QVPN::Core::TransportProtocol::UDP, IPPROTO_UDP } };
 		public:
 
 			using SockParam = int;
@@ -405,9 +405,11 @@ namespace QVPN {
 					bool s = true;
 					std::array<UByte, QVPN::Core::ReceiveData::buffer_size> data{};
 					sockaddr_in sock_addr{};
+					/* // sock_addr - out param
 					sock_addr.sin_family = AF_INET;
-					sock_addr.sin_addr.S_un.S_addr = htonl(addr.to_uint());
+					sock_addr.sin_addr.s_addr = htonl(addr.to_uint());
 					sock_addr.sin_port = htons(port);
+					*/
 					int addr_len = sizeof(sock_addr);
 					int err = 0;
 					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), 0, (sockaddr*)&sock_addr, &addr_len);
@@ -431,10 +433,11 @@ namespace QVPN {
 					bool s = true;
 					std::array<UByte, QVPN::Core::ReceiveData::buffer_size> data{};
 					sockaddr_in6 sock_addr{};
-					auto addr_bytes = addr.to_bytes();
-					memcpy(sock_addr.sin6_addr.u.Byte, addr_bytes.data(), addr_bytes.size());
-					sock_addr.sin6_family = AF_INET6;
-					sock_addr.sin6_port = htons(port);
+					/* // sock_addr - out param
+					sock_addr.sin_family = AF_INET;
+					sock_addr.sin_addr.s_addr = htonl(addr.to_uint());
+					sock_addr.sin_port = htons(port);
+					*/
 					int addr_len = sizeof(sock_addr);
 					int err = 0;
 					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), 0, (sockaddr*)&sock_addr, &addr_len);

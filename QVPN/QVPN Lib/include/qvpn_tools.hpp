@@ -345,12 +345,13 @@ namespace QVPN {
 			using Ipv4UdpPacketView = QVPN::Core::DataStructures::Ipv4UdpPacket_View;
 			using NoNetTcpPacketView = QVPN::Core::DataStructures::NoNetPacketTcpView;
 			using NoNetUdpPacketView = QVPN::Core::DataStructures::NoNetPacketUdpView;
+			using DummyPacket = QVPN::Core::DataStructures::DummyFullPacket;
 			using UByte = QVPN::Core::BaseTypes::UByte;
 
 		private:
 
 			template <std::random_access_iterator Iter>
-			std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> pre_parse_ipv4(Iter begin, Iter end)
+			std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView, DummyPacket> pre_parse_ipv4(Iter begin, Iter end)
 			{
 				using TransportProtocol = QVPN::Core::TransportProtocol;
 				//std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> ret;
@@ -364,6 +365,7 @@ namespace QVPN {
 					return Ipv4UdpPacketView(begin, end);
 					break;
 				default:
+					return DummyPacket(); // unknown packet
 					break;
 				}
 				//return ret;
@@ -371,7 +373,8 @@ namespace QVPN {
 
 		public:
 
-			using FullPacketType = std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView>;
+			using DummyPacketType = QVPN::Core::DataStructures::DummyFullPacket;
+			using FullPacketType = std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView, DummyPacketType>;
 			using NoNetPacketType = std::variant<NoNetTcpPacketView, NoNetUdpPacketView>;
 
 			template <std::random_access_iterator Iter>
@@ -385,8 +388,10 @@ namespace QVPN {
 					return pre_parse_ipv4<Iter>(begin, end);
 					break;
 				case NetProtocol::IPv6:
+					return DummyPacket(); // temporarily not supported
 					break;
 				default:
+					return DummyPacket(); // unknown packet
 					break;
 				}
 				//return ret;

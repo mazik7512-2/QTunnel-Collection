@@ -445,6 +445,8 @@ namespace QVPN {
 			template <class IpPacketImpl>
 			concept UnifiedIpPacketLike =
 				requires (IpPacketImpl t, const NetAddr & net_addr) {
+					
+					{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 
 					{ t.get_src_addr() } -> std::same_as<NetAddr>;
 					{ t.get_dst_addr() } -> std::same_as<NetAddr>;
@@ -469,7 +471,7 @@ namespace QVPN {
 				typename Ip4PacketImpl::ConstDataIterator_t;
 
 				{ Ip4PacketImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
-				{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
+				
 				{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
 				{ t.get_ip_version() } -> std::same_as<NetProtocol>;
 				{ t.get_ip_header_length() } -> std::same_as<UByte>;
@@ -770,6 +772,57 @@ namespace QVPN {
 				return obj_bytes;
 
 			}
+
+
+			class DummyNetPacket
+			{
+			private:
+
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = UByte*;
+
+				DummyNetPacket() = default;
+
+				template <std::random_access_iterator Iter>
+				DummyNetPacket(Iter begin, Iter end)
+				{
+
+				}
+
+
+				// NetLayer implementation
+				/////////////////////
+
+				UByte* get_next_protocol_byte() const;
+
+				NetAddr get_src_addr() const;
+				NetAddr get_dst_addr() const;
+
+				void set_src_addr(const NetAddr& src);
+				void set_dst_addr(const NetAddr& dst);
+
+				NetProtocol get_protocol_version() const;
+				TransportProtocol get_transport_protocol() const;
+
+				void recalculate_ip_checksum();
+
+				std::string to_net_friendly_view() const;
+				/////////////////////
+
+
+				// Unified Packet implementation
+				////////////////////
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				///////////////////
+
+			};
+
+
 
 			template <Ip4PacketLike Ip4PacketImpl>
 			class Ipv4Packet_ : public Ip4PacketImpl {
@@ -1220,6 +1273,60 @@ namespace QVPN {
 			};
 
 
+			class DummyTransportPacket
+			{
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+				DummyTransportPacket() = default;
+
+				template <std::random_access_iterator Iter>
+				DummyTransportPacket(Iter begin, Iter end)
+				{
+
+				}
+
+				// TransportLayer implementation
+				/////////////////////
+
+				UShort get_src_port() const;
+				UShort get_dst_port() const;
+				UShort get_transport_length() const;
+
+				void set_dst_port(UShort port);
+
+				void set_transport_length(UShort length);
+
+				void recalculate_transport_checksum(const TransportIpv4PseudoHeader& pseudo_header, ConstDataIterator_t begin, ConstDataIterator_t end);
+
+				UByte* get_next_protocol_byte() const;
+
+				UInt get_sender_number() const;
+				UInt get_receiver_number() const;
+				UByte get_flags() const;
+
+				void set_sender_number(UInt number);
+				void set_receiver_number(UInt number);
+				void set_flags(UByte flags);
+
+				std::string to_transport_friendly_view() const;
+
+				/////////////////////
+
+
+				// Unified Packet implementation
+				////////////////////
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				///////////////////
+
+			};
+
+
 			template <class TransportAndDataImpl>
 			concept TransportAndDataPacketLike =
 				requires (TransportAndDataImpl t) {
@@ -1313,6 +1420,45 @@ namespace QVPN {
 				ViewType to_view() const;
 
 				std::string to_data_friendly_view() const;
+			};
+
+
+
+			class DummyDataPacket
+			{
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+
+				DummyDataPacket() = default;
+
+				template <std::random_access_iterator Iter>
+				DummyDataPacket(Iter begin, Iter end)
+				{
+
+				}
+
+				// DataLayer implementation
+				/////////////////////
+
+				std::pair<DataIterator_t, DataIterator_t> get_data();
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_data() const;
+				void set_data(UByte* begin, UByte* end);
+				std::string to_data_friendly_view() const;
+
+				/////////////////////
+
+
+				// Unified Packet implementation
+				////////////////////
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				///////////////////
+
 			};
 
 
@@ -3623,10 +3769,10 @@ namespace QVPN {
 
 
 			template <class NetLayer>
-			concept is_net_layer = Ip4PacketLike<NetLayer>;
+			concept is_net_layer = Ip4PacketLike<NetLayer> || UnifiedIpPacketLike<NetLayer>;
 
 			template <class TransportLayer>
-			concept is_transport_layer = TcpPacketLike<TransportLayer> || UdpPacketLike<TransportLayer>;
+			concept is_transport_layer = TcpPacketLike<TransportLayer> || UdpPacketLike<TransportLayer> || UnifiedTransportLike<TransportLayer>;
 
 			template <class DataLayer>
 			concept is_data_layer = DataPacketLike<DataLayer> || HttpRequestPacketLike<DataLayer> || HttpResponsePacketLike<DataLayer>;
@@ -3745,7 +3891,11 @@ namespace QVPN {
 
 			public:
 
-				QTunnelProtoData() = default;
+				QTunnelProtoData()
+				{
+					data.push_back(0);
+					data.push_back(0);
+				}
 
 				QTunnelProtoData(UShort length, UByte* begin, UByte* end)
 				{
@@ -4054,7 +4204,7 @@ namespace QVPN {
 					auto size = Ipv4Packet::get_ip_total_length();
 					return size;
 				}
-
+				
 				void recalculate_checksums()
 				{
 					Ipv4Packet::recalculate_ip_checksum();
@@ -4439,6 +4589,73 @@ namespace QVPN {
 			// View instances
 			template class FullPacket<Ipv4Packet_View, TcpPacket_View, DataPacket_View>;
 			template class FullPacket<Ipv4Packet_View, UdpPacket_View, DataPacket_View>;
+
+
+			// Dummy spec
+			template <>
+			class FullPacket<DummyNetPacket, DummyTransportPacket, DummyDataPacket> : public DummyNetPacket, public DummyTransportPacket, public DummyDataPacket
+			{
+			private:
+
+
+			public:
+				
+				FullPacket() = default;
+
+				template <std::random_access_iterator Iter>
+				FullPacket(Iter begin, Iter end)
+				{
+
+				}
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+				// Full packet interface
+				//////////////////
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> bytes() const
+				{
+					return std::make_pair<ConstDataIterator_t, ConstDataIterator_t>(static_cast<ConstDataIterator_t>(nullptr), static_cast<ConstDataIterator_t>(nullptr));
+				}
+
+				UShort get_full_packet_length() const
+				{
+					return 0;
+				}
+
+				void recalculate_checksums()
+				{
+					
+				}
+
+				QTunnelProtoData collect_proto_data()
+				{
+					return QTunnelProtoData();
+				}
+
+				void set_qtunnel_proto_data(QTunnelProtoData& data)
+				{
+
+				}
+
+				void set_qtunnel_proto_data(UByte* begin, UByte* end)
+				{
+
+				}
+
+				std::string to_packet_friendly_view() const
+				{
+					return std::string("That`s a dummy packet. If you see this, you doing something wrong.");
+				}
+
+			};
+
+
+			// Dummy instance
+			template class FullPacket<DummyNetPacket, DummyTransportPacket, DummyDataPacket>;
+			
+			// pseudonym for dummy
+			using DummyFullPacket = FullPacket<DummyNetPacket, DummyTransportPacket, DummyDataPacket>;
 
 
 
