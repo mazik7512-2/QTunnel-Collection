@@ -72,6 +72,7 @@ WinDivertTrafficFilterType& QVPN::WinDivertExt::WinDivertTrafficFilterType::oper
 
     std::stringstream f;
     f << filter_ << " or " << t.filter_;
+    filter_ = f.str();
     return *this;
 }
 

@@ -2896,6 +2896,10 @@ namespace QVPN {
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_record_data() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+
+				// AppLevelProtoTemplate interface
+				static AppLevelTemplateParseResult bytes_parse(UByte* begin, UByte* end);
+
 			};
 
 
@@ -2957,6 +2961,9 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_record_data() const;
 				std::pair<DataIterator_t, DataIterator_t> get_tls_record_data();
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+
+				// AppLevelProtoTemplate interface
+				static AppLevelTemplateParseResult bytes_parse(UByte* begin, UByte* end);
 			};
 
 
@@ -4097,7 +4104,7 @@ namespace QVPN {
 					auto [b, e] = proxy_data.get_proto_data_bytes();
 					return QTunnelProxy(proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_src_addr(), proxy_data.get_src_port(), proxy_data.get_dst_addr(),
 						proxy_data.get_dst_port(), b, e);
-				}
+				}	
 
 			};
 
@@ -4109,7 +4116,7 @@ namespace QVPN {
 				using ProxyData = QTunnelProxy<Addr>;
 			public:
 
-				QTunnelData(std::vector<UByte>&& data) // TODO: перепроверить смещения
+				QTunnelData(std::vector<UByte>&& data) 
 					: QTunnelProxy<Addr>()
 				{
 					data_ = std::move(data);

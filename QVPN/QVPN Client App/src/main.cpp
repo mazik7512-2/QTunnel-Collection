@@ -9,7 +9,7 @@ using QVPNClient = QVPN::QVPNClient;
 using QVPNLayers = QVPN::QVPNLayersStrategy;
 
 void EnableANSI() {
-#ifdef _WIN32 || _WIN64
+#ifdef _WIN32
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return;
 
@@ -39,18 +39,17 @@ int main(int argc, const char* argv[])
     QVPNLayers layers{};
     settings.apply_strategy(std::move(layers));
 
-    auto addr = settings.get_ip_address();
-
     QVPNClient vpn_client(settings);
     vpn_client.init_vpn();
+    vpn_client.add_outgoing_traffic_filter(vpn_client.ipv4() && vpn_client.tcp());
+    vpn_client.add_incoming_traffic_filter(vpn_client.ipv4() && vpn_client.tcp());
+    // TODO: Почему-то ломается && vpn_client.udp(), возможно из-за wsl?
+    //vpn_client.add_outgoing_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
+    //vpn_client.add_incoming_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
+    //vpn_client.add_outgoing_traffic_filter(vpn_client.ipv4() && (vpn_client.tcp() || vpn_client.udp()));
+    //vpn_client.add_incoming_traffic_filter(vpn_client.ipv4() && (vpn_client.tcp() || vpn_client.udp()));
 
-//    vpn_client.add_outgoing_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
-//    vpn_client.add_incoming_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() && vpn_client.udp());
-    vpn_client.add_outgoing_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() || vpn_client.udp());
-    vpn_client.add_incoming_traffic_filter(vpn_client.ipv4() && vpn_client.tcp() || vpn_client.udp());
-
-    vpn_client.start_capture_outgoing_traffic(addr.to_ipv4(), 1);
-    vpn_client.start_capture_incoming_traffic(addr.to_ipv4());
+    vpn_client.start_vpn_client();
     std::cin.get();
     return 0;
 }

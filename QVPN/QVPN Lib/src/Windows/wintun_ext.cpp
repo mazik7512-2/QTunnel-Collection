@@ -1,8 +1,11 @@
 #include "wintun_ext.hpp"
 #include <iostream>
 #include <winsock2.h>
+#include <netioapi.h>
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
+#include <WS2tcpip.h>
+
 
 #pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "ws2_32.lib")
@@ -24,6 +27,37 @@ static WINTUN_ALLOCATE_SEND_PACKET_FUNC* WintunAllocateSendPacket;
 static WINTUN_SEND_PACKET_FUNC* WintunSendPacket;
 
 
+DWORD ConvertIpv4StringToPrefix(const char* ipCidrString, IP_ADDRESS_PREFIX* outPrefix) {
+    if (!ipCidrString || !outPrefix) return ERROR_INVALID_PARAMETER;
+
+    // Копируем строку, так как inet_pton не умеет работать с CIDR
+    char buffer[64];
+    strncpy_s(buffer, ipCidrString, _TRUNCATE);
+
+    // Разделяем строку по '/'
+    char* ipPart = buffer;
+    char* maskPart = strchr(buffer, '/');
+    if (!maskPart) {
+        return ERROR_INVALID_PARAMETER;
+    }
+    *maskPart++ = '\0'; // Заменяем '/' на '\0' для разделения частей
+
+    // Преобразуем IP-адрес
+    outPrefix->Prefix.si_family = AF_INET;
+    if (inet_pton(AF_INET, ipPart, &outPrefix->Prefix.Ipv4.sin_addr) != 1) {
+        return ERROR_INVALID_PARAMETER;
+    }
+
+    // Преобразуем длину маски (например, 24) в число
+    int maskLength = atoi(maskPart);
+    if (maskLength < 0 || maskLength > 32) {
+        return ERROR_INVALID_PARAMETER;
+    }
+    outPrefix->PrefixLength = (UINT8)maskLength;
+
+    return NO_ERROR;
+}
+
 
 QVPN::WinTunExt::WinTunDriver::WinTunDriver()
 {
@@ -37,7 +71,7 @@ QVPN::WinTunExt::WinTunDriver::~WinTunDriver()
 
 void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4()
 {
-    QVPN::Core::IPv4Address address(192, 168, 50, 25);
+    QVPN::Core::IPv4Address address(100, 64, 0, 0);
     create_adapter_ipv4("QVPN Adapter", "Quiet and fast", address);
     
 }
@@ -45,14 +79,13 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4()
 void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name, std::string_view a_desc, const QVPN::Core::IPv4Address& address)
 {
     QVPN::WinTunExt::WinTunDriver::AdapterHandle_t adapter;
-    GUID ExampleGuid = { 0xdeadbabe, 0xcafe, 0xbeef, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef } };
     int try_numbers = 20;
     bool trying = true;
     std::wstring adapter_name(a_name.begin(), a_name.end());
     std::wstring adapter_desc(a_desc.begin(), a_desc.end());
     while (trying && try_numbers-- > 0)
     {
-        adapter = WintunCreateAdapter(adapter_name.c_str(), adapter_desc.c_str(), &ExampleGuid);
+        adapter = WintunCreateAdapter(adapter_name.c_str(), adapter_desc.c_str(), NULL);
         if (!adapter) {
             auto LastError = GetLastError();
             std::cout << "Error while creating adapter. Error №" << LastError << std::endl;
@@ -61,32 +94,80 @@ void QVPN::WinTunExt::WinTunDriver::create_adapter_ipv4(std::string_view a_name,
         trying = false;
     }
 
+    DWORD LastError = 0;
+    NET_LUID luid;
+    WintunGetAdapterLUID(adapter, &luid);
+  
+    ULONG ifIndex;
+    if (ConvertInterfaceLuidToIndex(&luid, &ifIndex) != NO_ERROR) {
+        printf("Failed to convert luid to index: %lu\n", LastError);
+    }
 
+    MIB_IPFORWARD_ROW2 routeRow;
+    InitializeIpForwardEntry(&routeRow);
+
+    // 2. Указываем интерфейс для маршрута
+    routeRow.InterfaceLuid = luid;
+
+    // 3. Настраиваем префикс назначения (сеть, куда направляем трафик)
+    //    Пример: "192.168.1.0/24" или "0.0.0.0/0" для шлюза по умолчанию
+    if (ConvertIpv4StringToPrefix("0.0.0.0/0", &routeRow.DestinationPrefix) != NO_ERROR) {
+        std::cerr << "Invalid destination prefix format." << std::endl;
+    }
+
+    // 4. Настраиваем следующий шлюз (Next Hop) — адрес на вашем TUN-адаптере
+    //    Например, для маршрута по умолчанию это может быть IP самого TUN-адаптера
+    routeRow.NextHop.si_family = AF_INET; // Для IPv6 используйте AF_INET6
+    if (inet_pton(AF_INET, address.to_string().c_str(), &routeRow.NextHop.Ipv4.sin_addr) != 1) {
+        std::cerr << "Invalid next-hop address format." << std::endl;
+    }
+
+    // 5. Настраиваем метрику маршрута (чем меньше, тем выше приоритет)
+    routeRow.Metric = 0;
+
+    // 6. Указываем протокол, добавляющий маршрут. Для статических маршрутов используем MIB_IPPROTO_NETMGMT
+    routeRow.Protocol = MIB_IPPROTO_NETMGMT;
+
+    // 7. Добавляем маршрут в таблицу
+    DWORD dwRet = CreateIpForwardEntry2(&routeRow);
+    if (dwRet == NO_ERROR) {
+        std::cout << "Route added successfully." << std::endl;
+    }
+    else if (dwRet == ERROR_OBJECT_ALREADY_EXISTS) {
+        std::cout << "Route already exists." << std::endl;
+    }
+    else {
+        std::cerr << "Failed to add route. Error: " << dwRet << std::endl;
+    }
+
+
+    MIB_IPINTERFACE_ROW adapter_data = { 0 };
+    InitializeIpInterfaceEntry(&adapter_data);
+    adapter_data.Family = AF_INET;
+    WintunGetAdapterLUID(adapter, &adapter_data.InterfaceLuid);
+    adapter_data.Metric = 0; //
+    adapter_data.UseAutomaticMetric = false;
+    adapter_data.SitePrefixLength = 0;
+    LastError = SetIpInterfaceEntry(&adapter_data);
+    if (LastError != NO_ERROR) {
+        printf("Failed to set metric. Error %d\n", LastError);
+    }
+    
     MIB_UNICASTIPADDRESS_ROW AddressRow;
     InitializeUnicastIpAddressEntry(&AddressRow);
-    WintunGetAdapterLUID(adapter, &AddressRow.InterfaceLuid);
+    
     AddressRow.Address.Ipv4.sin_family = AF_INET;
     AddressRow.Address.Ipv4.sin_addr.S_un.S_addr = htonl(address.to_uint());
-    AddressRow.OnLinkPrefixLength = 24;
+    WintunGetAdapterLUID(adapter, &AddressRow.InterfaceLuid);
+    AddressRow.OnLinkPrefixLength = 10;
     AddressRow.DadState = IpDadStatePreferred;
-    auto LastError = CreateUnicastIpAddressEntry(&AddressRow);
+    LastError = CreateUnicastIpAddressEntry(&AddressRow);
 
     if (LastError)
     {
-        std::cout << "Error while creating unicast ip address. Error №" << LastError << std::endl;
+        std::cout << "Error while creating unicast ip address. Error #" << LastError << std::endl;
     }
-
-    MIB_IPFORWARDROW row;
-    ZeroMemory(&row, sizeof(row));
-    row.dwForwardDest = inet_addr("0.0.0.0");     // Destination address
-    row.dwForwardMask = inet_addr("0.0.0.0");    // Netmask
-    row.dwForwardNextHop = inet_addr("192.168.50.1");// Gateway
-    row.dwForwardIfIndex = 0x10;    // Interface index
-    row.dwForwardType = MIB_IPROUTE_TYPE_DIRECT;// Route type
-    row.dwForwardProto = PROTO_IP_NETMGMT;       // Protocol source
-    CreateIpForwardEntry(&row);                  // Add the route
-
-    adapter_ = QVPN::WinTunExt::WinTunDriver::Adapter_t(a_name, a_desc, address, adapter, 0x10); // ???
+    adapter_ = QVPN::WinTunExt::WinTunDriver::Adapter_t(a_name, a_desc, address, adapter); // ???
 }
 
 

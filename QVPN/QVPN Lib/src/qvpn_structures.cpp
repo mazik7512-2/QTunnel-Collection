@@ -3535,6 +3535,20 @@ std::pair<QVPN::Core::DataStructures::TLS13_RecordLittleEndian::ConstDataIterato
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.data(), data_.data() + data_.size());
 }
 
+QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordLittleEndian::bytes_parse(UByte* begin, UByte* end)
+{
+	constexpr auto min_length = 5; // app data may be zero size
+	auto real_size = std::distance(begin, end);
+	TLS13_RecordView rv(begin, end);
+	auto length = rv.get_tls_record_full_length();
+	bool full = false;
+
+	if (real_size >= min_length && length <= real_size)
+		full = true;
+
+	return AppLevelTemplateParseResult{ begin, begin + length, full, begin + real_size };
+}
+
 
 // TLS Record View
 
@@ -3572,6 +3586,20 @@ std::pair<QVPN::Core::DataStructures::TLS13_RecordView::DataIterator_t, QVPN::Co
 std::pair<QVPN::Core::DataStructures::TLS13_RecordView::ConstDataIterator_t, QVPN::Core::DataStructures::TLS13_RecordView::ConstDataIterator_t> QVPN::Core::DataStructures::TLS13_RecordView::to_bytes() const
 {
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
+}
+
+QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordView::bytes_parse(UByte* begin, UByte* end)
+{
+	constexpr auto min_length = 5; // app data may be zero size
+	auto real_size = std::distance(begin, end);
+	TLS13_RecordView rv(begin, end);
+	auto length = rv.get_tls_record_full_length();
+	bool full = false;
+
+	if (real_size >= min_length && length <= real_size)
+		full = true;
+
+	return AppLevelTemplateParseResult{ begin, begin + length, full, begin + real_size };
 }
 
 

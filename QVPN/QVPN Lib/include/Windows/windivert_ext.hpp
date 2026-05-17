@@ -181,10 +181,15 @@ namespace QVPN {
 			VPNDriver driver_;
 			Logger logger_{};
 
+			void clear_outgoing_filters()
+			{
+				filters_out_.clear();
+				outgoing_filters_data.clear();
+			}
+
 			void calculate_outgoing_filters()
 			{
 				Filter_t temp("");
-				apply_default_outgoing_filter();
 				for (auto& filter : filters_out_)
 				{
 					temp = temp && filter;
@@ -258,12 +263,16 @@ namespace QVPN {
 				}
 			}
 
+			void clear_incoming_filters()
+			{
+				filters_in_.clear();
+				incoming_filters_data.clear();
+			}
 
 			void calculate_incoming_filters()
 			{
 				Filter_t temp("");
-				apply_default_incoming_filter();
-				for (auto& filter : filters_out_)
+				for (auto& filter : filters_in_)
 				{
 					temp = temp && filter;
 				}
@@ -395,12 +404,15 @@ namespace QVPN {
 
 			void add_incoming_traffic_filter(Filter_t filter)
 			{
-				filters_out_.push_back(filter);
+				filters_in_.push_back(filter);
 				calculate_incoming_filters();
 			}
 
 			void start_capture_outgoing_traffic(const QVPN::Core::IPv4Address& adapter_addr, QVPN::Core::BaseTypes::ULong adapter_id)
 			{
+				//add_outgoing_traffic_filter(Filter::source(adapter_addr));
+				apply_default_outgoing_filter();
+				calculate_outgoing_filters();
 				new_adapter_id = adapter_id;
 				out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
 				//start_capture_outgoing_traffic_(adapter_addr);
@@ -408,6 +420,9 @@ namespace QVPN {
 
 			void start_capture_incoming_traffic(const QVPN::Core::IPv4Address& adapter_addr)
 			{
+				//add_incoming_traffic_filter(Filter::dest(adapter_addr));
+				apply_default_incoming_filter();
+				calculate_incoming_filters();
 				in_worker_ = std::thread([this, &adapter_addr]() { start_capture_incoming_traffic_(adapter_addr); });
 				//start_capture_incoming_traffic_(adapter_addr);
 			}

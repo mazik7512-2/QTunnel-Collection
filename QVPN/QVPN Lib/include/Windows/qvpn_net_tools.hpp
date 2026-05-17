@@ -262,7 +262,6 @@ namespace QVPN {
 			{
 				Socket operator()(SOCKET& socket, NetProtocol net_proto, TransportProtocol t_proto)
 				{
-					// TODO: не уверен что будет работать
 					sockaddr_in6 sock_addr{};
 					int addr_len = sizeof(sock_addr);
 
@@ -345,7 +344,6 @@ namespace QVPN {
 				template <std::random_access_iterator Iter>
 				QVPN::Core::NetStatus operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port, Iter begin, Iter end)
 				{
-					// TODO: не уверен что будет работать
 					bool s = true;
 					sockaddr_in6 sock_addr{};
 					auto addr_bytes = addr.to_bytes();
@@ -429,7 +427,6 @@ namespace QVPN {
 			{
 				QVPN::Core::ReceiveData operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port)
 				{
-					// TODO: не уверен что будет работать
 					bool s = true;
 					std::array<UByte, QVPN::Core::ReceiveData::buffer_size> data{};
 					sockaddr_in6 sock_addr{};
@@ -489,6 +486,12 @@ namespace QVPN {
 			using TransportProtocol = QVPN::Core::TransportProtocol;
 			using QVPNSocketSettings = QVPN::Core::QVPNSocketSettings;
 			using ReceiveData = QVPN::Core::ReceiveData;
+
+			using SafeReceiveSignals = QVPN::Core::SafeReceiveSignals;
+
+			template <class AppLevelProtoTemplate>
+			using SafeReceiveData = QVPN::Core::SafeReceiveData<AppLevelProtoTemplate>;
+
 		public:
 
 			QVPN_Socket();
@@ -551,7 +554,7 @@ namespace QVPN {
 			{
 				if (check_connected())
 				{
-					//shutdown();
+					shutdown();
 					close_socket();
 
 					QVPNMetaSocketData meta{};
@@ -653,6 +656,22 @@ namespace QVPN {
 			QVPN::Core::ReceiveData recv_from(const QVPN::Core::NetAddr& addr, const UShort port)
 			{
 				return NetTools::details::SocketRecvFrom<QVPN::Core::NetProtocol::NET_UNDEFINED, QVPN::Core::NetAddr, QVPN_Socket>{}(socket_, addr.get_addr_family(), addr, port);
+			}
+
+			// Return full app level data
+			template <QVPN::Core::is_app_lvl_proto_template AppLevelProtoTemplate>
+			SafeReceiveData<AppLevelProtoTemplate> safe_recv(int flags = 0)
+			{
+				SafeReceiveData<AppLevelProtoTemplate> sf_data{};
+				SafeReceiveSignals signal = SafeReceiveSignals::SFR_WAIT_DATA;
+				while (signal == SafeReceiveSignals::SFR_WAIT_DATA)
+				{
+					auto data = receive(flags);
+					if (data.status.success)
+						signal = sf_data.add_objects_and_validate(data.data.data(), data.data.data() + data.data.size());
+				}
+
+				return sf_data;
 			}
 
 		};
