@@ -3537,16 +3537,26 @@ std::pair<QVPN::Core::DataStructures::TLS13_RecordLittleEndian::ConstDataIterato
 
 QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordLittleEndian::bytes_parse(UByte* begin, UByte* end)
 {
+	using BytesParseSignal = QVPN::Core::BytesParseSignal;
 	constexpr auto min_length = 5; // app data may be zero size
 	auto real_size = std::distance(begin, end);
+	BytesParseSignal signal = BytesParseSignal::BP_NO_DATA;
+
+	if (real_size < min_length)
+		return AppLevelTemplateParseResult{ begin, end, BytesParseSignal::BP_NOT_FULL_OBJECT, end };
+
 	TLS13_RecordView rv(begin, end);
 	auto length = rv.get_tls_record_full_length();
-	bool full = false;
 
-	if (real_size >= min_length && length <= real_size)
-		full = true;
 
-	return AppLevelTemplateParseResult{ begin, begin + length, full, begin + real_size };
+	if (length == real_size)
+		signal = BytesParseSignal::BP_FULL_OBJECT;
+	else if (length > real_size)
+		signal = BytesParseSignal::BP_NOT_FULL_OBJECT;
+	else
+		signal = BytesParseSignal::BP_FULL_OBJECT_AND_TAIL;
+
+	return AppLevelTemplateParseResult{ begin, begin + length, signal, begin + real_size };
 }
 
 
@@ -3590,16 +3600,26 @@ std::pair<QVPN::Core::DataStructures::TLS13_RecordView::ConstDataIterator_t, QVP
 
 QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordView::bytes_parse(UByte* begin, UByte* end)
 {
+	using BytesParseSignal = QVPN::Core::BytesParseSignal;
 	constexpr auto min_length = 5; // app data may be zero size
 	auto real_size = std::distance(begin, end);
+	BytesParseSignal signal = BytesParseSignal::BP_NO_DATA;
+
+	if (real_size < min_length)
+		return AppLevelTemplateParseResult{ begin, end, BytesParseSignal::BP_NOT_FULL_OBJECT, end };
+
 	TLS13_RecordView rv(begin, end);
 	auto length = rv.get_tls_record_full_length();
-	bool full = false;
 
-	if (real_size >= min_length && length <= real_size)
-		full = true;
 
-	return AppLevelTemplateParseResult{ begin, begin + length, full, begin + real_size };
+	if (length == real_size)
+		signal = BytesParseSignal::BP_FULL_OBJECT;
+	else if (length > real_size)
+		signal = BytesParseSignal::BP_NOT_FULL_OBJECT;
+	else
+		signal = BytesParseSignal::BP_FULL_OBJECT_AND_TAIL;
+
+	return AppLevelTemplateParseResult{ begin, begin + length, signal, begin + real_size };
 }
 
 

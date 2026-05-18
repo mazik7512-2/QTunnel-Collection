@@ -487,7 +487,7 @@ namespace QVPN {
 			using QVPNSocketSettings = QVPN::Core::QVPNSocketSettings;
 			using ReceiveData = QVPN::Core::ReceiveData;
 
-			using SafeReceiveSignals = QVPN::Core::SafeReceiveSignals;
+			using SafeReceiveSignal = QVPN::Core::SafeReceiveSignal;
 
 			template <class AppLevelProtoTemplate>
 			using SafeReceiveData = QVPN::Core::SafeReceiveData<AppLevelProtoTemplate>;
@@ -663,12 +663,12 @@ namespace QVPN {
 			SafeReceiveData<AppLevelProtoTemplate> safe_recv(int flags = 0)
 			{
 				SafeReceiveData<AppLevelProtoTemplate> sf_data{};
-				SafeReceiveSignals signal = SafeReceiveSignals::SFR_WAIT_DATA;
-				while (signal == SafeReceiveSignals::SFR_WAIT_DATA)
+				SafeReceiveSignal signal = SafeReceiveSignal::SFR_NO_DATA;
+				while (signal != SafeReceiveSignal::SFR_FULL_DATA || signal == SafeReceiveSignal::SFR_ERROR)
 				{
 					auto data = receive(flags);
 					if (data.status.success)
-						signal = sf_data.add_objects_and_validate(data.data.data(), data.data.data() + data.data.size());
+						signal = sf_data.add_objects_and_validate(signal, data.data.data(), data.data.data() + data.data.size());
 				}
 
 				return sf_data;

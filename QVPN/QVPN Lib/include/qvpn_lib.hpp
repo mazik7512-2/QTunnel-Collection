@@ -91,14 +91,25 @@ namespace QVPN
 		};
 
 
+		namespace details
+		{
+			class DummyArg {};
+			class DummyArg1 {};
+			class DummyArg2 {};
+		}
+
 		template <class LoggerImpl>
 		concept is_logger =
-			requires (LoggerImpl l, std::string_view data, LoggerVerboseLevel level) {
+			requires (LoggerImpl l, std::string_view data, LoggerVerboseLevel level, details::DummyArg arg1, details::DummyArg1 arg2, details::DummyArg2 arg3) {
 
 				{ l.info(data) } -> std::same_as<void>;
+				{ l.info(data, arg1, arg2, arg3) } -> std::same_as<void>;
 				{ l.success(data) } -> std::same_as<void>;
+				{ l.success(data, arg1, arg2, arg3) } -> std::same_as<void>;
 				{ l.fail(data) } -> std::same_as<void>;
+				{ l.fail(data, arg1, arg2, arg3) } -> std::same_as<void>;
 				{ l.warning(data) } -> std::same_as<void>;
+				{ l.warning(data, arg1, arg2, arg3) } -> std::same_as<void>;
 
 				{ l.set_verbosity(level) } -> std::same_as<void>;
 
@@ -521,25 +532,34 @@ namespace QVPN {
 		};
 
 
-		struct AppLevelTemplateParseResult
+		enum class BytesParseSignal
 		{
-			BaseTypes::UByte* begin = nullptr;
-			BaseTypes::UByte* end = nullptr;
-
-			bool is_full = false;
-			BaseTypes::UByte* real_end = nullptr;
+			BP_FULL_OBJECT = 0,
+			BP_NOT_FULL_OBJECT = 1,
+			BP_FULL_OBJECT_AND_TAIL = 2,
+			BP_NO_DATA = 3,
+			BP_ERROR = 99
 		};
 
-		
+		struct AppLevelTemplateParseResult
+		{
+			BaseTypes::UByte* begin = nullptr; // object start
+			BaseTypes::UByte* end = nullptr; // object end
+
+			BytesParseSignal bp_signal = BytesParseSignal::BP_NO_DATA; // info signal
+			BaseTypes::UByte* real_end = nullptr; // real size of input data
+		};
+
+
 		template <class AppLevelProtoTemplate>
 		concept is_app_lvl_proto_template =
-			requires (AppLevelProtoTemplate t, BaseTypes::UByte* b, BaseTypes::UByte* e) {
+			requires (AppLevelProtoTemplate t, BaseTypes::UByte * b, BaseTypes::UByte * e) {
 
 			AppLevelProtoTemplate{ b, e }; // constructable from (b, e)
 
-				{ AppLevelProtoTemplate::bytes_parse(b, e) } -> std::same_as<AppLevelTemplateParseResult>;
+			{ AppLevelProtoTemplate::bytes_parse(b, e) } -> std::same_as<AppLevelTemplateParseResult>;
 		};
-		
+
 
 		namespace details
 		{
@@ -557,32 +577,33 @@ namespace QVPN {
 		};
 
 
-		enum class SafeReceiveSignals
+		enum class SafeReceiveSignal
 		{
 			SFR_FULL_DATA = 0,
-			SFR_WAIT_DATA = 1
+			SFR_WAIT_DATA = 1,
+			SFR_NO_DATA = 2,
+			SFR_ERROR = 99
 		};
-
 
 		template <class SafeReceiveDataType>
 		concept is_safe_receive_data =
-			requires (SafeReceiveDataType sfr, const SafeReceiveDataType csfr, BaseTypes::UByte * b, BaseTypes::UByte * e, size_t i, SafeReceiveDataType::AppLevelProtoTemplateType& altt, const SafeReceiveDataType::AppLevelProtoTemplateType& callt) {
+			requires (SafeReceiveDataType sfr, const SafeReceiveDataType csfr, SafeReceiveSignal signal, BaseTypes::UByte * b, BaseTypes::UByte * e, size_t i) {
 
 			typename SafeReceiveDataType::AppLevelProtoTemplateType;
 
-				{ sfr.add_objects_and_validate(b, e) } -> std::same_as<SafeReceiveSignals>;
+			{ sfr.add_objects_and_validate(signal, b, e) } -> std::same_as<SafeReceiveSignal>;
 
-				{ csfr.get_status() } -> std::same_as<NetStatus>;
+			{ csfr.get_status() } -> std::same_as<NetStatus>;
 
-				{ csfr.get_object_bytes(i) } -> std::same_as<std::pair<const BaseTypes::UByte*, const BaseTypes::UByte*>>;
-				{ sfr.get_object_bytes(i) } -> std::same_as<std::pair<BaseTypes::UByte*, BaseTypes::UByte*>>;
+			{ csfr.get_object_bytes(i) } -> std::same_as<std::pair<const BaseTypes::UByte*, const BaseTypes::UByte*>>;
+			{ sfr.get_object_bytes(i) } -> std::same_as<std::pair<BaseTypes::UByte*, BaseTypes::UByte*>>;
 
-				{ csfr.get_objects_num() } -> std::same_as<BaseTypes::UInt>;
+			{ csfr.get_objects_num() } -> std::same_as<BaseTypes::UInt>;
 
-				{ csfr.get_object(i) } -> std::same_as<typename SafeReceiveDataType::AppLevelProtoTemplateType>;
+			{ csfr.get_object(i) } -> std::same_as<typename SafeReceiveDataType::AppLevelProtoTemplateType>;
 
-				{ csfr.to_bytes() } -> std::same_as<std::pair<const BaseTypes::UByte*, const BaseTypes::UByte*>>;
-				{ sfr.to_bytes() } -> std::same_as<std::pair<BaseTypes::UByte*, BaseTypes::UByte*>>;
+			{ csfr.to_bytes() } -> std::same_as<std::pair<const BaseTypes::UByte*, const BaseTypes::UByte*>>;
+			{ sfr.to_bytes() } -> std::same_as<std::pair<BaseTypes::UByte*, BaseTypes::UByte*>>;
 
 		};
 
@@ -594,6 +615,7 @@ namespace QVPN {
 			using UInt = BaseTypes::UInt;
 			using SeparatorType = std::pair<size_t, size_t>;
 			using AppLevelProtoTemplateType = AppLevelProtoTemplate;
+			using BytesParseSignal = QVPN::Core::BytesParseSignal;
 
 			NetStatus status{};
 			std::vector<SeparatorType> separators;
@@ -609,6 +631,15 @@ namespace QVPN {
 				return AppLevelProtoTemplate::bytes_parse(begin, end);
 			}
 
+			size_t get_last_object()
+			{
+				if (separators.size() == 0)
+					separators.emplace_back(0, 0);
+				auto last = separators.size() - 1;
+				return last;
+			}
+
+			// add full object
 			void _add_object(UByte* begin, UByte* end)
 			{
 				auto start = data.size();
@@ -617,61 +648,104 @@ namespace QVPN {
 				separators.emplace_back(start, fin);
 			}
 
+			// add data to not full object
 			void _add_data_to_object(UByte* begin, UByte* end)
 			{
-				if (separators.size() == 0)
-					separators.emplace_back(0, 0);
-				auto last = separators.size() - 1;
+				auto last = get_last_object();
+				auto start = separators[last].first;
 				data.insert(data.end(), begin, end);
 				auto fin = data.size() - 1;
 				separators[last].second = fin;
 			}
 
-		public:
-
-			SafeReceiveSignals add_objects_and_validate(BaseTypes::UByte* begin, BaseTypes::UByte* end)
+			// basic parse no cycle
+			SafeReceiveSignal parse_data(BaseTypes::UByte* begin, BaseTypes::UByte* end)
 			{
 				auto parse_res = parse_object(begin, end);
-				if (parse_res.is_full)
-					_add_object(parse_res.begin, parse_res.end);
-				else
-					_add_data_to_object(parse_res.begin, parse_res.real_end);
-
-				if (parse_res.real_end == end && parse_res.is_full)
-					return SafeReceiveSignals::SFR_FULL_DATA;
-				else if (parse_res.real_end == end && !parse_res.is_full)
-					return SafeReceiveSignals::SFR_WAIT_DATA;
-				auto e = parse_res.real_end;
-
-				while (e < end)
+				switch (parse_res.bp_signal)
 				{
-					auto parse_res1 = parse_object(e, end);
-					auto b1 = parse_res1.begin;
-					auto e1 = parse_res1.end;
-					auto real_end1 = parse_res1.real_end;
-					if (e1 <= end) // if e1 < end another object
-						_add_object(b1, e1);
-					else
-						_add_object(b1, end); // else not full object and next iteration or func call parse 
-					if (e1 == end)
-						return SafeReceiveSignals::SFR_FULL_DATA;
-					e = e1;
+				case BytesParseSignal::BP_FULL_OBJECT:
+					_add_object(parse_res.begin, parse_res.end);
+					return SafeReceiveSignal::SFR_FULL_DATA;
+					break;
+				case BytesParseSignal::BP_NOT_FULL_OBJECT:
+					_add_object(parse_res.begin, parse_res.real_end);
+					return SafeReceiveSignal::SFR_WAIT_DATA;
+					break;
+				case BytesParseSignal::BP_FULL_OBJECT_AND_TAIL:
+					_add_object(parse_res.begin, parse_res.end);
+					_add_object(parse_res.end, parse_res.real_end);
+					return SafeReceiveSignal::SFR_WAIT_DATA;
+					break;
+				default:
+					return SafeReceiveSignal::SFR_ERROR;
+					break;
 				}
-				
-				return SafeReceiveSignals::SFR_WAIT_DATA;
+			}
+
+			// add data to object and parse with existing data
+			SafeReceiveSignal _add_data_and_parse(UByte* begin, UByte* end)
+			{
+				auto last = get_last_object();
+				auto start = separators[last].first;
+
+				data.insert(data.end(), begin, end); // raw add
+
+				auto fin = data.size() - 1;
+				separators[last].second = fin;
+
+				while (true)
+				{
+					auto parse_res = parse_object(data.data() + start, data.data() + fin);
+					switch (parse_res.bp_signal)
+					{
+					case BytesParseSignal::BP_FULL_OBJECT:
+						return SafeReceiveSignal::SFR_FULL_DATA;
+						break;
+					case BytesParseSignal::BP_NOT_FULL_OBJECT:
+						return SafeReceiveSignal::SFR_WAIT_DATA;
+						break;
+					case BytesParseSignal::BP_FULL_OBJECT_AND_TAIL:
+					{
+						auto size = std::distance(parse_res.begin, parse_res.end); // size of object
+						auto tail_size = std::distance(parse_res.end, parse_res.real_end); // tail size
+						auto tail_start = separators[last].second; // tail start
+						separators[last].second = separators[last].first + size; // cut tail from full object
+						separators.emplace_back(tail_start, tail_start + tail_size); // add tail separator
+						start = tail_start;
+						fin = start + tail_size;
+						break;
+					}
+					default:
+						return SafeReceiveSignal::SFR_ERROR;
+						break;
+					}
+				}
+			}
+
+		public:
+
+			SafeReceiveSignal add_objects_and_validate(SafeReceiveSignal prev_signal, BaseTypes::UByte* begin, BaseTypes::UByte* end)
+			{
+				if (prev_signal == SafeReceiveSignal::SFR_WAIT_DATA) // if have not full object from prev calls
+				{
+					return _add_data_and_parse(begin, end);
+				}
+
+				return parse_data(begin, end); // for first call
 			}
 
 			NetStatus get_status() const
 			{
 				return status;
 			}
-			
+
 			std::pair<ConstDataIterator_t, ConstDataIterator_t> get_object_bytes(size_t i) const
 			{
 				auto [b, e] = separators[i];
 				return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data.data() + b, data.data() + e);
 			}
-			
+
 			std::pair<DataIterator_t, DataIterator_t> get_object_bytes(size_t i)
 			{
 				auto [b, e] = separators[i];
@@ -682,7 +756,7 @@ namespace QVPN {
 			{
 				return data.size();
 			}
-			
+
 			AppLevelProtoTemplate get_object(size_t i) const
 			{
 				auto [b, e] = separators[i];
@@ -704,7 +778,7 @@ namespace QVPN {
 
 		template <class SocketImpl, class Addr>
 		concept is_socket =
-			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr &addr, const BaseTypes::UShort port, int flags, int con_limit, const QVPNSocketSettings& sock_settings) {
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit, const QVPNSocketSettings & sock_settings) {
 
 			SocketImpl::buffer_size;
 
@@ -757,15 +831,15 @@ namespace QVPN {
 
 		template <typename T>
 		concept is_net_number = std::integral<T> || std::floating_point<T>;
-		
+
 		template <class PreParserImpl>
 		concept is_preparser =
 			requires (PreParserImpl pp) {
-				
+
 			typename PreParserImpl::FullPacketType;
 			typename PreParserImpl::NoNetPacketType;
 
-				{ pp.pre_parse() }; //TODO:  ак сюда засунуть шаблонный параметр?
+			{ pp.pre_parse() }; //TODO:  ак сюда засунуть шаблонный параметр?
 
 		};
 
@@ -902,7 +976,7 @@ namespace QVPN {
 			}
 		};
 
-}
+	}
 
 }
 
@@ -917,5 +991,5 @@ namespace std
 		}
 
 	};
-	
+
 }

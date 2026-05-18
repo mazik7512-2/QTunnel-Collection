@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <qvpn_structures.hpp>
 #include <chrono>
+#include <format>
 
 namespace QVPN {
 
@@ -217,6 +218,19 @@ namespace QVPN {
 					std::cout << WinColors::ENDC << WinColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
 				}
 
+				template <class ... Args>
+				void info(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::INFO);
+					if (l != LoggerVerboseLevel::INFO)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					auto data = std::format(str, std::forward<Args>(args)...);
+					std::cout << WinColors::ENDC << WinColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+				}
+
 				void success(std::string_view data)
 				{
 					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::IMPORTANT);
@@ -225,6 +239,19 @@ namespace QVPN {
 
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
+					std::cout << WinColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+				}
+
+				template <class ... Args>
+				void success(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::IMPORTANT);
+					if (l != LoggerVerboseLevel::IMPORTANT)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					auto data = std::format(str, std::forward<Args>(args)...);
 					std::cout << WinColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
 				}
 
@@ -239,6 +266,19 @@ namespace QVPN {
 					std::cout << WinColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
 				}
 
+				template <class ... Args>
+				void fail(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::IMPORTANT);
+					if (l != LoggerVerboseLevel::IMPORTANT)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					auto data = std::format(str, std::forward<Args>(args)...);
+					std::cout << WinColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+				}
+
 				void warning(std::string_view data)
 				{
 					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::WARNING);
@@ -247,6 +287,19 @@ namespace QVPN {
 
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
+					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+				}
+
+				template <class ... Args>
+				void warning(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::WARNING);
+					if (l != LoggerVerboseLevel::WARNING)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					auto data = std::format(str, std::forward<Args>(args)...);
 					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
 				}
 			};
@@ -301,6 +354,19 @@ namespace QVPN {
 					std::cout << LinuxColors::ENDC << LinuxColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
 				}
 
+				template <class ... Args>
+				void info(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::INFO);
+					if (l != LoggerVerboseLevel::INFO)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					auto data = std::format(str, std::forward<Args>(args)...);
+					std::cout << LinuxColors::ENDC << LinuxColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << prefix_ << data << LinuxColors::DEFAULT << std::endl;
+				}
+
 				void success(std::string_view data)
 				{
 					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::IMPORTANT);
@@ -309,6 +375,19 @@ namespace QVPN {
 
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
+					std::cout << LinuxColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
+				}
+
+				template <class ... Args>
+				void success(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::IMPORTANT);
+					if (l != LoggerVerboseLevel::IMPORTANT)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					auto data = std::format(str, std::forward<Args>(args)...);
 					std::cout << LinuxColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
 				}
 
@@ -322,6 +401,19 @@ namespace QVPN {
 					auto time = sys_clock::to_time_t(now);
 					std::cout << LinuxColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
 				}
+				
+				template <class ... Args>
+				void fail(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::IMPORTANT);
+					if (l != LoggerVerboseLevel::IMPORTANT)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					auto data = std::format(str, std::forward<Args>(args)...);
+					std::cout << LinuxColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
+				}
 
 				void warning(std::string_view data)
 				{
@@ -331,6 +423,19 @@ namespace QVPN {
 
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
+					std::cout << LinuxColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
+				}
+
+				template <class ... Args>
+				void warning(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::WARNING);
+					if (l != LoggerVerboseLevel::WARNING)
+						return;
+
+					auto now = sys_clock::now();
+					auto time = sys_clock::to_time_t(now);
+					auto data = std::format(str, std::forward<Args>(args)...);
 					std::cout << LinuxColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
 				}
 			};
