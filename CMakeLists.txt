@@ -41,16 +41,19 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEAS
 set(QVPN_LIBRARY "QVPN Lib")
 set(QVPN_SERVER_APP "QVPN Server App")
 set(QVPN_CLIENT_APP "QVPN Client App")
+set(QVPN_SOCKET_FILTER "QVPN Socket Filter")
 
 set(QVPN_LIBRARY_NAME "QVPN_Lib")
 set(QVPN_SERVER_APP_NAME "QVPN_Server_App")
 set(QVPN_CLIENT_APP_NAME "QVPN_Client_App")
+set(QVPN_SOCKET_FILTER_NAME "QVPN_Socket_Filter")
 
 
 # QVPN Data
 set(QVPN_LIBRARY_PATH "QVPN/${QVPN_LIBRARY}")
 set(QVPN_SERVER_APP_PATH "QVPN/${QVPN_SERVER_APP}")
 set(QVPN_CLIENT_APP_PATH "QVPN/${QVPN_CLIENT_APP}")
+set(QVPN_SOCKET_FILTER_PATH "QVPN/${QVPN_SOCKET_FILTER}")
 
 
 
@@ -82,7 +85,6 @@ file(GLOB os_lib_incl "${QVPN_LIBRARY_PATH}/include/${CMAKE_SYSTEM_NAME}/*.hpp")
 set(lib_src "${_lib_src};${os_lib_src}")
 set(lib_incl "${_lib_incl};${os_lib_incl}")
 
-
 # Определяем целевую директорию вывода 
 set(TARGET_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE}")
 
@@ -95,7 +97,7 @@ add_definitions(-DNPCAP=ON)
 include_directories(${NPCAP_PATH}/Include)
 link_directories(${NPCAP_PATH}/Lib/x64)
 
-
+include(ExternalProject)
 include(FetchContent)
 
 # Arg parse подключение
@@ -156,6 +158,52 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	file(GLOB_RECURSE server_src "${QVPN_SERVER_APP_PATH}/src/*.cpp")
 	add_executable("${QVPN_SERVER_APP_NAME}" ${server_inc} ${server_src})
 
+	if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+		# Пути
+		set(LIBBPF_SRC    "${CMAKE_CURRENT_SOURCE_DIR}/include/libbpf")
+		set(LIBBPF_BUILD  ${CMAKE_BINARY_DIR}/libbpf_build)
+		set(LIBBPF_INSTALL ${CMAKE_BINARY_DIR}/libbpf_install)
+
+		ExternalProject_Add(libbpf_ext
+			SOURCE_DIR      ${LIBBPF_SRC}
+			CONFIGURE_COMMAND ""   # не используем configure
+			BUILD_COMMAND   make -C ${LIBBPF_SRC}/src
+							BUILD_STATIC_ONLY=1
+							OBJDIR=${LIBBPF_BUILD}
+							LIBDIR=${LIBBPF_INSTALL}/lib
+							INCLUDEDIR=${LIBBPF_INSTALL}/include
+							install
+			INSTALL_COMMAND ""     # make install уже всё сделал
+			BUILD_BYPRODUCTS ${LIBBPF_INSTALL}/lib/libbpf.a
+		)
+
+		# Импортированная цель для libbpf
+		add_library(libbpf STATIC IMPORTED GLOBAL)
+		set_target_properties(libbpf PROPERTIES
+			IMPORTED_LOCATION             ${LIBBPF_INSTALL}/lib/libbpf.a
+			INTERFACE_INCLUDE_DIRECTORIES ${LIBBPF_SRC}/include
+		)
+		add_dependencies(libbpf libbpf_ext)
+		# Линкуем libbpf и системные зависимости (elf, z)
+		target_link_libraries(${QVPN_LIBRARY_NAME} PRIVATE libbpf elf z)
+		target_include_directories(${QVPN_LIBRARY_NAME} PUBLIC "${LIBBPF_INSTALL}/include")
+
+
+		# Опционально: автоматическая компиляция eBPF‑программы
+		add_custom_command(
+			OUTPUT ${TARGET_DIRECTORY}/filter.bpf.o
+			COMMAND clang -target bpf -O2 -g 
+				-I ${LIBBPF_SRC}/src
+				-c "${CMAKE_CURRENT_SOURCE_DIR}/${QVPN_SOCKET_FILTER_PATH}/src/${CMAKE_SYSTEM_NAME}/bpf/bpf_filter.c" 
+				-o ${TARGET_DIRECTORY}/filter.bpf.o
+			DEPENDS "./${QVPN_SOCKET_FILTER_PATH}/src/${CMAKE_SYSTEM_NAME}/bpf/bpf_filter.c"
+			COMMENT "Compile filter.bpf.o to ${TARGET_DIRECTORY}"
+		)
+		add_custom_target(bpf_prog DEPENDS ${TARGET_DIRECTORY}/filter.bpf.o)
+		add_dependencies(${QVPN_LIBRARY_NAME} bpf_prog)
+
+	endif()
+
 	if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 		set_target_properties(${QVPN_SERVER_APP_NAME} PROPERTIES
 			LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
@@ -163,7 +211,7 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 
 	elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 
-		
+		# TODO: добавить требования sudo
 
 	endif()
 	# set working directory for vc

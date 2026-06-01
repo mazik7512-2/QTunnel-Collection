@@ -391,7 +391,7 @@ std::string QVPN::Core::QVPNSocketData::to_string() const
 {
     std::stringstream ss{};
 
-    ss << "(" << transport_proto << ") " << local_addr.to_string() << ":" << local_port << "-" << remote_addr.to_string() << ":" << remote_port;
+    ss << "(" << net_proto << "," << transport_proto << ") " << local_addr.to_string() << ":" << local_port << "-" << remote_addr.to_string() << ":" << remote_port;
 
     auto str = ss.str();
     return str;

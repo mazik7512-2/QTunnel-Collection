@@ -566,9 +566,10 @@ namespace QVPN
 			PacketBuilderSignal build_packet(Iter begin, Iter end)
 			{
 				auto size = std::distance(begin, end);
+				auto no_pb_header_size = size - QVPNPacketManager::packet_manager_data_size;
 				auto offset = begin[1] << 8 | begin[2];
 				auto original_size = begin[3] << 8 | begin[4];
-				if (size <= QVPNPacketManager::packet_manager_data_size || offset >= original_size || size + offset > original_size) // check if corrupted or not our packet
+				if (no_pb_header_size <= QVPNPacketManager::packet_manager_data_size || offset >= original_size || no_pb_header_size + offset > original_size) // check if corrupted or not our packet
 					return PacketBuilderSignal::PACKET_NO_BUILDER_DATA;
 				auto p_id = static_cast<UByte>(begin[0]);
 				auto it = packets_.find(p_id);
@@ -581,7 +582,7 @@ namespace QVPN
 				else
 				{
 					packets_.emplace(std::piecewise_construct, std::forward_as_tuple(p_id), std::forward_as_tuple(begin + 1, end));
-					return size == original_size ? PacketBuilderSignal::PACKET_FULL_BUILD : PacketBuilderSignal::PACKET_PART_RECEIVED;
+					return no_pb_header_size == original_size ? PacketBuilderSignal::PACKET_FULL_BUILD : PacketBuilderSignal::PACKET_PART_RECEIVED;
 				}
 			}
 
@@ -1019,7 +1020,7 @@ namespace QVPN
 
 
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger, QVPN::Core::QVPNClientWorkMode work_mode>
-			requires is_socket<Socket, Addr> && is_net_tools<NetTools, Socket>
+			requires is_socket<Socket, Addr> && is_net_tools<NetTools>
 		class QVPNClientDriver
 		{
 
@@ -1027,7 +1028,7 @@ namespace QVPN
 
 		// vpn spec
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools>
 		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_VPN>
 		{
 		private:
@@ -1307,7 +1308,7 @@ namespace QVPN
 
 		// proxy spec
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools>
 		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_PROXY_NODE>
 		{
 
@@ -1315,7 +1316,7 @@ namespace QVPN
 
 		// anti dpi node spec
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools>
 		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_ANTI_DPI_NODE>
 		{
 
@@ -1323,7 +1324,7 @@ namespace QVPN
 
 		// anti dpi spec
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools>
 		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_ANTI_DPI>
 		{
 
@@ -1331,7 +1332,7 @@ namespace QVPN
 
 		// dpi terror spec
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_logger Logger>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+			requires is_socket<Socket, Addr>&& is_net_tools<NetTools>
 		class QVPNClientDriver<Iter, Addr, Socket, NetTools, Logger, QVPN::Core::QVPNClientWorkMode::CLIENT_DPI_TERROR>
 		{
 
@@ -1520,6 +1521,13 @@ namespace QVPN
 		using QVPNServerSettings = QVPNServerSettings_<UByte*>;
 
 
+		enum class TrafficType
+		{
+			TRAFFIC_INCOMING = 0,
+			TRAFFIC_OUTGOING = 1,
+			TRAFFIC_ERROR_TYPE = 99
+		};
+
 		class UserStatisticData
 		{
 		private:
@@ -1534,12 +1542,14 @@ namespace QVPN
 
 			size_t traffic_size_;
 
+			TrafficType traffic_type_;
+
 		public:
 
 			UserStatisticData();
-			UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size);
+			UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size, TrafficType traffic_type);
 
-			void set_data(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size);
+			void set_data(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size, TrafficType traffic_type);
 
 			std::string_view get_user() const;
 
@@ -1550,6 +1560,8 @@ namespace QVPN
 			TransportProtocol get_transport_proto() const;
 
 			size_t get_traffic_size() const;
+
+			TrafficType get_traffic_type() const;
 
 		};
 
@@ -1621,7 +1633,7 @@ namespace QVPN
 
 
 		template <NetProtocol Net, TransportProtocol Transport, class Socket, class NetTools>
-		requires is_net_tools<NetTools, Socket>
+		requires is_net_tools<NetTools>
 		class ConnectionInstaller
 		{
 		public:
@@ -1722,17 +1734,17 @@ namespace QVPN
 
 		};
 
-		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger, QVPN::Core::QVPNServerWorkMode work_mode>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger, QVPN::Core::QVPNServerWorkMode work_mode>
+			requires is_net_tools<NetTools>
 		class QVPNServerDriver
 		{
 
 		};
 
 		// vpn spec
-		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
-		class QVPNServerDriver<Iter, Addr, Socket, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_VPN>
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
+			requires is_net_tools<NetTools>
+		class QVPNServerDriver<Iter, Addr, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_VPN>
 		{
 		private:
 			using TLS13_Record = QVPN::Core::DataStructures::TLS13_RecordLittleEndian;
@@ -1756,6 +1768,9 @@ namespace QVPN
 
 			QVPNServerSettings_<Iter> settings_;
 
+			using Socket = NetTools::Socket;
+			using RawSocket = NetTools::RawSocket;
+
 			std::vector<Socket> vpn_sockets_;
 			std::vector<Socket> client_sockets_{};
 
@@ -1763,7 +1778,7 @@ namespace QVPN
 			std::vector<std::thread> response_threads_{};
 			std::vector<std::thread> socket_clients_threads_{};
 
-			std::unordered_map<QVPNSocketData, std::pair<Socket, Socket>> response_sockets_;
+			std::unordered_map<QVPNSocketData, std::pair<Socket, RawSocket>> response_sockets_;
 
 			QVPNPacketManager packet_manager_;
 
@@ -1822,7 +1837,8 @@ namespace QVPN
 			}
 
 			// TODO: Проверить добавляются ли response sockets
-			decltype(auto) add_to_response_socket_map(Socket& response_socket, Socket& raw_socket, QVPNSocketData& remote_key)
+			// TODO: Возможно нужно сделать либо дублирование сокетов (один raw, другой обычный), либо устанавливать подключение вручную
+			decltype(auto) add_to_response_socket_map(Socket& response_socket, RawSocket& raw_socket, QVPNSocketData& remote_key)
 			{
 				QVPNSocketData sock_data(remote_key);
 				QVPNSocketSettings settings(true, 3000);
@@ -1832,8 +1848,8 @@ namespace QVPN
 				{
 					const auto& vpn_socket = get_random_vpn_interface();
 					auto port = PortGenerator::get_random_port();
-					sock_data.local_addr = vpn_socket.get_local_addr();
-					sock_data.local_port = port;
+					//sock_data.local_addr = vpn_socket.get_local_addr();
+					//sock_data.local_port = port;
 					auto it = response_sockets_.find(sock_data);
 					if (it == response_sockets_.end())
 					{
@@ -1912,11 +1928,21 @@ namespace QVPN
 				}
 			}
 
-			std::optional<Socket> connect_to_server_impl_(Socket& response_socket, QVPNSocketData& key, const QTunnelProxyData& proxy_data)
+			std::optional<RawSocket> connect_to_server_impl_(Socket& response_socket, QVPNSocketData& key, const QTunnelProxyData& proxy_data)
 			{
 				std::stringstream ss{};
-				auto socket = NetTools::create_raw_socket(key.remote_addr.get_addr_family(), key.transport_proto); 
-				//auto res = socket.connect(key.remote_addr, key.remote_port); 
+				auto socket = NetTools::create_raw_socket(key.remote_addr.get_addr_family(), key.transport_proto);
+
+				auto s_filter = NetTools::create_socket_filter(key);
+
+				socket.filter(s_filter);
+				//auto res = socket.connect(key.remote_addr, key.remote_port);
+				if (!socket.is_valid())
+				{
+					ss << "Failed to create socket to " << key.remote_addr.to_string() << ":" << key.remote_port << ".";
+					logger_.fail(ss.str());
+					return std::nullopt;
+				}
 				add_to_response_socket_map(response_socket, socket, key);
 
 				//auto res = socket.bind(vpn_socket.get_local_addr(), PortGenerator::get_random_port()); //TODO: будет перехватывать все tcp, нужно доделать фильтры, либо через berkley filters (linux), либо в userspace
@@ -1928,7 +1954,7 @@ namespace QVPN
 				return socket;
 			}
 
-			void connect_to_server_(Socket& response_socket, QVPNSocketData& key, std::unordered_map<QVPNSocketData, Socket>& sock_map, const QTunnelProxyData& proxy_data)
+			void connect_to_server_(Socket& response_socket, QVPNSocketData& key, std::unordered_map<QVPNSocketData, RawSocket>& sock_map, const QTunnelProxyData& proxy_data)
 			{
 				auto sock = connect_to_server_impl_(response_socket, key, proxy_data);
 				if (sock.has_value())
@@ -1937,7 +1963,7 @@ namespace QVPN
 				}
 			}
 
-			void connect_if_not_to_server(Socket& response_socket, QVPNSocketData& key, std::unordered_map<QVPNSocketData, Socket>& sock_map, const QTunnelProxyData& proxy_data)
+			void connect_if_not_to_server(Socket& response_socket, QVPNSocketData& key, std::unordered_map<QVPNSocketData, RawSocket>& sock_map, const QTunnelProxyData& proxy_data)
 			{
 				auto it = sock_map.find(key);
 				if (it == sock_map.end())
@@ -2069,28 +2095,35 @@ namespace QVPN
 				return packet;
 			}
 
-			bool vpn_request_loop_iteration(std::shared_ptr<Socket> client_socket, std::unordered_map<QVPNSocketData, Socket>& sock_map, Stats& stats, std::string_view user)
+			bool vpn_request_loop_iteration(std::shared_ptr<Socket> client_socket, std::unordered_map<QVPNSocketData, RawSocket>& sock_map, Stats& stats, std::string_view user)
 			{
 				std::stringstream ss{};
 
-				//auto receive_data = client_socket->receive(); // TODO: т.к. TCP это поток может приходить несколько пакетов в один receive переделать
+				//auto receive_data = client_socket->receive(); 
 				auto receive_data = (*client_socket).template safe_recv<TLS13_Record>();
 
 				const auto& status = receive_data.get_status();
 				//auto& data = receive_data.data;
 				//auto size = receive_data.size;
 
+				if (!status.success)
+				{
+					auto err_data = std::format("Failed to receive bytes from {}:{}. Error {}", (*client_socket).get_remote_addr().to_string(), (*client_socket).get_remote_port(), status.status);
+					logger_.fail(err_data);
+					return true;
+				}
+
 				auto [bb, be] = receive_data.to_bytes();
 				auto size = std::distance(bb, be);
-
-				if (!status.success)
-					return true;
 
 				ss.str("");
 				ss << "Received " << size << " bytes from(" << client_socket->get_remote_addr().to_string() << ":" << client_socket->get_remote_port() << ")";
 				logger_.info(ss.view());
 
 				auto num = receive_data.get_objects_num();
+
+				auto num_data = std::format("Received {} object from safe recv", num);
+				logger_.warning(num_data);
 
 				for (size_t i = 0; i < num; i++)
 				{
@@ -2108,7 +2141,7 @@ namespace QVPN
 					// inverted proxy data
 					QTunnelProxyData proxy_data = decoded_data->create_and_inverse_addrs(*decoded_data);
 
-					QVPNSocketData key{ decoded_data->get_transport_proto(), decoded_data->get_src_addr(), decoded_data->get_src_port(), decoded_data->get_dst_addr(), decoded_data->get_dst_port() };
+					QVPNSocketData key{ decoded_data->get_net_proto(), decoded_data->get_transport_proto(), decoded_data->get_src_addr(), decoded_data->get_src_port(), decoded_data->get_dst_addr(), decoded_data->get_dst_port() };
 					connect_if_not_to_server(*client_socket, key, sock_map, original_proxy_data);
 					auto [b, e] = decoded_data->get_raw_data();
 
@@ -2138,8 +2171,9 @@ namespace QVPN
 					NetProtocol net_proto = proxy_data.get_net_proto();
 					TransportProtocol transport_proto = proxy_data.get_transport_proto();
 					size_t data_size = std::distance(b, e);
+					TrafficType traffic_type = TrafficType::TRAFFIC_OUTGOING;;
 
-					UserStatisticData stats_data(user, user_conn, dest_conn, transport_proto, data_size);
+					UserStatisticData stats_data(user, user_conn, dest_conn, transport_proto, data_size, traffic_type);
 					stats.add_user_stats(stats_data);
 				}
 
@@ -2154,7 +2188,7 @@ namespace QVPN
 				ss << "QTunnel from (" << client_socket->get_remote_addr().to_string() << ":" << client_socket->get_remote_port() << ") initialized";
 				logger_.success(ss.view());
 
-				std::unordered_map<QVPNSocketData, Socket> socket_map{};
+				std::unordered_map<QVPNSocketData, RawSocket> socket_map{};
 				bool status = true;
 				while (status)
 				{
@@ -2451,7 +2485,7 @@ namespace QVPN
 			std::optional<QTunnelData<Addr>> decode_data(Iter begin, Iter end)
 			{
 				// first decode, then build
-				auto res = settings_.layers_decode(begin, end); // TODO: сделать парсинг TLS записей, т.к. может прийти несколько за один receive
+				auto res = settings_.layers_decode(begin, end);
 				auto signal = packet_manager_.build_packet(res.data(), res.data() + res.size());
 				if (packet_manager_.have_full_packets())
 				{
@@ -2469,25 +2503,25 @@ namespace QVPN
 
 
 		// proxy spec
-		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
-		class QVPNServerDriver<Iter, Addr, Socket, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_PROXY_NODE>
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
+			requires is_net_tools<NetTools>
+		class QVPNServerDriver<Iter, Addr, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_PROXY_NODE>
 		{
 
 		};
 
 		// anti dpi node spec
-		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
-		class QVPNServerDriver<Iter, Addr, Socket, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_ANTI_DPI_NODE>
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
+			requires is_net_tools<NetTools>
+		class QVPNServerDriver<Iter, Addr, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_ANTI_DPI_NODE>
 		{
 
 		};
 
 		// dpi terror spec
-		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class Socket, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
-			requires is_socket<Socket, Addr>&& is_net_tools<NetTools, Socket>
-		class QVPNServerDriver<Iter, Addr, Socket, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_DPI_TERROR>
+		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger>
+			requires is_net_tools<NetTools>
+		class QVPNServerDriver<Iter, Addr, NetTools, Database, Stats, Logger, QVPN::Core::QVPNServerWorkMode::SERVER_DPI_TERROR>
 		{
 
 		};

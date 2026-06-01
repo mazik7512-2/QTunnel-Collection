@@ -3,6 +3,8 @@
 #include <array>
 #include <unordered_map>
 #include <iterator>
+#include <iostream>
+#include <sstream>
 
 
 namespace QVPN
@@ -17,6 +19,7 @@ namespace QVPN
 			using UShort = unsigned short;
 			using UInt = unsigned int;
 			using ULong = unsigned long long;
+			using Long = long long;
 			using ubyte_const_iter = std::vector<unsigned char>::const_iterator;
 		}
 
@@ -488,6 +491,7 @@ namespace QVPN {
 
 		struct QVPNSocketData
 		{
+			NetProtocol net_proto;
 			TransportProtocol transport_proto;
 
 			QVPN::Core::NetAddr local_addr;
@@ -501,7 +505,8 @@ namespace QVPN {
 			// для std::unordered_map
 			bool operator==(const QVPNSocketData& other) const
 			{
-				return transport_proto == other.transport_proto &&
+				return net_proto == other.net_proto && 
+					transport_proto == other.transport_proto &&
 					local_addr == other.local_addr &&
 					local_port == other.local_port &&
 					remote_addr == other.remote_addr &&
@@ -527,7 +532,7 @@ namespace QVPN {
 			static constexpr BaseTypes::UInt buffer_size = 1 << 16;
 
 			NetStatus status;
-			int size;
+			BaseTypes::Long size;
 			std::array<BaseTypes::UByte, buffer_size> data;
 		};
 
@@ -541,7 +546,7 @@ namespace QVPN {
 			BP_ERROR = 99
 		};
 
-		struct AppLevelTemplateParseResult
+		struct ProtoTemplateParseResult
 		{
 			BaseTypes::UByte* begin = nullptr; // object start
 			BaseTypes::UByte* end = nullptr; // object end
@@ -551,13 +556,13 @@ namespace QVPN {
 		};
 
 
-		template <class AppLevelProtoTemplate>
-		concept is_app_lvl_proto_template =
-			requires (AppLevelProtoTemplate t, BaseTypes::UByte * b, BaseTypes::UByte * e) {
+		template <class ProtoTemplate>
+		concept is_proto_template =
+			requires (ProtoTemplate t, BaseTypes::UByte * b, BaseTypes::UByte * e) {
 
-			AppLevelProtoTemplate{ b, e }; // constructable from (b, e)
+			ProtoTemplate{ b, e }; // constructable from (b, e)
 
-			{ AppLevelProtoTemplate::bytes_parse(b, e) } -> std::same_as<AppLevelTemplateParseResult>;
+			{ ProtoTemplate::bytes_parse(b, e) } -> std::same_as<ProtoTemplateParseResult>;
 		};
 
 
@@ -565,13 +570,29 @@ namespace QVPN {
 		{
 			using UByte = QVPN::Core::BaseTypes::UByte;
 
+			class DummyNetLevelProtoTemplate
+			{
+				DummyNetLevelProtoTemplate(UByte* begin, UByte* end) {}
+
+				static inline ProtoTemplateParseResult bytes_parse(UByte* begin, UByte* end) { return ProtoTemplateParseResult{}; };
+			};
+
+
+			class DummyTransportLevelProtoTemplate
+			{
+				DummyTransportLevelProtoTemplate(UByte* begin, UByte* end) {}
+
+				static inline ProtoTemplateParseResult bytes_parse(UByte* begin, UByte* end) { return ProtoTemplateParseResult{}; };
+			};
+
+
 			class DummyAppLevelProtoTemplate
 			{
 			public:
 
 				DummyAppLevelProtoTemplate(UByte* begin, UByte* end) {}
 
-				static inline AppLevelTemplateParseResult bytes_parse(UByte* begin, UByte* end) {};
+				static inline ProtoTemplateParseResult bytes_parse(UByte* begin, UByte* end) { return ProtoTemplateParseResult{}; };
 
 			};
 		};
@@ -587,7 +608,7 @@ namespace QVPN {
 
 		template <class SafeReceiveDataType>
 		concept is_safe_receive_data =
-			requires (SafeReceiveDataType sfr, const SafeReceiveDataType csfr, SafeReceiveSignal signal, BaseTypes::UByte * b, BaseTypes::UByte * e, size_t i) {
+			requires (SafeReceiveDataType sfr, const SafeReceiveDataType csfr, SafeReceiveSignal signal, BaseTypes::UByte * b, BaseTypes::UByte * e, size_t i, const NetStatus& status) {
 
 			typename SafeReceiveDataType::AppLevelProtoTemplateType;
 
@@ -605,10 +626,12 @@ namespace QVPN {
 			{ csfr.to_bytes() } -> std::same_as<std::pair<const BaseTypes::UByte*, const BaseTypes::UByte*>>;
 			{ sfr.to_bytes() } -> std::same_as<std::pair<BaseTypes::UByte*, BaseTypes::UByte*>>;
 
+			{ sfr.set_status(status) } -> std::same_as<void>;
+
 		};
 
 
-		template <is_app_lvl_proto_template AppLevelProtoTemplate>
+		template <is_proto_template AppLevelProtoTemplate>
 		struct SafeReceiveData
 		{
 			using UByte = BaseTypes::UByte;
@@ -626,7 +649,7 @@ namespace QVPN {
 
 		private:
 
-			AppLevelTemplateParseResult parse_object(BaseTypes::UByte* begin, BaseTypes::UByte* end) const
+			ProtoTemplateParseResult parse_object(BaseTypes::UByte* begin, BaseTypes::UByte* end) const
 			{
 				return AppLevelProtoTemplate::bytes_parse(begin, end);
 			}
@@ -642,9 +665,9 @@ namespace QVPN {
 			// add full object
 			void _add_object(UByte* begin, UByte* end)
 			{
-				auto start = data.size();
 				data.insert(data.end(), begin, end);
-				auto fin = data.size() - 1;
+				auto start = data.size() - std::distance(begin, end);
+				auto fin = data.size();
 				separators.emplace_back(start, fin);
 			}
 
@@ -654,7 +677,7 @@ namespace QVPN {
 				auto last = get_last_object();
 				auto start = separators[last].first;
 				data.insert(data.end(), begin, end);
-				auto fin = data.size() - 1;
+				auto fin = data.size();
 				separators[last].second = fin;
 			}
 
@@ -691,7 +714,7 @@ namespace QVPN {
 
 				data.insert(data.end(), begin, end); // raw add
 
-				auto fin = data.size() - 1;
+				auto fin = data.size();
 				separators[last].second = fin;
 
 				while (true)
@@ -740,6 +763,12 @@ namespace QVPN {
 				return status;
 			}
 
+			void set_status(const NetStatus& net_status)
+			{
+				status.status = net_status.status;
+				status.success = net_status.success;
+			}
+
 			std::pair<ConstDataIterator_t, ConstDataIterator_t> get_object_bytes(size_t i) const
 			{
 				auto [b, e] = separators[i];
@@ -754,7 +783,7 @@ namespace QVPN {
 
 			UInt get_objects_num() const
 			{
-				return data.size();
+				return separators.size();
 			}
 
 			AppLevelProtoTemplate get_object(size_t i) const
@@ -772,6 +801,32 @@ namespace QVPN {
 			{
 				return std::pair<DataIterator_t, DataIterator_t>(data.data(), data.data() + data.size());
 			}
+
+		};
+
+
+
+		template <class SockFilter>
+		concept is_socket_filter =
+			requires (SockFilter sf, const NetAddr& addr, QVPN::Core::BaseTypes::UShort port, BaseTypes::UByte proto, BaseTypes::UByte net, const SockFilter& csf_ref, const QVPNSocketData& csd_r) {
+
+			typename SockFilter::SockFilter_t;
+
+			SockFilter{ csd_r };
+
+				{ sf.net_ver(net) } -> std::same_as<void>;
+				{ sf.ipv4() } -> std::same_as<void>;
+				{ sf.ipv6() } -> std::same_as<void>;
+
+				{ sf.src(addr) } -> std::same_as<void>;
+				{ sf.dst(addr) } -> std::same_as<void>;
+				{ sf.src_port(port) } -> std::same_as<void>;
+				{ sf.dst_port(port) } -> std::same_as<void>;
+				{ sf.custom_protocol(proto) } -> std::same_as<void>;
+				{ sf.tcp() } -> std::same_as<void>;
+				{ sf.udp() } -> std::same_as<void>;
+
+				{ sf.get_filters() } -> std::same_as<typename SockFilter::SockFilter_t&>;
 
 		};
 
@@ -809,15 +864,63 @@ namespace QVPN {
 			{ t.recv_from(addr, port) } -> std::same_as<ReceiveData>;
 
 			{ t.template safe_recv<details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
+
+			{ t.is_valid() } -> std::same_as<bool>;
+		};
+
+		template <class SocketImpl, class Addr, class SockFilter>
+		concept is_raw_socket =
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit, const QVPNSocketSettings & sock_settings, SockFilter& csf) {
+
+			requires is_socket_filter<SockFilter>;
+
+			SocketImpl::buffer_size;
+
+			{ t.reconnect(addr, port) } -> std::same_as<NetStatus>;
+			{ t.connect(addr, port) } -> std::same_as<NetStatus>;
+			{ t.disconnect() } -> std::same_as<NetStatus>;
+			{ t.close_socket() } -> std::same_as<void>;
+			{ t.disconnect_if_connected() } -> std::same_as<void>;
+
+			{ t.bind(addr, port) } -> std::same_as<NetStatus>;
+			{ t.listen(con_limit) } -> std::same_as<NetStatus>;
+			{ t. template accept<Addr>() } -> std::same_as<SocketImpl>;
+
+			{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
+			{ t.receive(flags) } -> std::same_as<ReceiveData>;
+
+			{ t.get_local_addr() } -> std::same_as<const Addr&>;
+			{ t.get_local_port() } -> std::same_as<BaseTypes::UShort>;
+
+			{ t.get_remote_addr() } -> std::same_as<const Addr&>;
+			{ t.get_remote_port() } -> std::same_as<BaseTypes::UShort>;
+
+			{ t.get_transport_protocol() } -> std::same_as<TransportProtocol>;
+
+			{ t.apply_settings(sock_settings) } -> std::same_as<void>;
+
+			{ t.send_to(addr, port, begin, end) } -> std::same_as<NetStatus>;
+			{ t.recv_from(addr, port) } -> std::same_as<ReceiveData>;
+
+			{ t.template safe_recv<details::DummyNetLevelProtoTemplate, details::DummyTransportLevelProtoTemplate, details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
+
+			{ t.is_valid() } -> std::same_as<bool>;
+
+			{ t.filter(csf) } -> std::same_as<void>;
 		};
 
 
-		template <class NetToolsImpl, class Socket>
+		template <class NetToolsImpl>
 		concept is_net_tools =
-			requires (NetToolsImpl t, NetProtocol net_proto, TransportProtocol t_proto, BaseTypes::UShort us, BaseTypes::UInt ui, BaseTypes::ULong ul) {
+			requires (NetToolsImpl t, NetProtocol net_proto, TransportProtocol t_proto, BaseTypes::UShort us, BaseTypes::UInt ui, BaseTypes::ULong ul, const QVPNSocketData& csd_r) {
 
-				{ NetToolsImpl::create_socket(net_proto, t_proto) } -> std::same_as<Socket>;
-				{ NetToolsImpl::create_raw_socket(net_proto, t_proto) } -> std::same_as<Socket>;
+			typename NetToolsImpl::Socket;
+			typename NetToolsImpl::RawSocket;
+			typename NetToolsImpl::SocketFilter;
+
+				{ NetToolsImpl::create_socket(net_proto, t_proto) } -> std::same_as<typename NetToolsImpl::Socket>;
+				{ NetToolsImpl::create_raw_socket(net_proto, t_proto) } -> std::same_as<typename NetToolsImpl::RawSocket>;
+				{ NetToolsImpl::create_socket_filter(csd_r) } -> std::same_as<typename NetToolsImpl::SocketFilter>;
 
 				{ NetToolsImpl::hton(us) } -> std::same_as<BaseTypes::UShort>;
 				{ NetToolsImpl::hton(ui) } -> std::same_as<BaseTypes::UInt>;

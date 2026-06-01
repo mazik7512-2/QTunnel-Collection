@@ -411,7 +411,7 @@ namespace QVPN {
 
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
-					auto data = std::format(str, std::forward<Args>(args)...);
+					auto data = std::vformat(str, std::forward<Args>(args)...);
 					std::cout << LinuxColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
 				}
 

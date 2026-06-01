@@ -8,7 +8,7 @@ using QVPNLayers = QVPN::QVPNLayersStrategy;
 
 
 void EnableANSI() {
-#ifdef _WIN32 || _WIN64
+#ifdef _WIN32
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return;
 

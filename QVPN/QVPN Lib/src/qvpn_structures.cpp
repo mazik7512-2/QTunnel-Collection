@@ -3535,7 +3535,7 @@ std::pair<QVPN::Core::DataStructures::TLS13_RecordLittleEndian::ConstDataIterato
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.data(), data_.data() + data_.size());
 }
 
-QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordLittleEndian::bytes_parse(UByte* begin, UByte* end)
+QVPN::Core::ProtoTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordLittleEndian::bytes_parse(UByte* begin, UByte* end)
 {
 	using BytesParseSignal = QVPN::Core::BytesParseSignal;
 	constexpr auto min_length = 5; // app data may be zero size
@@ -3543,7 +3543,7 @@ QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_Record
 	BytesParseSignal signal = BytesParseSignal::BP_NO_DATA;
 
 	if (real_size < min_length)
-		return AppLevelTemplateParseResult{ begin, end, BytesParseSignal::BP_NOT_FULL_OBJECT, end };
+		return ProtoTemplateParseResult{ begin, end, BytesParseSignal::BP_NOT_FULL_OBJECT, end };
 
 	TLS13_RecordView rv(begin, end);
 	auto length = rv.get_tls_record_full_length();
@@ -3556,7 +3556,7 @@ QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_Record
 	else
 		signal = BytesParseSignal::BP_FULL_OBJECT_AND_TAIL;
 
-	return AppLevelTemplateParseResult{ begin, begin + length, signal, begin + real_size };
+	return ProtoTemplateParseResult{ begin, begin + length, signal, begin + real_size };
 }
 
 
@@ -3598,7 +3598,7 @@ std::pair<QVPN::Core::DataStructures::TLS13_RecordView::ConstDataIterator_t, QVP
 	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + size_);
 }
 
-QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordView::bytes_parse(UByte* begin, UByte* end)
+QVPN::Core::ProtoTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordView::bytes_parse(UByte* begin, UByte* end)
 {
 	using BytesParseSignal = QVPN::Core::BytesParseSignal;
 	constexpr auto min_length = 5; // app data may be zero size
@@ -3606,7 +3606,7 @@ QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_Record
 	BytesParseSignal signal = BytesParseSignal::BP_NO_DATA;
 
 	if (real_size < min_length)
-		return AppLevelTemplateParseResult{ begin, end, BytesParseSignal::BP_NOT_FULL_OBJECT, end };
+		return ProtoTemplateParseResult{ begin, end, BytesParseSignal::BP_NOT_FULL_OBJECT, end };
 
 	TLS13_RecordView rv(begin, end);
 	auto length = rv.get_tls_record_full_length();
@@ -3619,7 +3619,7 @@ QVPN::Core::AppLevelTemplateParseResult QVPN::Core::DataStructures::TLS13_Record
 	else
 		signal = BytesParseSignal::BP_FULL_OBJECT_AND_TAIL;
 
-	return AppLevelTemplateParseResult{ begin, begin + length, signal, begin + real_size };
+	return ProtoTemplateParseResult{ begin, begin + length, signal, begin + real_size };
 }
 
 

@@ -38,7 +38,8 @@
           "value": "True",
           "type": "BOOL"
         }
-      ]
+      ],
+      "intelliSenseMode": "linux-gcc-x64"
     },
     {
       "name": "WSL-Clang-Debug",

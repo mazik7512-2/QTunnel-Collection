@@ -7,6 +7,7 @@
 #include <variant>
 #include <type_traits>
 #include <ws2tcpip.h>
+#include <qvpn_socket_filters.hpp>
 
 #include <iostream>
 #include <utility>
@@ -38,6 +39,7 @@ namespace QVPN {
 
 
 		class QVPN_Socket;
+		class QVPN_RawSocket;
 
 		class QVPNMetaSocketData
 		{
@@ -63,8 +65,13 @@ namespace QVPN {
 		{
 		public:
 
-			static QVPN::NetTools::QVPN_Socket create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
-			static QVPN::NetTools::QVPN_Socket create_raw_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
+			using Socket = QVPN_Socket;
+			using RawSocket = QVPN_RawSocket;
+			using SocketFilter = QVPN_SocketFilter;
+
+			static QVPN::NetTools::QVPNNetTools::Socket create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
+			static QVPN::NetTools::QVPNNetTools::RawSocket create_raw_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
+			static SocketFilter create_socket_filter(const QVPNSocketData& s_data);
 
 			static UShort hton(UShort num);
 			static UShort ntoh(UShort num);
@@ -497,20 +504,7 @@ namespace QVPN {
 			QVPN_Socket();
 
 			QVPN_Socket(int sock_family, int sock_type, int sock_proto);
-			/*
-			template <class ... Args>
-			QVPN_Socket(Args&& ... args)
-			{
-				int result = WSAStartup(MAKEWORD(2, 2), &wsa_data_);
-				if (result == 0)
-				{
-					socket_ = socket(std::forward<Args>(args)...);
-					socket_data_.remote_port = 0;
-					socket_data_.local_port = 0;
-					s_mod_ = UNDEFINED;
-				}
-			}
-			*/
+
 			QVPN_Socket(const QVPN_Socket& other) noexcept;
 			QVPN_Socket& operator=(const QVPN_Socket& other) noexcept;
 			QVPN_Socket(QVPN_Socket&& other) noexcept;
@@ -525,6 +519,8 @@ namespace QVPN {
 			{
 				socket_ = socket(std::forward<Args>(args)...);
 			}
+
+			bool is_valid() const;
 
 			template <QVPN::Core::is_addr Addr>
 			QVPN::Core::NetStatus connect(const Addr& addr, const UShort port)
@@ -558,10 +554,7 @@ namespace QVPN {
 					close_socket();
 
 					QVPNMetaSocketData meta{};
-					if (s_type_ == SOCK_RAW)
-						socket_ = socket(meta.get_socket_family(socket_data_.local_addr.get_addr_family()), meta.get_raw_socket_type(socket_data_.transport_proto), meta.get_raw_socket_proto(socket_data_.transport_proto));
-					else
-						socket_ = socket(meta.get_socket_family(socket_data_.local_addr.get_addr_family()), meta.get_socket_type(socket_data_.transport_proto), meta.get_socket_proto(socket_data_.transport_proto));
+					socket_ = socket(meta.get_socket_family(socket_data_.local_addr.get_addr_family()), meta.get_socket_type(socket_data_.transport_proto), meta.get_socket_proto(socket_data_.transport_proto));
 				}
 				return connect<Addr>(addr, port);
 			}
@@ -659,16 +652,22 @@ namespace QVPN {
 			}
 
 			// Return full app level data
-			template <QVPN::Core::is_app_lvl_proto_template AppLevelProtoTemplate>
+			template <QVPN::Core::is_proto_template AppLevelProtoTemplate>
 			SafeReceiveData<AppLevelProtoTemplate> safe_recv(int flags = 0)
 			{
+				int num_tries = 20;
 				SafeReceiveData<AppLevelProtoTemplate> sf_data{};
 				SafeReceiveSignal signal = SafeReceiveSignal::SFR_NO_DATA;
-				while (signal != SafeReceiveSignal::SFR_FULL_DATA || signal == SafeReceiveSignal::SFR_ERROR)
+				while (signal != SafeReceiveSignal::SFR_FULL_DATA || signal == SafeReceiveSignal::SFR_ERROR || num_tries <= 0)
 				{
 					auto data = receive(flags);
-					if (data.status.success)
-						signal = sf_data.add_objects_and_validate(signal, data.data.data(), data.data.data() + data.data.size());
+					sf_data.set_status(data.status);
+					if (!data.status.success)
+					{
+						num_tries--;
+						continue;
+					}
+					signal = sf_data.add_objects_and_validate(signal, data.data.data(), data.data.data() + data.size);
 				}
 
 				return sf_data;
@@ -676,6 +675,206 @@ namespace QVPN {
 
 		};
 
+
+		class QVPN_RawSocket
+		{
+		public:
+			static constexpr int buffer_size = 1 << 16;
+
+		private:
+			SOCKET socket_;
+
+			QVPNSocketData socket_data_{};
+
+			SocketMod s_mod_ = UNDEFINED;
+
+			using TransportProtocol = QVPN::Core::TransportProtocol;
+			using QVPNSocketSettings = QVPN::Core::QVPNSocketSettings;
+			using ReceiveData = QVPN::Core::ReceiveData;
+			using SafeReceiveSignal = QVPN::Core::SafeReceiveSignal;
+
+			template <class AppLevelProtoTemplate>
+			using SafeReceiveData = QVPN::Core::SafeReceiveData<AppLevelProtoTemplate>;
+
+		public:
+
+			QVPN_RawSocket();
+
+			QVPN_RawSocket(int sock_family, int sock_type, int sock_proto);
+			QVPN_RawSocket(const QVPN_RawSocket& other) noexcept;
+			QVPN_RawSocket& operator=(const QVPN_RawSocket& other) noexcept;
+			QVPN_RawSocket(QVPN_RawSocket&& other) noexcept;
+			QVPN_RawSocket& operator=(QVPN_RawSocket&& other) noexcept;
+
+			QVPN_RawSocket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto);
+			QVPN_RawSocket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto);
+			QVPN_RawSocket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto);
+
+			template<class ... Args>
+			void create_socket_by_args(Args&& ... args)
+			{
+				socket_ = socket(std::forward<Args>(args)...);
+			}
+
+			bool is_valid() const;
+
+			template <QVPN::Core::is_addr Addr>
+			QVPN::Core::NetStatus connect(const Addr& addr, const UShort port)
+			{
+				if (s_mod_ == SERVER_MOD)
+					return QVPN::Core::NetStatus{ false, 0 };
+				QVPN::Core::NetStatus status{};
+				QVPN::Core::NetData data{};
+				status.success = false;
+
+				data = QVPN::NetTools::details::qvpn_connect_(socket_, addr, port);
+				status.status = data.status;
+				status.success = data.success;
+
+				if (status.success) {
+					socket_data_.net_proto = data.addr.get_addr_family();
+					socket_data_.remote_port = port;
+					socket_data_.remote_addr = addr;
+					socket_data_.local_port = data.port;
+					socket_data_.local_addr = data.addr;
+					s_mod_ = CLIENT_MOD;
+				}
+				return status;
+			}
+
+			template <QVPN::Core::is_addr Addr>
+			QVPN::Core::NetStatus reconnect(const Addr& addr, const UShort port)
+			{
+				if (check_connected())
+				{
+					shutdown();
+					close_socket();
+
+					QVPNMetaSocketData meta{};
+					socket_ = socket(meta.get_socket_family(socket_data_.local_addr.get_addr_family()), meta.get_raw_socket_type(socket_data_.transport_proto), meta.get_raw_socket_proto(socket_data_.transport_proto));
+				}
+				return connect<Addr>(addr, port);
+			}
+
+			template <QVPN::Core::is_addr Addr>
+			QVPN::Core::NetStatus bind(const Addr& addr, const UShort port)
+			{
+				if (s_mod_ == CLIENT_MOD)
+					return QVPN::Core::NetStatus{ false, 0 };
+				QVPN::Core::NetStatus status{};
+				QVPN::Core::NetData data{};
+
+				data = QVPN::NetTools::details::qvpn_bind_(socket_, addr, port);
+
+				status.status = data.status;
+				status.success = data.success;
+
+				if (status.success) {
+					socket_data_.net_proto = data.addr.get_addr_family();
+					socket_data_.remote_port = port;
+					socket_data_.remote_addr = addr;
+					socket_data_.local_port = data.port;
+					socket_data_.local_addr = data.addr;
+					s_mod_ = SERVER_MOD;
+				}
+
+				return status;
+			}
+
+			template <QVPN::Core::is_addr Addr>
+			QVPN_Socket accept()
+			{
+				return QVPN::NetTools::details::SocketAccept<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_Socket>{}(socket_, socket_data_.local_addr.get_addr_family(), socket_data_.transport_proto);
+			}
+
+			QVPN::Core::NetStatus listen(int con_limit = SOMAXCONN);
+
+			QVPN::Core::NetStatus send(const UByte* begin, const UByte* end, int flags = 0);
+
+			ReceiveData receive(int flags = 0);
+
+			QVPN::Core::NetStatus disconnect() const;
+
+			bool check_connected() const;
+
+			void disconnect_if_connected() const;
+
+			QVPN::Core::NetStatus shutdown();
+
+			void close_socket() const;
+
+			const QVPN::Core::NetAddr& get_local_addr() const
+			{
+				return socket_data_.local_addr;
+			}
+
+			UShort get_local_port() const
+			{
+				return socket_data_.local_port;
+			}
+
+			const QVPN::Core::NetAddr& get_remote_addr() const
+			{
+				return socket_data_.remote_addr;
+			}
+
+			UShort get_remote_port() const
+			{
+				return socket_data_.remote_port;
+			}
+
+			TransportProtocol get_transport_protocol() const
+			{
+				return socket_data_.transport_proto;
+			}
+
+			void apply_settings(const QVPNSocketSettings& settings)
+			{
+				char optval = static_cast<char>(settings.ip_header());
+				int optlen = sizeof(optval);
+				setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen);
+
+				int timeout = settings.receive_timeout_ms();
+				optlen = sizeof(timeout);
+				setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), optlen);
+			}
+
+			QVPN::Core::NetStatus send_to(const QVPN::Core::NetAddr& addr, const UShort port, const UByte* begin, const UByte* end)
+			{
+				return NetTools::details::SocketSendTo<QVPN::Core::NetProtocol::NET_UNDEFINED, QVPN::Core::NetAddr, QVPN_Socket>{}(socket_, addr.get_addr_family(), addr, port, begin, end);
+			}
+
+			QVPN::Core::ReceiveData recv_from(const QVPN::Core::NetAddr& addr, const UShort port)
+			{
+				return NetTools::details::SocketRecvFrom<QVPN::Core::NetProtocol::NET_UNDEFINED, QVPN::Core::NetAddr, QVPN_Socket>{}(socket_, addr.get_addr_family(), addr, port);
+			}
+
+			// Return full app level data
+			// TODO: Возможно нужно убрать из raw сокета функции для обычного сокета
+			template <QVPN::Core::is_proto_template NetLevelProtoTemplate, QVPN::Core::is_proto_template TransportLevelProtoTemplate, QVPN::Core::is_proto_template AppLevelProtoTemplate>
+			SafeReceiveData<AppLevelProtoTemplate> safe_recv(int flags = 0)
+			{
+				int num_tries = 20;
+				SafeReceiveData<AppLevelProtoTemplate> sf_data{};
+				SafeReceiveSignal signal = SafeReceiveSignal::SFR_NO_DATA;
+				while (signal != SafeReceiveSignal::SFR_FULL_DATA || signal == SafeReceiveSignal::SFR_ERROR || num_tries <= 0)
+				{
+					auto data = receive(flags);
+					sf_data.set_status(data.status);
+					if (!data.status.success)
+					{
+						num_tries--;
+						continue;
+					}
+					signal = sf_data.add_objects_and_validate(signal, data.data.data(), data.data.data() + data.size);
+				}
+
+				return sf_data;
+			}
+
+			void filter(QVPN_SocketFilter& filter);
+
+		};
 
 	}
 

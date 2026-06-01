@@ -399,7 +399,6 @@ namespace QVPN {
 			template<class Ip4PacketLike, class AdapterHandle>
 			concept is_adapter_criteria =
 				requires (Ip4PacketLike t) {
-					{ true };
 					{ t.check_criteria(std::declval<const Adapter<AdapterHandle>&>()) } -> std::same_as<bool>;
 			};
 
@@ -2897,8 +2896,8 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_tls_record_data() const;
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 
-				// AppLevelProtoTemplate interface
-				static AppLevelTemplateParseResult bytes_parse(UByte* begin, UByte* end);
+				// ProtoTemplate interface
+				static ProtoTemplateParseResult bytes_parse(UByte* begin, UByte* end);
 
 			};
 
@@ -2962,8 +2961,8 @@ namespace QVPN {
 				std::pair<DataIterator_t, DataIterator_t> get_tls_record_data();
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 
-				// AppLevelProtoTemplate interface
-				static AppLevelTemplateParseResult bytes_parse(UByte* begin, UByte* end);
+				// ProtoTemplate interface
+				static ProtoTemplateParseResult bytes_parse(UByte* begin, UByte* end);
 			};
 
 

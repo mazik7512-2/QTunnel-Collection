@@ -11,6 +11,7 @@ using NetProtocol = QVPN::Core::NetProtocol;
 using TransportProtocol = QVPN::Core::TransportProtocol;
 using QVPNConnectionSettings = QVPN::Core::QVPNConnectionSettings;
 using UserStatisticData = QVPN::Core::UserStatisticData;
+using TrafficType = QVPN::Core::TrafficType;
 
 
 class SQLiteDatabase
@@ -22,7 +23,7 @@ public:
 	SQLiteDatabase(std::string_view path);
 
 
-	void add_statistic_data(std::string_view user, NetProtocol net_proto, TransportProtocol transport_proto, const NetAddr& src_addr, UShort src_port, const NetAddr& dst_addr, UShort dst_port, size_t traffic_size);
+	void add_statistic_data(std::string_view user, NetProtocol net_proto, TransportProtocol transport_proto, const NetAddr& src_addr, UShort src_port, const NetAddr& dst_addr, UShort dst_port, size_t traffic_size, TrafficType traffic_type);
 	std::vector<UserStatisticData> get_user_stats(std::string_view user);
 	bool check_user(std::string_view user);
 

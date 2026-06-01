@@ -18,7 +18,7 @@ namespace QVPN
 		using QVPNNetTools = QVPN::NetTools::QVPNNetTools;
 
 		template <QVPN::Core::is_database_adapter Database, QVPN::Core::is_statistic_adapter Stats>
-		using QVPNServerDriver = QVPN::Core::QVPNServerDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPNSocket, QVPNNetTools, Database, Stats, QVPNLogger, QVPN::Core::QVPNServerWorkMode::SERVER_VPN>;
+		using QVPNServerDriver = QVPN::Core::QVPNServerDriver<QVPN::Core::BaseTypes::UByte*, QVPN::Core::NetAddr, QVPNNetTools, Database, Stats, QVPNLogger, QVPN::Core::QVPNServerWorkMode::SERVER_VPN>;
 	}
 
 	using QVPNClientSettings = QVPN::Core::QVPNClientSettings;

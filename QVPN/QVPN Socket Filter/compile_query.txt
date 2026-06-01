@@ -1,0 +1,1 @@
+clang -target bpf -O2 -g -I ../../include/libbpf/src -c ./src/Linux/bpf/bpf_filter.c -o filter.bpf.o
