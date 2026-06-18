@@ -40,36 +40,42 @@ struct {
 
 int filter_by_addr_port_ipv4(struct __sk_buff* skb)
 {
-	void* data = (void*)(long)skb->data;
-	void* data_end = (void*)(long)skb->data_end;
+	struct iphdr ip;
 
-	struct iphdr* ip = data;
+	if (bpf_skb_load_bytes(skb, 0, &ip, sizeof(ip)) < 0)
+		return 0;
 
-	__u8 net = ip->version;
-	__u8 transport = ip->protocol;
+	__u8 net = ip.version;
+	__u8 transport = ip.protocol;
 
-	__u32 src = ip->saddr;
-	__u32 dst = ip->daddr;
+	__u32 src = ip.saddr;
+	__u32 dst = ip.daddr;
 	__u16 src_port;
 	__u16 dst_port;
 
-	struct tcphdr* tcp = (struct tcphdr*)(ip + 1);
-	struct udphdr* udp = (struct udphdr*)(ip + 1);
-	char* custom = (char*)(ip + 1);
+	//struct tcphdr* tcp = (struct tcphdr*)(ip + 1);
+	//struct udphdr* udp = (struct udphdr*)(ip + 1);
+	//char* custom = (char*)(ip + 1);
+	struct tcphdr tcp;
+	struct udphdr udp;
 
 	switch (transport)
 	{
 	case IPPROTO_TCP:
-		src_port = tcp->source;
-		dst_port = tcp->dest;
+		if (bpf_skb_load_bytes(skb, sizeof(ip), &tcp, sizeof(tcp)) < 0)
+			return 0;
+		src_port = tcp.source;
+		dst_port = tcp.dest;
 		break;
 	case IPPROTO_UDP:
-		src_port = udp->source;
-		dst_port = udp->dest;
+		if (bpf_skb_load_bytes(skb, sizeof(ip), &udp, sizeof(udp)) < 0)
+			return 0;
+		src_port = udp.source;
+		dst_port = udp.dest;
 		break;
 	default:
-		src_port = *custom << 8 | *(custom + 1);
-		dst_port = *(custom + 2) << 8 | *(custom + 3);
+		src_port = 0;
+		dst_port = 0;
 		break;
 	}
 
@@ -99,15 +105,14 @@ int filter_by_addr_port_ipv6(struct __sk_buff* skb)
 SEC("socket")
 int filter_by_addr_port(struct __sk_buff* skb)
 {
-	void* data = (void*)(long)skb->data;
-	void* data_end = (void*)(long)skb->data_end;
+	//void* data = (void*)(long)skb->data;
+	//void* data_end = (void*)(long)skb->data_end;
 
-	struct iphdr* ip = data;
-
-	if ((void*)(ip + 1) > data_end)
+	struct iphdr ip;
+	if (bpf_skb_load_bytes(skb, 0, &ip, sizeof(ip)) < 0)
 		return 0;
 	
-	switch (ip->version)
+	switch (ip.version)
 	{
 	case 4:
 		return filter_by_addr_port_ipv4(skb);

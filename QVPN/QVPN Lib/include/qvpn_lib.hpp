@@ -128,6 +128,13 @@ namespace QVPN
 			ANDROID = 2,
 		};
 
+		enum QVPNAppType
+		{
+			UNDEFINED = -1,
+			CLIENT = 0,
+			SERVER = 1
+			
+		};
 
 		enum QVPNClientWorkMode
 		{

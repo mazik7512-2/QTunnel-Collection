@@ -3,7 +3,11 @@
 #include <iostream>
 #include <memory>
 
-using QVPNConnectionElement = QVPN::Core::QVPNConnectionElement;
+using QVPNSocketData = QVPN::Core::QVPNSocketData;
+using NetAddr = QVPN::Core::NetAddr;
+using NetProtocol = QVPN::Core::NetProtocol;
+using TransportProtocol = QVPN::Core::TransportProtocol;
+using UShort = QVPN::Core::BaseTypes::UShort;
 using UInt = QVPN::Core::BaseTypes::UInt;
 
 SQLiteDatabase::SQLiteDatabase(std::string_view path)
@@ -11,12 +15,12 @@ SQLiteDatabase::SQLiteDatabase(std::string_view path)
 	sqlite3_open(path.data(), &db_);
 }
 
-void SQLiteDatabase::add_statistic_data(std::string_view user, NetProtocol net_proto, TransportProtocol transport_proto, const NetAddr& src_addr, UShort src_port, const NetAddr& dst_addr, UShort dst_port, size_t traffic_size, TrafficType traffic_type)
+void SQLiteDatabase::add_statistic_data(std::string_view user, const QVPNSocketData& sock_data, size_t traffic_size, TrafficType traffic_type)
 {
 	char* msg_error;
 	std::stringstream ss{};
-	ss << "INSERT INTO stats VALUES('" << src_addr.to_string() << "', " << src_port << ", '" << dst_addr.to_string() << "', " << dst_port << ", ";
-	ss << static_cast<QVPN::Core::UShort>(net_proto) << ", " << static_cast<QVPN::Core::UShort>(transport_proto) << ", " << traffic_size << ", '" << user << "'" << ", " << static_cast<UInt>(traffic_type) << ");";
+	ss << "INSERT INTO stats VALUES(NULL, '" << sock_data.local_addr.to_string() << "', " << sock_data.local_port << ", '" << sock_data.remote_addr.to_string() << "', " << sock_data.remote_port << ", ";
+	ss << static_cast<QVPN::Core::UShort>(sock_data.net_proto) << ", " << static_cast<QVPN::Core::UShort>(sock_data.transport_proto) << ", " << traffic_size << ", '" << user << "'" << ", " << static_cast<UInt>(traffic_type) << ");";
 	auto sql = ss.str();
 	auto exit = sqlite3_exec(db_, sql.c_str(), NULL, nullptr, &msg_error);
 	if (exit != SQLITE_OK)
@@ -32,17 +36,23 @@ void SQLiteDatabase::add_statistic_data(std::string_view user, NetProtocol net_p
 int get_user_stats_callback(void* data, int argc, char** argv, char** azColName)
 {
 	std::vector<UserStatisticData>* res = static_cast<std::vector<UserStatisticData>*>(data);
-	QVPNConnectionElement user_data(std::string_view(argv[1]), static_cast<UShort>(std::stoi(argv[2])));
-	QVPNConnectionElement dst_data(std::string_view(argv[3]), static_cast<UShort>(std::stoi(argv[4])));
+	//QVPNSocketData user_data(std::string_view(argv[1]), static_cast<UShort>(std::stoi(argv[2])));
+	//QVPNSocketData dst_data(std::string_view(argv[3]), static_cast<UShort>(std::stoi(argv[4])));
+	NetAddr src{ std::string_view(argv[1]) };
+	NetAddr dst{ std::string_view(argv[3]) };
+	UShort src_port = static_cast<UShort>(std::stoi(argv[2]));
+	UShort dst_port = static_cast<UShort>(std::stoi(argv[4]));
+	NetProtocol net = static_cast<NetProtocol>(std::stoi(argv[5]));
+	TransportProtocol transport = static_cast<TransportProtocol>(std::stoi(argv[6]));
 
-	NetProtocol net_proto = static_cast<NetProtocol>(std::stoi(argv[5]));
-	TransportProtocol transport_proto = static_cast<TransportProtocol>(std::stoi(argv[6]));
+	QVPNSocketData socket_data{ net, transport, src, src_port, dst, dst_port };
+
 	
 	size_t traffic_size = static_cast<size_t>(std::stoi(argv[7]));
 	TrafficType traffic_type = static_cast<TrafficType>(std::stoi(argv[8]));
 	for (size_t i = 0; i < argc; i++)
 	{
-		res->at(i).set_data(std::string_view(argv[0]), user_data, dst_data, transport_proto, traffic_size, traffic_type);
+		res->at(i).set_data(std::string_view(argv[0]), socket_data, traffic_size, traffic_type);
 	}
 
 	return 0;
@@ -105,9 +115,8 @@ ServerStatsAdatper::ServerStatsAdatper(SQLiteDatabase& db_instance)
 
 void ServerStatsAdatper::add_user_stats(const UserStatisticData& data)
 {
-	const auto& user_con = data.get_user_con();
-	const auto& dst_con = data.get_dest_con();
-	db_->add_statistic_data(data.get_user(), data.get_net_proto(), data.get_transport_proto(), user_con.get_ip_address(), user_con.get_port(), dst_con.get_ip_address(), dst_con.get_port(), data.get_traffic_size(), data.get_traffic_type());
+	const auto& socket_data = data.get_connection_data();
+	db_->add_statistic_data(data.get_user(), socket_data, data.get_traffic_size(), data.get_traffic_type());
 }
 
 std::vector<UserStatisticData> ServerStatsAdatper::get_user_stats(std::string_view user)

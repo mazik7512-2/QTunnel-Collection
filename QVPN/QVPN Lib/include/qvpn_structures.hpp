@@ -782,6 +782,9 @@ namespace QVPN {
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = UByte*;
 
+				using ObjectType = DummyNetPacket;
+				using ViewType = DummyNetPacket;
+
 				DummyNetPacket() = default;
 
 				template <std::random_access_iterator Iter>
@@ -816,6 +819,9 @@ namespace QVPN {
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				ObjectType to_object() const;
+				ViewType to_view() const;
 
 				///////////////////
 
@@ -887,6 +893,7 @@ namespace QVPN {
 				{ t.get_transport_length() } -> std::same_as<UShort>;
 
 				{ t.set_dst_port(port) } -> std::same_as<void>;
+				{ t.set_src_port(port) } -> std::same_as<void>;
 
 				{ t.set_transport_length(length) } -> std::same_as<void>;
 
@@ -998,6 +1005,7 @@ namespace QVPN {
 				void set_flags(UByte flags);
 
 				void set_dst_port(UShort port);
+				void set_src_port(UShort port);
 
 				void set_transport_length(UShort length);
 				void set_tcp_seq_number(UInt number);
@@ -1082,6 +1090,7 @@ namespace QVPN {
 				void set_tcp_urgent(UShort urgent);
 
 				void set_dst_port(UShort port);
+				void set_src_port(UShort port);
 
 				void set_transport_length(UShort length);
 				void set_tcp_seq_number(UInt number);
@@ -1177,6 +1186,7 @@ namespace QVPN {
 				void set_flags(UByte flags);
 
 				void set_dst_port(UShort port);
+				void set_src_port(UShort port);
 
 				void set_transport_length(UShort length);
 
@@ -1242,6 +1252,7 @@ namespace QVPN {
 				void set_flags(UByte flags);
 
 				void set_dst_port(UShort port);
+				void set_src_port(UShort port);
 
 				void set_transport_length(UShort length);
 
@@ -1276,6 +1287,9 @@ namespace QVPN {
 			{
 			public:
 
+				using ObjectType = DummyTransportPacket;
+				using ViewType = DummyTransportPacket;
+
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = const UByte*;
 
@@ -1295,6 +1309,7 @@ namespace QVPN {
 				UShort get_transport_length() const;
 
 				void set_dst_port(UShort port);
+				void set_src_port(UShort port);
 
 				void set_transport_length(UShort length);
 
@@ -1320,6 +1335,9 @@ namespace QVPN {
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				ObjectType to_object() const;
+				ViewType to_view() const;
 
 				///////////////////
 
@@ -1430,6 +1448,8 @@ namespace QVPN {
 				using DataIterator_t = UByte*;
 				using ConstDataIterator_t = const UByte*;
 
+				using ObjectType = DummyTransportPacket;
+				using ViewType = DummyTransportPacket;
 
 				DummyDataPacket() = default;
 
@@ -1455,6 +1475,10 @@ namespace QVPN {
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+
+				ObjectType to_object() const;
+				ViewType to_view() const;
 
 				///////////////////
 
@@ -4149,10 +4173,10 @@ namespace QVPN {
 					// also proto data
 
 					UShort size = static_cast<UShort>(data_[0] << 8 | data_[1]);
-					ProxyData::proto_data = QTunnelProtoData(size, data_.data() + 2, data_.data() + size);
-					data_.erase(data_.begin(), data_.begin() + size);
+					auto full_size = size + sizeof(size);
+					ProxyData::proto_data = QTunnelProtoData(size, data_.data() + 2, data_.data() + full_size);
+					data_.erase(data_.begin(), data_.begin() + full_size); // erase proto data and here payload
 
-					//ProxyData::source_port = data_[0] << 8 | data_[1];
 
 				}
 
@@ -4730,6 +4754,7 @@ namespace QVPN {
 				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
 				{
 					NetProtocol net_proto = src.get_addr_family();
+					auto t_proto = TransportProtocol::TCP;
 					auto [b, e] = DataPacket::get_data();
 					switch (net_proto)
 					{
@@ -4737,7 +4762,7 @@ namespace QVPN {
 					{
 						auto src4 = src.to_ipv4();
 						auto dst4 = dst.to_ipv4();
-						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(net_proto), length);
+						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(t_proto), length);
 						TcpPacket::recalculate_transport_checksum(pseudo, b, e);
 						break;
 					}
@@ -4804,6 +4829,7 @@ namespace QVPN {
 				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
 				{
 					NetProtocol net_proto = src.get_addr_family();
+					auto t_proto = TransportProtocol::UDP;
 					auto [b, e] = DataPacket::get_data();
 					switch (net_proto)
 					{
@@ -4811,7 +4837,7 @@ namespace QVPN {
 					{
 						auto src4 = src.to_ipv4();
 						auto dst4 = dst.to_ipv4();
-						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(net_proto), length);
+						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(t_proto), length);
 						UdpPacket::recalculate_transport_checksum(pseudo, b, e);
 						break;
 					}
@@ -4835,6 +4861,52 @@ namespace QVPN {
 				{
 
 				}
+			};
+
+			// dummy spec
+
+			template <>
+			class NoNetPacket<DummyTransportPacket, DummyDataPacket> : public DummyTransportPacket, public DummyDataPacket
+			{
+			public:
+
+				using ConstDataIterator_t = DummyTransportPacket::ConstDataIterator_t;
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter begin, Iter end)
+					: DummyTransportPacket(), DummyDataPacket()
+				{
+
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket(Iter transport_begin, Iter transport_end, Iter begin, Iter end)
+					: DummyTransportPacket(), DummyDataPacket()
+				{
+
+				}
+
+				std::pair<NoNetPacket::ConstDataIterator_t, NoNetPacket::ConstDataIterator_t> bytes() const
+				{
+					return std::pair<ConstDataIterator_t, ConstDataIterator_t>(nullptr, nullptr);
+				}
+
+				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
+				{
+
+				}
+
+				template <std::random_access_iterator Iter>
+				NoNetPacket new_packet_by_payload(const NetAddr& src, const NetAddr& dst, UShort length, Iter begin, Iter end) const
+				{
+					return NoNetPacket(begin, end);
+				}
+
+				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
+				{
+					
+				}
+
 			};
 
 			// Views specs for no net packet
@@ -4872,6 +4944,7 @@ namespace QVPN {
 				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
 				{
 					NetProtocol net_proto = src.get_addr_family();
+					auto t_proto = TransportProtocol::TCP;
 					auto [b, e] = DataPacket_View::get_data();
 					switch (net_proto)
 					{
@@ -4879,7 +4952,7 @@ namespace QVPN {
 					{
 						auto src4 = src.to_ipv4();
 						auto dst4 = dst.to_ipv4();
-						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(net_proto), length);
+						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(t_proto), length);
 						TcpPacket_View::recalculate_transport_checksum(pseudo, b, e);
 						break;
 					}
@@ -4941,6 +5014,7 @@ namespace QVPN {
 				void recalculate_checksums(const NetAddr& src, const NetAddr& dst, UShort length)
 				{
 					NetProtocol net_proto = src.get_addr_family();
+					auto t_proto = TransportProtocol::UDP;
 					auto [b, e] = DataPacket_View::get_data();
 					switch (net_proto)
 					{
@@ -4948,7 +5022,7 @@ namespace QVPN {
 					{
 						auto src4 = src.to_ipv4();
 						auto dst4 = dst.to_ipv4();
-						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(net_proto), length);
+						TransportIpv4PseudoHeader pseudo(src4, dst4, static_cast<UByte>(t_proto), length);
 						UdpPacket_View::recalculate_transport_checksum(pseudo, b, e);
 						break;
 					}
@@ -4978,9 +5052,11 @@ namespace QVPN {
 			// Default instances for no net packet
 			template class NoNetPacket<TcpPacket, DataPacket>;
 			template class NoNetPacket<UdpPacket, DataPacket>;
+			template class NoNetPacket<DummyTransportPacket, DummyDataPacket>;
 
 			using NoNetPacketTcpObject = NoNetPacket<TcpPacket, DataPacket>;
 			using NoNetPacketUdpObject = NoNetPacket<UdpPacket, DataPacket>;
+			using NoNetDummyPacketObject = NoNetPacket<DummyTransportPacket, DummyDataPacket>;
 
 			// View instances for no net packet
 			template class NoNetPacket<TcpPacket_View, DataPacket_View>;

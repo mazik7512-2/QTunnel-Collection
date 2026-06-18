@@ -258,6 +258,8 @@ namespace QVPN {
 
 					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data(ver, transport_proto, ip_src, port_src, ip_dest, port_dst, std::move(qtunnel_proto_data));
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
+					auto info = std::format("Payload: {} bytes", std::distance(data_b, data_e));
+					logger_.info(info);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
 
 				}
@@ -348,13 +350,17 @@ namespace QVPN {
 
 						auto dst_addr = decoded_data->get_dst_addr();
 						auto dst_port = decoded_data->get_dst_port();
+						auto src_addr = decoded_data->get_src_addr();
+						auto src_port = decoded_data->get_src_port();
 
 						auto [qtp_b, qtp_e] = decoded_data->get_proto_data();
 
 						auto [b, e] = decoded_data->get_raw_data();
 
-						std::visit([&dst_addr, &dst_port, &qtp_b, &qtp_e, &b, &e](auto& p) 
-							{ 
+						std::visit([&src_addr, &src_port, &dst_addr, &dst_port, &qtp_b, &qtp_e, &b, &e](auto& p)
+							{
+								p.set_src_addr(src_addr);
+								p.set_src_port(src_port);
 								p.set_dst_port(dst_port); 
 								p.set_dst_addr(dst_addr);
 								p.set_qtunnel_proto_data(qtp_b, qtp_e);

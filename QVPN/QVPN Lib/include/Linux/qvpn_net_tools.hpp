@@ -109,7 +109,7 @@ namespace QVPN {
 
 				int res = connect(socket, (sockaddr*)&serverAddr, addr_len);
 				int err = 0;
-				if (res == SO_ERROR)
+				if (res <= 0)
 					err = errno;
 
 				sockaddr_in localAddr{};
@@ -146,7 +146,7 @@ namespace QVPN {
 
 				bool s = (res == 0) ? true : false;
 				int err = 0;
-				if (s == SO_ERROR)
+				if (res <= 0)
 					err = errno;
 				return QVPN::Core::NetData{ s , err, net_addr, port };
 			}
@@ -177,7 +177,7 @@ namespace QVPN {
 				serverAddr.sin_port = htons(port);
 				serverAddr.sin_addr.s_addr = htonl(addr.to_uint());//std::visit([](const auto& address) { return address.to_uint(); }, addr);
 				int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-				if (res == SO_ERROR)
+				if (res <= 0)
 					err = errno;
 				getsockname(socket, (sockaddr*)&serverAddr, &addr_len);
 				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin_addr.s_addr, (UByte*)&serverAddr.sin_addr.s_addr + addr.get_addr_size());
@@ -197,7 +197,7 @@ namespace QVPN {
 				auto bytes = addr.to_bytes();
 				memcpy(&serverAddr.sin6_addr.__in6_u.__u6_addr8, bytes.data(), bytes.size());
 				int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-				if (res == SO_ERROR)
+				if (res <= 0)
 					err = errno;
 				getsockname(socket, (sockaddr*)&serverAddr, &addr_len);
 				QVPN::Core::NetAddr net_addr((UByte*)&serverAddr.sin6_addr.__in6_u.__u6_addr8, (UByte*)&serverAddr.sin6_addr.__in6_u.__u6_addr8 + addr.get_addr_size());
@@ -339,7 +339,7 @@ namespace QVPN {
 					int err = 0;
 					auto size = std::distance(begin, end);
 					auto sock = ::sendto(socket, reinterpret_cast<const char*>(begin), size, 0, (sockaddr*)&sock_addr, addr_len);
-					if (sock == SO_ERROR)
+					if (sock <= 0)
 					{
 						err = errno;
 						s = false;
@@ -365,7 +365,7 @@ namespace QVPN {
 					int err = 0;
 					auto size = std::distance(begin, end);
 					auto sock = ::sendto(socket, reinterpret_cast<const char*>(begin), size, 0, (sockaddr*)&sock_addr, addr_len);
-					if (sock == SO_ERROR)
+					if (sock <= 0)
 					{
 						err = errno;
 						s = false;
@@ -422,7 +422,7 @@ namespace QVPN {
 					socklen_t addr_len = sizeof(sock_addr);
 					int err = 0;
 					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), 0, (sockaddr*)&sock_addr, &addr_len);
-					if (sock == SO_ERROR)
+					if (sock <= 0)
 					{
 						err = errno;
 						s = false;
@@ -450,7 +450,7 @@ namespace QVPN {
 					socklen_t addr_len = sizeof(sock_addr);
 					int err = 0;
 					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), 0, (sockaddr*)&sock_addr, &addr_len);
-					if (sock == SO_ERROR)
+					if (sock <= 0)
 					{
 						err = errno;
 						s = false;
@@ -487,7 +487,7 @@ namespace QVPN {
 				int prog_fd, map_fd;
 				int err;
 
-				obj = bpf_object__open_file("filter.bpf.o", NULL);
+				obj = bpf_object__open_file("./filter.bpf.o", NULL);
 				if (libbpf_get_error(obj))
 				{
 					printf("Cannot open file %d\n", errno);
@@ -683,11 +683,20 @@ namespace QVPN {
 			{
 				char optval = static_cast<char>(settings.ip_header());
 				int optlen = sizeof(optval);
-				setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen);
+				if (setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen) == -1)
+				{
+					perror("Failed to apply IP_HDRINCL to raw socket");
+				}
 
 				int timeout = settings.receive_timeout_ms();
-				optlen = sizeof(timeout);
-				setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), optlen);
+				timeval tv;
+				tv.tv_sec = 0;
+				tv.tv_usec = timeout;;
+				optlen = sizeof(tv);
+				if (setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, &tv, optlen) == -1)
+				{
+					perror("Failed to apply timeout option to raw socket");
+				}
 			}
 
 			QVPN::Core::NetStatus send_to(const QVPN::Core::NetAddr& addr, const UShort port, const UByte* begin, const UByte* end)
@@ -881,11 +890,20 @@ namespace QVPN {
 			{
 				char optval = static_cast<char>(settings.ip_header());
 				int optlen = sizeof(optval);
-				setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen);
+				if (setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen) == -1)
+				{
+					perror("Failed to apply IP_HDRINCL to raw socket");
+				}
 
 				int timeout = settings.receive_timeout_ms();
-				optlen = sizeof(timeout);
-				setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), optlen);
+				timeval tv;
+				tv.tv_sec = 0;
+				tv.tv_usec = timeout;;
+				optlen = sizeof(tv);
+				if (setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, &tv, optlen) == -1)
+				{
+					perror("Failed to apply timeout option to raw socket");
+				}
 			}
 
 			QVPN::Core::NetStatus send_to(const QVPN::Core::NetAddr& addr, const UShort port, const UByte* begin, const UByte* end)

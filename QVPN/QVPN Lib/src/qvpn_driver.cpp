@@ -47,22 +47,22 @@ std::string_view QVPN::Core::QVPNClientAuthSettings::get_auth_data() const
 
 // QVPN Net Settings
 
-void QVPN::Core::QVPNNetSettings::add_addr(const Ipv4AddressType& addr, UShort port, TransportProtocol t_proto)
+void QVPN::Core::QVPNServerConnectionSettings::add_addr(const Ipv4AddressType& addr, UShort port, TransportProtocol t_proto, QVPNServerWorkMode mode)
 {
     data_.emplace_back(addr, port, t_proto);
 }
 
-void QVPN::Core::QVPNNetSettings::add_addr(const Ipv6AddressType& addr, UShort port, TransportProtocol t_proto)
+void QVPN::Core::QVPNServerConnectionSettings::add_addr(const Ipv6AddressType& addr, UShort port, TransportProtocol t_proto, QVPNServerWorkMode mode)
 {
     data_.emplace_back(addr, port, t_proto);
 }
 
-void QVPN::Core::QVPNNetSettings::add_addr(const NetAddr& addr, UShort port, TransportProtocol t_proto)
+void QVPN::Core::QVPNServerConnectionSettings::add_addr(const NetAddr& addr, UShort port, TransportProtocol t_proto, QVPNServerWorkMode mode)
 {
     data_.emplace_back(addr, port, t_proto);
 }
 
-std::pair<QVPN::Core::QVPNNetSettings::DataIterator_t, QVPN::Core::QVPNNetSettings::DataIterator_t> QVPN::Core::QVPNNetSettings::get_addrs() const
+std::pair<QVPN::Core::QVPNServerConnectionSettings::DataIterator_t, QVPN::Core::QVPNServerConnectionSettings::DataIterator_t> QVPN::Core::QVPNServerConnectionSettings::get_addrs() const
 {
     return std::pair<DataIterator_t, DataIterator_t>(data_.cbegin(), data_.cend());
 }
@@ -408,23 +408,20 @@ std::pair<QVPN::Core::SplittedPacketView::DataIterator_t, QVPN::Core::SplittedPa
 // User statistic data
 
 QVPN::Core::UserStatisticData::UserStatisticData()
-    : user_("Anonymous"), transport_proto_(TransportProtocol::TRANSPORT_UNDEFINED), net_proto_(NetProtocol::NET_UNDEFINED), traffic_size_(0), user_conn_("0.0.0.0", 0), dest_conn_("0.0.0.0", 0)
+    : user_("Anonymous"), socket_data_(), traffic_size_(0)
 {
 }
 
-QVPN::Core::UserStatisticData::UserStatisticData(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size, TrafficType traffic_type)
-    : user_(user), user_conn_(user_conn), dest_conn_(dest_conn), transport_proto_(t_proto), traffic_size_(traffic_size), traffic_type_(traffic_type)
+QVPN::Core::UserStatisticData::UserStatisticData(std::string_view user, const QVPNSocketData& socket_data, size_t traffic_size, TrafficType traffic_type)
+    : user_(user), socket_data_(socket_data), traffic_size_(traffic_size), traffic_type_(traffic_type)
 {
-    net_proto_ = user_conn_.get_ip_address().get_addr_family();
+
 }
 
-void QVPN::Core::UserStatisticData::set_data(std::string_view user, QVPNConnectionElement user_conn, QVPNConnectionElement dest_conn, TransportProtocol t_proto, size_t traffic_size, TrafficType traffic_type)
+void QVPN::Core::UserStatisticData::set_data(std::string_view user, const QVPNSocketData& socket_data, size_t traffic_size, TrafficType traffic_type)
 {
     user_ = user;
-    user_conn_ = user_conn;
-    dest_conn_ = dest_conn;
-    transport_proto_ = t_proto;
-    net_proto_ = user_conn_.get_ip_address().get_addr_family();
+    socket_data_ = socket_data;
     traffic_size_ = traffic_size;
     traffic_type_ = traffic_type;
 }
@@ -434,24 +431,19 @@ std::string_view QVPN::Core::UserStatisticData::get_user() const
     return user_;
 }
 
-const QVPN::Core::QVPNConnectionElement& QVPN::Core::UserStatisticData::get_user_con() const
+const QVPN::Core::QVPNSocketData& QVPN::Core::UserStatisticData::get_connection_data() const
 {
-    return user_conn_;
-}
-
-const QVPN::Core::QVPNConnectionElement& QVPN::Core::UserStatisticData::get_dest_con() const
-{
-    return dest_conn_;
+    return socket_data_;
 }
 
 QVPN::Core::NetProtocol QVPN::Core::UserStatisticData::get_net_proto() const
 {
-    return net_proto_;
+    return socket_data_.net_proto;
 }
 
 QVPN::Core::TransportProtocol QVPN::Core::UserStatisticData::get_transport_proto() const
 {
-    return transport_proto_;
+    return socket_data_.transport_proto;
 }
 
 size_t QVPN::Core::UserStatisticData::get_traffic_size() const
@@ -466,7 +458,7 @@ QVPN::Core::TrafficType QVPN::Core::UserStatisticData::get_traffic_type() const
 
 // Default no database adapter
 
-void QVPN::Core::NoDatabaseAdapter::init(std::shared_ptr<QVPNConnectionSettings> conn_data)
+void QVPN::Core::NoDatabaseAdapter::init(std::shared_ptr<QVPNClientConnectionSettings> conn_data)
 {
     // empty
 }
