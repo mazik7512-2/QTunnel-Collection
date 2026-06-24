@@ -349,7 +349,7 @@ std::string QVPN::Core::DataStructures::TcpPacketLittleEndian::tcp_to_friendly_v
 	ss << "Source port: " << std::to_string(get_tcp_src_port()) << " Dest port: " << std::to_string(get_tcp_dst_port()) << std::endl;
 	ss << "Seq: " << std::to_string(get_tcp_seq_number()) << std::endl;
 	ss << "Ack: " << std::to_string(get_tcp_ack_number()) << std::endl;
-	ss << "Length: " << std::to_string(get_tcp_header_length()) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << std::to_string(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
+	ss << "Length: " << std::to_string(get_tcp_header_length() * bytes_in_quartet) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << std::to_string(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
 	ss << "Checksum: " << std::to_string(get_tcp_checksum()) << " Urgent: " << std::to_string(get_tcp_urgent_pointer()) << std::endl;
 
 	return ss.str();
@@ -1176,7 +1176,7 @@ std::string QVPN::Core::DataStructures::TcpPacketView::tcp_to_friendly_view() co
 	ss << "Source port: " << std::to_string(get_tcp_src_port()) << " Dest port: " << std::to_string(get_tcp_dst_port()) << std::endl;
 	ss << "Seq: " << std::to_string(get_tcp_seq_number()) << std::endl;
 	ss << "Ack: " << std::to_string(get_tcp_ack_number()) << std::endl;
-	ss << "Length: " << std::to_string(get_tcp_header_length()) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << std::to_string(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
+	ss << "Length: " << std::to_string(get_tcp_header_length() * bytes_in_quartet) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << std::to_string(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
 	ss << "Checksum: " << std::to_string(get_tcp_checksum()) << " Urgent: " << std::to_string(get_tcp_urgent_pointer()) << std::endl;
 
 	return ss.str();
@@ -3721,7 +3721,7 @@ UByte QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_offset() const
 
 UShort QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_window() const
 {
-	return static_cast<UShort>(data_[12] << 8 & 0xFF | data_[13]);
+	return static_cast<UShort>(data_[12] << 8 | data_[13]);;
 }
 
 UShort QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_urgent_pointer() const

@@ -1078,7 +1078,7 @@ namespace QVPN
 			using QTunnelProxy = QVPN::Core::DataStructures::QTunnelProxy<QVPNClientDriver::AddrType>;
 
 			QVPNClientDriver(QVPNClientSettings_<Iter> settings)
-				: settings_(std::move(settings))//, socket_(NetTools::create_socket())
+				: settings_(std::move(settings))
 			{
 				logger_.set_prefix("[Client Driver]");
 				logger_.info("Starting QVPN Client Driver...");
@@ -1094,7 +1094,7 @@ namespace QVPN
 				std::stringstream ss{};
 				const auto addr = settings_.get_ip_address();
 				const auto port = settings_.get_port();
-				auto res = socket_.connect(addr, port);//std::visit([this, port](const auto& a) { return socket_.connect(a, port); }, addr);
+				auto res = socket_.connect(addr, port);
 				if (res.success) {
 					ss << "Successfully connected to QVPN Server (" << socket_.get_remote_addr().to_string() << ":" << socket_.get_remote_port() << ")";
 					logger_.success(ss.str());
@@ -1237,7 +1237,6 @@ namespace QVPN
 				for (size_t i = 0; i < splitted_packet.size(); i++)
 				{
 					auto [b, e] = splitted_packet.get_raw_packet(i);
-					//auto data = splitted_packet.get(i);
 					auto res = base_send_data(b, e);
 					if (!res)
 					{
@@ -1285,16 +1284,12 @@ namespace QVPN
 				// proxy data encoded only in first splitting
 				// first splitting will be always
 				SplittedPacket sp{};
-				//auto [b, e] = sp_view.get_raw_packet(0);
 				auto [pb_data, b, e] = sp_view.get_raw_with_pb_data(0);
-				//auto first_packet = sp_view.get(0);
 				auto first_encoded_data = settings_.layers_encode(pb_data, data, b, e);
 				sp.add_data(first_encoded_data.data(), first_encoded_data.data() + first_encoded_data.size());
 
 				for (auto i = 1; i < sp_view.size(); ++i)
 				{
-					//auto [bi, ei] = sp_view.get_raw_packet(i);
-					//auto packet_i = sp_view.get(i);
 					auto [pb_data_i, bi, ei] = sp_view.get_raw_with_pb_data(i);
 					auto encoded_part = settings_.layers_encode(pb_data_i, bi, ei);
 					sp.add_data(encoded_part.data(), encoded_part.data() + encoded_part.size());
@@ -1312,8 +1307,6 @@ namespace QVPN
 				if (packet_manager_.have_full_packets())
 				{
 					auto packet = packet_manager_.get_and_pop_packet();
-					//auto [b, e] = packet_manager_.get_raw_packet();
-					//packet_manager_.pop_last_packet();
 					QTunnelData<Addr> data(std::move(packet.get_data()));
 					return data;
 				}
@@ -1866,21 +1859,18 @@ namespace QVPN
 			// TODO: Возможно нужно сделать либо дублирование сокетов (один raw, другой обычный), либо устанавливать подключение вручную
 			decltype(auto) add_to_response_socket_map(Socket& response_socket, RawSocket& raw_socket, QVPNSocketData& remote_key)
 			{
-				QVPNSocketData sock_data(remote_key);
+				//QVPNSocketData sock_data(remote_key);
+				remote_key.local_addr = raw_socket.get_local_addr();
 				QVPNSocketSettings settings(false, 0);
 				bool legal_addr = false;
 				raw_socket.apply_settings(settings);
 				while (!legal_addr)
 				{
-					const auto& vpn_socket = get_random_vpn_interface();
-					auto port = PortGenerator::get_random_port();
-					//sock_data.local_addr = vpn_socket.get_local_addr();
-					//sock_data.local_port = port;
-					if (!response_sockets_.contains(sock_data))
+					if (!response_sockets_.contains(remote_key))
 					{
-						response_sockets_[sock_data] = std::make_pair<>(response_socket, raw_socket);
+						response_sockets_[remote_key] = std::make_pair<>(response_socket, raw_socket);
 						legal_addr = true;
-						logger_.info("Socket added to response map");
+						logger_.success("Socket added to response map");
 						break;
 					}
 				}
@@ -1970,17 +1960,25 @@ namespace QVPN
 					return std::nullopt;
 				}
 
+				// TODO: разобраться с socket key, local addr приходит оригинальный, а отправлять и приходить будет на другой
+				auto bind_res = socket.bind(NetAddr{}, key.local_port); // NetAddr{} - IN6ADDR_ANY
+
+				if (!bind_res.success)
+				{
+					logger_.fail("Failed bind socket to port {}. Error #{}", key.local_port, bind_res.status);
+					return std::nullopt;
+				}
+				logger_.success("Socket successfully binded to port {}", key.local_port);
+
 				auto res = socket.connect(key.remote_addr, key.remote_port);
 				if (!res.success)
 				{
-					ss << "Failed to connect to " << key.remote_addr.to_string() << ":" << key.remote_port << ".";
+					ss << "Failed to connect to " << key.remote_addr.to_string() << ":" << key.remote_port << ". Error #" << res.status;
 					logger_.fail(ss.str());
 					return std::nullopt;
 				}
 
 				add_to_response_socket_map(response_socket, socket, key);
-
-				//auto res = socket.bind(vpn_socket.get_local_addr(), PortGenerator::get_random_port()); //TODO: будет перехватывать все tcp, нужно доделать фильтры, либо через berkley filters (linux), либо в userspace
 
 				ss << "Socket from (" << key.local_addr.to_string() << ":" << key.local_port << ") to (" << key.remote_addr.to_string() << ":" << key.remote_port << ") created and connected.";
 				logger_.success(ss.str());
@@ -2066,7 +2064,7 @@ namespace QVPN
 				}
 			}
 
-			FullPacketObjectType generate_full_packet(const QTunnelProxyData& data, NetPacketObjectType& net,  TransportPacketObjectType& transport, UByte* begin, UByte* end)
+			FullPacketObjectType generate_full_packet(const QTunnelProxyData& data, NetPacketObjectType& net, TransportPacketObjectType& transport, UByte* begin, UByte* end)
 			{
 				auto net_proto = data.get_net_proto();
 				auto t_proto = data.get_transport_proto();
@@ -2157,12 +2155,12 @@ namespace QVPN
 				const auto src = data.get_src_addr();
 				const auto dst = data.get_dst_addr();
 				auto packet = generate_packet_with_transport_layer(data, t_header, begin, end);
+
 				std::visit([&](auto& p) { p.recalculate_checksums(src, dst, full_size); }, packet);
 				return packet;
 			}
 			 
-			// TODO: отладить через gdb, разобраться с nonetpacket, проверить работает ли обычный send на raw сокетах (не работает на wsl или работает криво)
-			// протестировать на нормальном линуксе + переделать прием пакетов на прием и обратную пересылку на оригинальный сокет
+			// TODO: РАЗОБРАТЬСЯ С ГЕНЕРАЦИЕЙ TCP заголовка
 
 			bool vpn_request_loop_iteration(std::shared_ptr<Socket> client_socket, std::unordered_map<QVPNSocketData, RawSocket>& sock_map, Stats& stats, std::string_view user)
 			{
@@ -2266,12 +2264,9 @@ namespace QVPN
 					auto dst_port = proxy_data.get_dst_port();
 
 					QVPNSocketData socket_data{ net_proto, transport_proto, src, src_port, dst, dst_port };
-					//QVPNConnectionEntity user_conn(proxy_data.get_src_addr(), proxy_data.get_src_port(), proxy_data.get_transport_proto());
-					//QVPNConnectionEntity dest_conn(proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_transport_proto());
-
 
 					UserStatisticData stats_data(user, socket_data, data_size, traffic_type);
-					stats.add_user_stats(stats_data);
+					//stats.add_user_stats(stats_data);
 				}
 
 
@@ -2337,10 +2332,9 @@ namespace QVPN
 						if (!status.success)
 						{
 							logger_auth_fail(client_socket);
-
 							client_socket.shutdown();
+							client_socket.disconnect();
 							client_socket.close_socket();
-							//client_socket.disconnect();
 							continue;
 						}
 
@@ -2354,6 +2348,7 @@ namespace QVPN
 						{
 							logger_auth_fail(client_socket);
 							client_socket.shutdown();
+							client_socket.disconnect();
 							client_socket.close_socket();
 							continue;
 						}
@@ -2365,6 +2360,7 @@ namespace QVPN
 						{
 							logger_auth_fail(client_socket);
 							client_socket.shutdown();
+							client_socket.disconnect();
 							client_socket.close_socket();
 							continue;
 						}
@@ -2394,8 +2390,8 @@ namespace QVPN
 						{
 							logger_auth_fail(client_socket);
 							client_socket.shutdown();
+							client_socket.disconnect();
 							client_socket.close_socket();
-							//client_socket.disconnect();
 							continue;
 						}
 
@@ -2414,6 +2410,7 @@ namespace QVPN
 						{
 							logger_auth_fail(client_socket);
 							client_socket.shutdown();
+							client_socket.disconnect();
 							client_socket.close_socket();
 						}
 
@@ -2565,7 +2562,6 @@ namespace QVPN
 				for (size_t i = 0; i < splitted_packet.size(); i++)
 				{
 					auto [b, e] = splitted_packet.get_raw_packet(i);
-					//auto data = splitted_packet.get(i);
 					auto res = base_send_data(socket, b, e);
 					if (!res) // TODO: переделать на возврат
 						return;
@@ -2580,16 +2576,12 @@ namespace QVPN
 				// proxy data encoded only in first splitting
 				// first splitting will be always
 				SplittedPacket sp{};
-				//auto [b, e] = sp_view.get_raw_packet(0);
 				auto [pb_data, b, e] = sp_view.get_raw_with_pb_data(0);
-				//auto first_packet = sp_view.get(0);
 				auto first_encoded_data = settings_.layers_encode(pb_data, proxy_data, b, e);
 				sp.add_data(first_encoded_data.data(), first_encoded_data.data() + first_encoded_data.size());
 
 				for (auto i = 1; i < sp_view.size(); ++i)
 				{
-					//auto [bi, ei] = sp_view.get_raw_packet(i);
-					//auto packet_i = sp_view.get(i);
 					auto [pb_data_i, bi, ei] = sp_view.get_raw_with_pb_data(i);
 					auto encoded_part = settings_.layers_encode(pb_data_i, bi, ei);
 					sp.add_data(encoded_part.data(), encoded_part.data() + encoded_part.size());
@@ -2607,13 +2599,10 @@ namespace QVPN
 				if (packet_manager_.have_full_packets())
 				{
 					auto packet = packet_manager_.get_and_pop_packet();
-					//auto [b, e] = packet_manager_.get_raw_packet();
-					//packet_manager_.pop_last_packet();
 					QTunnelData<Addr> data(std::move(packet.get_data()));
 					return data;
 				}
 				return std::nullopt;
-				//return settings_.layers_decode(begin, end);
 			}
 
 		};

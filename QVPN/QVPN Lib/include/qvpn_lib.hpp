@@ -254,7 +254,7 @@ namespace QVPN {
 			AddrBytes_t ip_{};
 
 		public:
-
+			// default construct is INADDR_ANY
 			IPv4Address();
 
 			template<std::random_access_iterator Iter>
@@ -307,6 +307,7 @@ namespace QVPN {
 
 		public:
 
+			// default construct is IN6ADDR_ANY
 			IPv6Address();
 
 			template <std::random_access_iterator Iter>
@@ -343,6 +344,7 @@ namespace QVPN {
 			AddrBytes_t ip_{};
 
 		public:
+			// default construct is INADDR_ANY/IN6ADDR_ANY
 			NetAddr();
 
 			template <is_byte ... Byte>

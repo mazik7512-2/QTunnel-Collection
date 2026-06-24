@@ -64,7 +64,7 @@ ULong QVPN::NetTools::QVPNNetTools::ntoh(ULong num)
 // QVPN Socket
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket()
-	: s_mod_(UNDEFINED), socket_(NULL)
+	: socket_(NULL)
 {}
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket(int sock_family, int sock_type, int sock_proto)
@@ -98,21 +98,18 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(int sock_family, int sock_type, int soc
 
 	socket_data_.remote_port = 0;
 	socket_data_.local_port = 0;
-	s_mod_ = UNDEFINED;
 }
 
 QVPN::NetTools::QVPN_Socket::QVPN_Socket(const QVPN_Socket& other) noexcept
 {
 	socket_ = other.socket_;
 	socket_data_ = other.socket_data_;
-	s_mod_ = other.s_mod_;
 }
 
 QVPN::NetTools::QVPN_Socket& QVPN::NetTools::QVPN_Socket::operator=(const QVPN_Socket& other) noexcept
 {
 	socket_ = other.socket_;
 	socket_data_ = other.socket_data_;
-	s_mod_ = other.s_mod_;
 	return *this;
 }
 
@@ -120,18 +117,16 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(QVPN_Socket&& other) noexcept
 {
 	socket_ = std::move(other.socket_);
 	socket_data_ = std::move(other.socket_data_);
-	s_mod_ = std::move(other.s_mod_);
 }
 
 QVPN::NetTools::QVPN_Socket& QVPN::NetTools::QVPN_Socket::operator=(QVPN_Socket&& other) noexcept
 {
 	socket_ = std::move(other.socket_);
 	socket_data_ = std::move(other.socket_data_);
-	s_mod_ = std::move(other.s_mod_);
 	return *this;
 }
 
-QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto)
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, TransportProtocol transport_proto)
 {
 	socket_ = socket;
 	socket_data_.net_proto = NetProtocol::IPv4;
@@ -139,11 +134,10 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv4Address 
 	socket_data_.remote_port = remote_port;
 	socket_data_.local_addr = local_addr;
 	socket_data_.local_port = local_port;
-	s_mod_ = s_mod;
 	socket_data_.transport_proto = transport_proto;
 }
 
-QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto)
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, TransportProtocol transport_proto)
 {
 	socket_ = socket;
 	socket_data_.net_proto = NetProtocol::IPv6;
@@ -151,11 +145,10 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::IPv6Address 
 	socket_data_.remote_port = remote_port;
 	socket_data_.local_addr = local_addr;
 	socket_data_.local_port = local_port;
-	s_mod_ = s_mod;
 	socket_data_.transport_proto = transport_proto;
 }
 
-QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto)
+QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, TransportProtocol transport_proto)
 {
 	socket_ = socket;
 	socket_data_.net_proto = remote_addr.get_addr_family();
@@ -163,7 +156,6 @@ QVPN::NetTools::QVPN_Socket::QVPN_Socket(SOCKET socket, QVPN::Core::NetAddr remo
 	socket_data_.remote_port = remote_port;
 	socket_data_.local_addr = local_addr;
 	socket_data_.local_port = local_port;
-	s_mod_ = s_mod;
 	socket_data_.transport_proto = transport_proto;
 }
 
@@ -179,7 +171,7 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::listen(int con_limit)
 	int err = 0;
 	auto res = ::listen(socket_, con_limit);
 	bool s = (res == 0) ? true : false;
-	if (s == SO_ERROR)
+	if (res == -1)
 		err = errno;
 	return QVPN::Core::NetStatus{ s , res };
 }
@@ -189,7 +181,7 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::send(const UByte* begin, cons
 	QVPN::Core::NetStatus status{};
 	status.success = true;
 	auto res = ::send(socket_, reinterpret_cast<const char*>(begin), std::distance(begin, end), flags);
-	if (res == SO_ERROR)
+	if (res == -1)
 	{
 		status.success = false;
 		status.status = errno;
@@ -276,7 +268,7 @@ QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData
 
 
 QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket()
-	: s_mod_(UNDEFINED), socket_(NULL)
+	: socket_(NULL)
 {}
 
 QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(int sock_family, int sock_type, int sock_proto)
@@ -311,21 +303,18 @@ QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(int sock_family, int sock_type, i
 
 	socket_data_.remote_port = 0;
 	socket_data_.local_port = 0;
-	s_mod_ = UNDEFINED;
 }
 
 QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(const QVPN_RawSocket& other) noexcept
 {
 	socket_ = other.socket_;
 	socket_data_ = other.socket_data_;
-	s_mod_ = other.s_mod_;
 }
 
 QVPN::NetTools::QVPN_RawSocket& QVPN::NetTools::QVPN_RawSocket::operator=(const QVPN_RawSocket& other) noexcept
 {
 	socket_ = other.socket_;
 	socket_data_ = other.socket_data_;
-	s_mod_ = other.s_mod_;
 	return *this;
 }
 
@@ -333,18 +322,16 @@ QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(QVPN_RawSocket&& other) noexcept
 {
 	socket_ = std::move(other.socket_);
 	socket_data_ = std::move(other.socket_data_);
-	s_mod_ = std::move(other.s_mod_);
 }
 
 QVPN::NetTools::QVPN_RawSocket& QVPN::NetTools::QVPN_RawSocket::operator=(QVPN_RawSocket&& other) noexcept
 {
 	socket_ = std::move(other.socket_);
 	socket_data_ = std::move(other.socket_data_);
-	s_mod_ = std::move(other.s_mod_);
 	return *this;
 }
 
-QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto)
+QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(SOCKET socket, QVPN::Core::IPv4Address remote_addr, UShort remote_port, QVPN::Core::IPv4Address local_addr, UShort local_port, TransportProtocol transport_proto)
 {
 	socket_ = socket;
 	socket_data_.net_proto = NetProtocol::IPv4;
@@ -352,11 +339,10 @@ QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(SOCKET socket, QVPN::Core::IPv4Ad
 	socket_data_.remote_port = remote_port;
 	socket_data_.local_addr = local_addr;
 	socket_data_.local_port = local_port;
-	s_mod_ = s_mod;
 	socket_data_.transport_proto = transport_proto;
 }
 
-QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto)
+QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(SOCKET socket, QVPN::Core::IPv6Address remote_addr, UShort remote_port, QVPN::Core::IPv6Address local_addr, UShort local_port, TransportProtocol transport_proto)
 {
 	socket_ = socket;
 	socket_data_.net_proto = NetProtocol::IPv6;
@@ -364,11 +350,10 @@ QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(SOCKET socket, QVPN::Core::IPv6Ad
 	socket_data_.remote_port = remote_port;
 	socket_data_.local_addr = local_addr;
 	socket_data_.local_port = local_port;
-	s_mod_ = s_mod;
 	socket_data_.transport_proto = transport_proto;
 }
 
-QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, SocketMod s_mod, TransportProtocol transport_proto)
+QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(SOCKET socket, QVPN::Core::NetAddr remote_addr, UShort remote_port, QVPN::Core::NetAddr local_addr, UShort local_port, TransportProtocol transport_proto)
 {
 	socket_ = socket;
 	socket_data_.net_proto = remote_addr.get_addr_family();
@@ -376,7 +361,6 @@ QVPN::NetTools::QVPN_RawSocket::QVPN_RawSocket(SOCKET socket, QVPN::Core::NetAdd
 	socket_data_.remote_port = remote_port;
 	socket_data_.local_addr = local_addr;
 	socket_data_.local_port = local_port;
-	s_mod_ = s_mod;
 	socket_data_.transport_proto = transport_proto;
 }
 
@@ -392,7 +376,7 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::listen(int con_limit)
 	int err = 0;
 	auto res = ::listen(socket_, con_limit);
 	bool s = (res == 0) ? true : false;
-	if (s == SO_ERROR)
+	if (res == -1)
 		err = errno;
 	return QVPN::Core::NetStatus{ s , res };
 }
@@ -402,7 +386,7 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send(const UByte* begin, c
 	QVPN::Core::NetStatus status{};
 	status.success = true;
 	auto res = ::send(socket_, reinterpret_cast<const char*>(begin), std::distance(begin, end), flags);
-	if (res == SO_ERROR)
+	if (res == -1)
 	{
 		status.success = false;
 		status.status = errno;

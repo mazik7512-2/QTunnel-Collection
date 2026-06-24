@@ -237,14 +237,10 @@ namespace QVPN {
 				{
 					if (!WinDivertRecv(out_hDivert_, packet, sizeof(packet), &packet_len, &addr))
 					{
-						std::stringstream ss{};
-						ss << "[System] Failed to read packet. Error " << GetLastError();
-						logger_.fail(ss.view());
+						logger_.fail("Failed to read packet. Error #{}", GetLastError());
 						continue;
 					}
 
-					//package.set_ip_source(adapter_addr);
-					//addr.Network.IfIdx = new_adapter_id; // <-- 0x10
 					auto package = pp.pre_parse(packet, packet + packet_len);
 
 					auto ver = std::visit([](auto& p) { return p.get_protocol_version(); }, package);
@@ -258,8 +254,6 @@ namespace QVPN {
 
 					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data(ver, transport_proto, ip_src, port_src, ip_dest, port_dst, std::move(qtunnel_proto_data));
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
-					auto info = std::format("Payload: {} bytes", std::distance(data_b, data_e));
-					logger_.info(info);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
 
 				}
@@ -292,12 +286,12 @@ namespace QVPN {
 				in_hDivert_ = WinDivertOpen(incoming_filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
 				if (in_hDivert_ != INVALID_HANDLE_VALUE)
 				{
-					printf("Driver is working.\n");
+					logger_.success("Driver is working.");
 
 				}
 				else
 				{
-					printf("Error opening driver.\n");
+					logger_.fail("Error opening driver. Error #", GetLastError());
 					return;
 				}
 				incoming_capture_loop(adapter_addr);
@@ -322,8 +316,7 @@ namespace QVPN {
 				{
 					if (!WinDivertRecv(in_hDivert_, packet, sizeof(packet), &packet_len, &addr))
 					{
-						printf("warning: failed to read packet (%d)\n",
-							GetLastError());
+						logger_.fail("Failed to read packet. Error #{}", GetLastError());
 						continue;
 					}
 
@@ -335,8 +328,7 @@ namespace QVPN {
 					{
 						if (!WinDivertSend(in_hDivert_, packet, sizeof(packet), &packet_len, &addr))
 						{
-							printf("warning: failed to reinject packet (%d)\n",
-								GetLastError());
+							logger_.fail("Failed to reinject packet. Error #{}", GetLastError());
 						}
 						continue;
 					}
@@ -373,8 +365,7 @@ namespace QVPN {
 						auto size = std::distance(bytes_pair.first, bytes_pair.second);
 						if (!WinDivertSend(in_hDivert_, bytes_pair.first, size, NULL, &addr))
 						{
-							printf("warning: failed to reinject packet (%d)\n",
-								GetLastError());
+							logger_.fail("Failed to reinject packet. Error #{}", GetLastError());
 						}
 					}
 					
@@ -386,11 +377,11 @@ namespace QVPN {
 			WinDivertClientVPNNetDriver_(QVPN::Core::QVPNClientSettings settings)
 				: driver_(std::move(settings))
 			{
-
 			}
 
 			void init_driver(const QVPN::Core::IPv4Address& addr)
 			{
+				logger_.set_prefix("WinDivert");
 				bool success = driver_.connect();
 				if (success)
 				{
