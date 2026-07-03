@@ -253,7 +253,7 @@ namespace QVPN {
 					auto qtunnel_proto_data = std::visit([](auto& p) {return p.collect_proto_data(); }, package);
 
 					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data(ver, transport_proto, ip_src, port_src, ip_dest, port_dst, std::move(qtunnel_proto_data));
-					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
+					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, package);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
 
 				}
@@ -321,7 +321,7 @@ namespace QVPN {
 					}
 
 					auto package = pp.pre_parse(packet, packet + packet_len);
-					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, package);
+					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, package);
 
 					auto data_size = std::distance(data_b, data_e);
 					if (data_size == 0) // this is not our packet
@@ -356,7 +356,7 @@ namespace QVPN {
 								p.set_dst_port(dst_port); 
 								p.set_dst_addr(dst_addr);
 								p.set_qtunnel_proto_data(qtp_b, qtp_e);
-								p.set_data(b, e);
+								p.set_payload(b, e);
 								p.recalculate_checksums();
 							}, 
 							package);

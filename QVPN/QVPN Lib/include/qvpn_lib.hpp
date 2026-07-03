@@ -581,6 +581,7 @@ namespace QVPN {
 
 			class DummyNetLevelProtoTemplate
 			{
+			public:
 				DummyNetLevelProtoTemplate(UByte* begin, UByte* end) {}
 
 				static inline ProtoTemplateParseResult bytes_parse(UByte* begin, UByte* end) { return ProtoTemplateParseResult{}; };
@@ -589,6 +590,7 @@ namespace QVPN {
 
 			class DummyTransportLevelProtoTemplate
 			{
+				public:
 				DummyTransportLevelProtoTemplate(UByte* begin, UByte* end) {}
 
 				static inline ProtoTemplateParseResult bytes_parse(UByte* begin, UByte* end) { return ProtoTemplateParseResult{}; };
@@ -819,7 +821,7 @@ namespace QVPN {
 		concept is_socket_filter =
 			requires (SockFilter sf, const NetAddr& addr, QVPN::Core::BaseTypes::UShort port, BaseTypes::UByte proto, BaseTypes::UByte net, const SockFilter& csf_ref, const QVPNSocketData& csd_r) {
 
-			typename SockFilter::SockFilter_t;
+			typename SockFilter::SocketFilter_t;
 
 			SockFilter{ csd_r };
 
@@ -835,7 +837,7 @@ namespace QVPN {
 				{ sf.tcp() } -> std::same_as<void>;
 				{ sf.udp() } -> std::same_as<void>;
 
-				{ sf.get_filters() } -> std::same_as<typename SockFilter::SockFilter_t&>;
+				{ sf.get_filters() } -> std::same_as<typename SockFilter::SocketFilter_t&>;
 
 		};
 
@@ -869,8 +871,8 @@ namespace QVPN {
 
 			{ t.apply_settings(sock_settings) } -> std::same_as<void>;
 
-			{ t.send_to(addr, port, begin, end) } -> std::same_as<NetStatus>;
-			{ t.recv_from(addr, port) } -> std::same_as<ReceiveData>;
+			{ t.template send_to<Addr>(addr, port, begin, end) } -> std::same_as<NetStatus>;
+			{ t.template recv_from<Addr>(addr, port) } -> std::same_as<ReceiveData>;
 
 			{ t.template safe_recv<details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
 
@@ -884,6 +886,7 @@ namespace QVPN {
 			requires is_socket_filter<SockFilter>;
 
 			SocketImpl::buffer_size;
+			typename SocketImpl::SocketFilter;
 
 			{ t.reconnect(addr, port) } -> std::same_as<NetStatus>;
 			{ t.connect(addr, port) } -> std::same_as<NetStatus>;
@@ -908,8 +911,8 @@ namespace QVPN {
 
 			{ t.apply_settings(sock_settings) } -> std::same_as<void>;
 
-			{ t.send_to(addr, port, begin, end) } -> std::same_as<NetStatus>;
-			{ t.recv_from(addr, port) } -> std::same_as<ReceiveData>;
+			{ t.template send_to<Addr>(addr, port, begin, end) } -> std::same_as<NetStatus>;
+			{ t.template recv_from<Addr>(addr, port) } -> std::same_as<ReceiveData>;
 
 			{ t.template safe_recv<details::DummyNetLevelProtoTemplate, details::DummyTransportLevelProtoTemplate, details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
 

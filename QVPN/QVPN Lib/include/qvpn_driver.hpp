@@ -1645,14 +1645,14 @@ namespace QVPN
 		{
 		public:
 			template <is_addr Addr, class Sock>
-				requires is_socket<Sock, Addr>
+				requires is_raw_socket<Sock, Addr, typename NetTools::SocketFilter>
 			static NetStatus install_connection(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Sock& socket)
 			{
 				return NetStatus{ true, 0 };
 			}
 		};
 
-		// ipv4 + tcp spec
+		// ipv4 + tcp spec + ip hdr spec
 		template <class Socket, class NetTools>
 		class ConnectionInstaller<NetProtocol::IPv4, TransportProtocol::TCP, Socket, NetTools>
 		{
@@ -1671,7 +1671,7 @@ namespace QVPN
 		public:
 
 			template <is_addr Addr, class Sock>
-			requires is_socket<Sock, Addr>
+			requires is_raw_socket<Sock, Addr, typename NetTools::SocketFilter>
 			static NetStatus install_connection(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, Sock& socket)
 			{
 				UByte* dummy_data = nullptr;
@@ -1703,7 +1703,7 @@ namespace QVPN
 				auto ack = fp_syn_ack.get_tcp_ack_number();
 				if (flags != TCPFlags::SYN_ACK)
 					return NetStatus{ false, -1 };
-
+				// TODO: разобраться с seq, ack и убрать\разделить генерацию без ip-header
 				// ack gen
 				auto tcp_ack = generate_transport_header<Addr>(data, scheme.get_seq() - NetTools::hton(static_cast<UShort>(1)), ack + NetTools::hton(static_cast<UInt>(1)), TCPFlags::ACK);
 				auto [bt_ack, et_ack] = tcp_ack.to_bytes();
@@ -1718,7 +1718,6 @@ namespace QVPN
 				if (!ack_res.success)
 					return ack_res;
 				return ack_res;
-
 			}
 
 		private:
@@ -1740,6 +1739,80 @@ namespace QVPN
 			}
 
 		};
+
+
+		// no net header + tcp spec
+		template <class RawSocket, class NetTools>
+		class ConnectionInstaller<NetProtocol::NET_UNDEFINED, TransportProtocol::TCP, RawSocket, NetTools>
+		{
+			using TCPScheme = QVPN::Core::DataStructures::QTunnelTCPViewScheme;
+			using SchemeAdapter = QVPN::Core::DataStructures::QTunnelTransportSchemeAdapter<TransportProtocol::TCP>;
+
+			using TCPFlags = QVPN::Core::DataStructures::TCPFlags;
+
+			using TCPPacketObject = QVPN::Core::DataStructures::TcpPacketLittleEndian;
+			using DataPacketObject = QVPN::Core::DataStructures::DataPacketLittleEndian;
+
+			using NoNetPacket = QVPN::Core::DataStructures::NoNetPacketTcpObject;
+		public:
+
+			template <is_addr Addr>
+				requires is_raw_socket<RawSocket, Addr, typename NetTools::SocketFilter>
+			static NetStatus install_connection(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, RawSocket& socket)
+			{
+				UByte* dummy_data = nullptr;
+
+				auto [b, e] = data.get_proto_data_bytes();
+				SchemeAdapter scheme(b, e);
+
+				// syn gen
+				auto tcp_syn = generate_transport_header<Addr>(data, scheme.get_seq() - NetTools::hton(static_cast<UShort>(2)), 0, TCPFlags::SYN);
+				auto [bt_syn, et_syn] = tcp_syn.to_bytes();
+				auto syn_size = std::distance(bt_syn, et_syn);
+				NoNetPacket fp_syn(bt_syn, et_syn, dummy_data, dummy_data);
+				auto [b1_syn, e1_syn] = fp_syn.bytes();
+
+				auto syn_res = socket.template send_to<Addr>(data.get_dst_addr(), data.get_dst_port(), b1_syn, e1_syn);
+				if (!syn_res.success)
+					return syn_res;
+				// TODO: скорее всего send блокируется системой
+				QVPN::Core::ReceiveData rec_data = socket. template recv_from<Addr>(data.get_dst_addr(), data.get_dst_port());
+				if (!rec_data.status.success)
+					return rec_data.status;
+
+				// syn ack check
+				NoNetPacket fp_syn_ack(rec_data.data.data(), rec_data.data.data() + rec_data.size);
+				auto flags = fp_syn_ack.get_flags() & TCPFlags::SYN_ACK;
+				auto ack = fp_syn_ack.get_tcp_ack_number();
+				if (flags != TCPFlags::SYN_ACK)
+					return NetStatus{ false, -1 };
+				// TODO: разобраться с seq, ack и убрать\разделить генерацию без ip-header
+				// ack gen
+				auto tcp_ack = generate_transport_header<Addr>(data, scheme.get_seq() - NetTools::hton(static_cast<UShort>(1)), ack + NetTools::hton(static_cast<UInt>(1)), TCPFlags::ACK);
+				auto [bt_ack, et_ack] = tcp_ack.to_bytes();
+				auto ack_size = std::distance(bt_ack, et_ack);
+				NoNetPacket fp_ack(bt_ack, et_ack, dummy_data, dummy_data);
+				auto [b1_ack, e1_ack] = fp_ack.bytes();
+
+				auto ack_res = socket.template send_to<Addr>(data.get_dst_addr(), data.get_dst_port(), b1_ack, e1_ack);
+				if (!ack_res.success)
+					return ack_res;
+				return ack_res;
+			}
+
+		private:
+
+			template <is_addr Addr>
+			static TCPPacketObject generate_transport_header(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& data, UInt seq, UInt ack, TCPFlags flags)
+			{
+				auto [b, e] = data.get_proto_data_bytes();
+				SchemeAdapter scheme(b, e);
+				auto [opt_b, opt_e] = scheme.get_options();
+				return TCPPacketObject::generate_object(data.get_src_port(), data.get_dst_port(), seq, ack, scheme.get_offset(), static_cast<UByte>(flags), scheme.get_window(), scheme.get_urgent_pointer(), opt_b, opt_e);
+			}
+
+		};
+
 
 		template <std::random_access_iterator Iter, QVPN::Core::is_addr Addr, class NetTools, is_database_adapter Database, is_statistic_adapter Stats, is_logger Logger, QVPN::Core::QVPNServerWorkMode work_mode>
 			requires is_net_tools<NetTools>
@@ -1794,8 +1867,8 @@ namespace QVPN
 
 			Logger logger_{};
 
-			using NoNetTcpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::TcpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
-			using NoNetUdpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::UdpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
+			using NoNetTcpPacket = QVPN::Core::DataStructures::NoNetPacketTcpView;
+			using NoNetUdpPacket = QVPN::Core::DataStructures::NoNetPacketUdpView;
 			using NoNetDummyPacket = QVPN::Core::DataStructures::NoNetDummyPacketObject;
 
 			using IPv4PacketObject = QVPN::Core::DataStructures::Ipv4PacketLittleEndian;
@@ -1855,8 +1928,6 @@ namespace QVPN
 				return vpn_sockets_[dist(gen)];
 			}
 
-			// TODO: Проверить добавляются ли response sockets
-			// TODO: Возможно нужно сделать либо дублирование сокетов (один raw, другой обычный), либо устанавливать подключение вручную
 			decltype(auto) add_to_response_socket_map(Socket& response_socket, RawSocket& raw_socket, QVPNSocketData& remote_key)
 			{
 				//QVPNSocketData sock_data(remote_key);
@@ -1879,11 +1950,11 @@ namespace QVPN
 
 
 			template <NetProtocol Net, TransportProtocol Transport>
-			bool estabilish_connection(const QTunnelProxyData& data, Socket& socket)
+			bool estabilish_connection(const QTunnelProxyData& data, RawSocket& socket)
 			{
 				std::stringstream ss{};
-				using ConInst = ConnectionInstaller<Net, Transport, Socket, NetTools>;
-				auto res = ConInst:: template install_connection<Addr, Socket>(data, socket);
+				using ConInst = ConnectionInstaller<Net, Transport, RawSocket, NetTools>;
+				auto res = ConInst::template install_connection<Addr>(data, socket);
 				if (res.success)
 				{
 					ss << "Connection to (" << socket.get_remote_addr().to_string() << ":" << socket.get_remote_port() << " succesfully estabilished.";
@@ -1891,22 +1962,22 @@ namespace QVPN
 				}
 				else
 				{
-					ss << "Cannot connect to (" << socket.get_remote_addr().to_string() << ":" << socket.get_remote_port() << ".";
+					ss << "Cannot connect to (" << socket.get_remote_addr().to_string() << ":" << socket.get_remote_port() << ". Error #" << res.status;
 					logger_.fail(ss.view());
 				}
 				return res.success;
 			}
 
-			bool connection_wrapper_transport_ipv4(const QTunnelProxyData& data, Socket& socket)
+			bool connection_wrapper_transport_ipv4(const QTunnelProxyData& data, RawSocket& socket)
 			{
 				auto t_proto = data.get_transport_proto();
 				switch (t_proto)
 				{
 				case TransportProtocol::TCP:
-					return estabilish_connection<IPv4, TCP>(data, socket);
+					return estabilish_connection<NET_UNDEFINED, TCP>(data, socket);
 					break;
 				case TransportProtocol::UDP:
-					return estabilish_connection<IPv4, UDP>(data, socket);
+					return estabilish_connection<NET_UNDEFINED, UDP>(data, socket);
 					break;
 				default:
 					break;
@@ -1914,12 +1985,12 @@ namespace QVPN
 				return false;
 			}
 
-			bool connection_wrapper_transport_ipv6(const QTunnelProxyData& data, Socket& socket)
+			bool connection_wrapper_transport_ipv6(const QTunnelProxyData& data, RawSocket& socket)
 			{
 				return false;
 			}
 
-			bool connection_wrapper_net(const QTunnelProxyData& data, Socket& socket)
+			bool connection_wrapper_net(const QTunnelProxyData& data, RawSocket& socket)
 			{
 				auto net_p = data.get_net_proto();
 				switch (net_p)
@@ -1936,7 +2007,7 @@ namespace QVPN
 				}
 			}
 
-			void install_connection_by_protocols(const QTunnelProxyData& data, Socket& socket)
+			void install_connection_by_protocols(const QTunnelProxyData& data, RawSocket& socket)
 			{
 				bool con = false;
 				while (!con)
@@ -1983,7 +2054,7 @@ namespace QVPN
 				ss << "Socket from (" << key.local_addr.to_string() << ":" << key.local_port << ") to (" << key.remote_addr.to_string() << ":" << key.remote_port << ") created and connected.";
 				logger_.success(ss.str());
 
-				//install_connection_by_protocols(proxy_data, socket); // dont need to install con?
+				install_connection_by_protocols(proxy_data, socket);
 				return socket;
 			}
 
@@ -2298,11 +2369,6 @@ namespace QVPN
 
 			void listen_and_connect_socket_(Socket& socket, Database& database, Stats& stats)
 			{
-				using NoNetTcpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::TcpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
-				using NoNetUdpPacket = QVPN::Core::DataStructures::NoNetPacket<QVPN::Core::DataStructures::UdpPacket_View, QVPN::Core::DataStructures::DataPacket_View>;
-				using TCPPacketView = QVPN::Core::DataStructures::TcpPacket_View;
-				using UDPPacketView = QVPN::Core::DataStructures::UdpPacket_View;
-
 				std::stringstream ss{};
 				ss << "QVPN Server started on " << socket.get_local_addr().to_string() << ":" << socket.get_local_port();
 				logger_.success(ss.view());
@@ -2441,7 +2507,7 @@ namespace QVPN
 					}
 				, response);
 
-				auto [data_b, data_e] = std::visit([](auto& p) { return p.get_data(); }, response);
+				auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, response);
 
 				encode_and_send(socket, new_proxy_data, data_b, data_e);
 			}
@@ -2453,7 +2519,7 @@ namespace QVPN
 					for (auto& [key, socks] : response_sockets_)
 					{
 						auto [resp_sock, sock] = socks;
-						auto rec_data = sock.recv_from(key.local_addr, key.local_port);
+						auto rec_data = sock.template recv_from<Addr>(key.local_addr, key.local_port);
 						if (rec_data.status.success)
 							vpn_response_loop_iteration<>(sock, resp_sock, key, rec_data.data.data(), rec_data.data.data() + rec_data.size);
 						else

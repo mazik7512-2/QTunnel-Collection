@@ -146,7 +146,7 @@ FetchContent_MakeAvailable(json)
 target_link_libraries(${QVPN_LIBRARY_NAME} PUBLIC nlohmann_json::nlohmann_json)
 
 # whitelists
-file(GLOB whitelists_list "${CMAKE_CURRENT_SOURCE_DIR}/*.qwlist")
+file(GLOB whitelists_list "${CMAKE_CURRENT_SOURCE_DIR}/data/*.qwlist")
 
 
 # Executables
@@ -271,7 +271,7 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 	endforeach()
 	
 	
-	set(server_settings "${CMAKE_CURRENT_SOURCE_DIR}/server_settings_example.json")
+	set(server_settings "${CMAKE_CURRENT_SOURCE_DIR}/data/server_settings_example.json")
 
 	# Копирование шаблонного файла с настройками
 	add_custom_command(
@@ -283,7 +283,7 @@ if(QVPN_BUILD_SERVER OR QVPN_BUILD_ALL)
 		)
 	
 	
-	set(database_path "${CMAKE_CURRENT_SOURCE_DIR}/db_example.sqlite3")
+	set(database_path "${CMAKE_CURRENT_SOURCE_DIR}/data/db_example.sqlite3")
 	
 	# Копирование базы данных
 	add_custom_command(
@@ -325,7 +325,7 @@ if(QVPN_BUILD_CLIENT OR QVPN_BUILD_ALL)
 
 	endforeach()
 
-	set(client_settings "${CMAKE_CURRENT_SOURCE_DIR}/client_settings_example.json")
+	set(client_settings "${CMAKE_CURRENT_SOURCE_DIR}/data/client_settings_example.json")
 
 	# Копирование шаблонного файла с настройками
 	add_custom_command(
