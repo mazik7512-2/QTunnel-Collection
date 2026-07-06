@@ -72,6 +72,7 @@ namespace QVPN {
 			static QVPN::NetTools::QVPNNetTools::Socket create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
 			static QVPN::NetTools::QVPNNetTools::RawSocket create_raw_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
 			static SocketFilter create_socket_filter(const QVPNSocketData& s_data);
+			static SocketFilter create_socket_filter(const QVPN::Core::QVPNServerSocketData& s_data);
 
 			static UShort hton(UShort num);
 			static UShort ntoh(UShort num);

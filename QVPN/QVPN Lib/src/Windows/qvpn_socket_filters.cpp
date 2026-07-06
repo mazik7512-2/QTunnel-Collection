@@ -213,6 +213,27 @@ QVPN::NetTools::QVPN_SocketFilter::QVPN_SocketFilter(const QVPN::Core::QVPNSocke
     filter_.dst_port = s_data.remote_port;
 }
 
+QVPN::NetTools::QVPN_SocketFilter::QVPN_SocketFilter(const QVPN::Core::QVPNServerSocketData& s_data)
+{
+    filter_.net_proto = static_cast<UByte>(s_data.net_proto);
+    filter_.transport_proto = static_cast<UByte>(s_data.transport_proto);
+
+    switch (s_data.net_proto)
+    {
+    case QVPN::Core::NetProtocol::IPv4:
+        filter_.src_ip = s_data.server_local_addr.to_uint();
+        filter_.dst_ip = s_data.remote_addr.to_uint();
+        break;
+    case QVPN::Core::NetProtocol::IPv6:
+        break;
+    default:
+        break;
+    }
+
+    filter_.src_port = s_data.local_port;
+    filter_.dst_port = s_data.remote_port;
+}
+
 void QVPN::NetTools::QVPN_SocketFilter::ipv4()
 {
     filter_.net_proto = static_cast<UByte>(NetProtocol::IPv4);

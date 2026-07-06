@@ -490,3 +490,13 @@ QVPN::Core::QVPNServerWorkMode QVPN::Core::QVPNModeVerbose::get_server_mode_by_v
 {
 	return server_modes_[mode];
 }
+
+std::string QVPN::Core::QVPNServerSocketData::to_string() const
+{
+	std::stringstream ss{};
+
+	ss << "(" << static_cast<BaseTypes::UInt>(net_proto) << "," << static_cast<BaseTypes::UInt>(transport_proto) << ") (Client data:" << client_local_addr.to_string() << ":" << local_port << "<=>" << server_local_addr.to_string() << ":" << local_port << ")-" << remote_addr.to_string() << ":" << remote_port;
+
+	auto str = ss.str();
+	return str;
+}

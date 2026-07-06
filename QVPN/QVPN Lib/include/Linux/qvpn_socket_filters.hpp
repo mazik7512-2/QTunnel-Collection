@@ -57,6 +57,7 @@ namespace QVPN {
 
 			QVPN_SocketFilter() = default;
 			QVPN_SocketFilter(const QVPN::Core::QVPNSocketData& s_data);
+			QVPN_SocketFilter(const QVPN::Core::QVPNServerSocketData& s_data);
 
 			void ipv4();
 			void ipv6();

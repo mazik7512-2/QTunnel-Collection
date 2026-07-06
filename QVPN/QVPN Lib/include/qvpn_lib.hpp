@@ -5,6 +5,7 @@
 #include <iterator>
 #include <iostream>
 #include <sstream>
+#include <format>
 
 
 namespace QVPN
@@ -497,6 +498,180 @@ namespace QVPN {
 			BaseTypes::UShort port;
 		};
 
+		template <class OStream>
+		concept is_output_stream =
+			requires (OStream os, std::string_view s) {
+			os << s;
+		};
+
+		template <class FVPolicy, class OStream = std::stringstream>
+		concept is_friendly_view_policy =
+			requires (FVPolicy p, std::string_view v, OStream& os, std::string_view delim) {
+
+			requires is_output_stream<OStream>;
+
+				{ p.label(v, delim) } -> std::same_as<std::string>;
+				{ p.label(os, v, delim) } -> std::same_as<void>;
+
+				{ p.value(v, delim) } -> std::same_as<std::string>;
+				{ p.value(os, v, delim) } -> std::same_as<void>;
+
+				{ p.label_value(v, v, delim, delim) } -> std::same_as<std::string>;
+				{ p.label_value(os, v, v, delim, delim) } -> std::same_as<void>;
+
+		};
+
+
+		enum class FriendlyViewPolicies : BaseTypes::UByte
+		{
+			FRIENDLY_VIEW_ONE_LINE = 0,
+			FRIENDLY_VIEW_MULTIPLE_LINES = 1
+		};
+
+
+		template <FriendlyViewPolicies FVPolicy, is_output_stream OStream = std::stringstream>
+		class FriendlyViewPolicy
+		{
+		public:
+
+		};
+
+		// one line spec
+		template <is_output_stream OStream>
+		class FriendlyViewPolicy<FriendlyViewPolicies::FRIENDLY_VIEW_ONE_LINE, OStream>
+		{
+		public:
+
+			std::string label(std::string_view l, std::string_view delimiter = " ")
+			{
+				std::stringstream ss{};
+				ss << l << ":" << delimiter;
+				return ss.str();
+			}
+
+			void label(OStream& os, std::string_view l, std::string_view delimiter = " ")
+			{
+				os << l << ":" << delimiter;
+			}
+
+			std::string value(std::string_view v, std::string_view delimiter = " ")
+			{
+				std::stringstream ss{};
+				ss << v << delimiter;
+				return ss.str();
+			}
+
+			void value(OStream& os, std::string_view v, std::string_view delimiter = " ")
+			{
+				os << v << delimiter;
+			}
+
+			std::string label_value(std::string_view l, std::string_view v, std::string_view label_delimiter = " ", std::string_view value_delimiter = " ")
+			{
+				std::stringstream ss{};
+				ss << l << ":" << label_delimiter << v << value_delimiter;
+				return ss.str();
+			}
+
+			void label_value(OStream& os, std::string_view l, std::string_view v, std::string_view label_delimiter = " ", std::string_view value_delimiter = " ")
+			{
+				os << l << ":" << label_delimiter << v << value_delimiter;
+			}
+
+		};
+
+		// multiple lines spec
+		template <is_output_stream OStream>
+		class FriendlyViewPolicy<FriendlyViewPolicies::FRIENDLY_VIEW_MULTIPLE_LINES, OStream>
+		{
+		public:
+
+			std::string label(std::string_view l, std::string_view delimiter = " ")
+			{
+				std::stringstream ss{};
+				ss << l << ":" << delimiter;
+				return ss.str();
+			}
+
+			void label(OStream& os, std::string_view l, std::string_view delimiter = " ")
+			{
+				os << l << ":" << delimiter;
+			}
+
+			std::string value(std::string_view v, std::string_view delimiter = "")
+			{
+				std::stringstream ss{};
+				ss << v << delimiter << std::endl;
+				return ss.str();
+			}
+
+			void value(OStream& os, std::string_view v, std::string_view delimiter = "")
+			{
+				os << v << delimiter << std::endl;
+			}
+
+			std::string label_value(std::string_view l, std::string_view v, std::string_view label_delimiter = " ", std::string_view value_delimiter = "")
+			{
+				std::stringstream ss{};
+				ss << l << ":" << label_delimiter << v << value_delimiter << std::endl;
+				return ss.str();
+			}
+
+			void label_value(OStream& os, std::string_view l, std::string_view v, std::string_view label_delimiter = " ", std::string_view value_delimiter = "")
+			{
+				os << l << ":" << label_delimiter << v << value_delimiter << std::endl;
+			}
+
+		};
+
+
+		struct QVPNServerSocketData
+		{
+			NetProtocol net_proto;
+			TransportProtocol transport_proto;
+
+			QVPN::Core::NetAddr client_local_addr;
+			QVPN::Core::NetAddr server_local_addr;
+			BaseTypes::UShort local_port;
+
+			QVPN::Core::NetAddr remote_addr;
+			BaseTypes::UShort remote_port;
+
+
+			std::string to_string() const;
+
+			// для std::unordered_map
+			bool operator==(const QVPNServerSocketData& other) const
+			{
+				return net_proto == other.net_proto &&
+					transport_proto == other.transport_proto &&
+					client_local_addr == other.client_local_addr &&
+					server_local_addr == other.server_local_addr &&
+					local_port == other.local_port &&
+					remote_addr == other.remote_addr &&
+					remote_port == other.remote_port;
+			}
+
+			template <is_friendly_view_policy FVPolicy = FriendlyViewPolicy<FriendlyViewPolicies::FRIENDLY_VIEW_ONE_LINE>>
+			std::string to_friendly_view(FVPolicy p = FriendlyViewPolicy<FriendlyViewPolicies::FRIENDLY_VIEW_ONE_LINE>{}) const
+			{
+				std::stringstream ss{};
+
+				auto ip_str = std::to_string(static_cast<BaseTypes::UInt>(net_proto));
+				auto proto_str = std::to_string(static_cast<BaseTypes::UInt>(transport_proto));
+				p.label_value(ss, "IP", ip_str);
+				p.label_value(ss, "TProto", proto_str);
+
+				auto local_str = std::format("{}:{}", client_local_addr.to_string(), local_port);
+				p.label_value(ss, "Client local socket data", local_str);
+				auto local_str1 = std::format("{}:{}", server_local_addr.to_string(), local_port);
+				p.label_value(ss, "Server local socket data", local_str1);
+				auto remote_str = std::format("{}:{}", remote_addr.to_string(), remote_port);
+				p.label_value(ss, "Remote socket data", remote_str);
+				return ss.str();
+			}
+		};
+
 
 		struct QVPNSocketData
 		{
@@ -520,6 +695,23 @@ namespace QVPN {
 					local_port == other.local_port &&
 					remote_addr == other.remote_addr &&
 					remote_port == other.remote_port;
+			}
+
+			template <is_friendly_view_policy FVPolicy = FriendlyViewPolicy<FriendlyViewPolicies::FRIENDLY_VIEW_ONE_LINE>>
+			std::string to_friendly_view(FVPolicy p = FriendlyViewPolicy<FriendlyViewPolicies::FRIENDLY_VIEW_ONE_LINE>{}) const
+			{
+				std::stringstream ss{};
+
+				auto ip_str = std::to_string(static_cast<BaseTypes::UInt>(net_proto));
+				auto proto_str = std::to_string(static_cast<BaseTypes::UInt>(transport_proto));
+				p.label_value(ss, "IP", ip_str);
+				p.label_value(ss, "TProto", proto_str);
+
+				auto local_str = std::format("{}:{}", local_addr.to_string(), local_port);
+				p.label_value(ss, "Local socket data", local_str);
+				auto remote_str = std::format("{}:{}", remote_addr.to_string(), remote_port);
+				p.label_value(ss, "Remote socket data", remote_str);
+				return ss.str();
 			}
 		};
 
@@ -819,11 +1011,12 @@ namespace QVPN {
 
 		template <class SockFilter>
 		concept is_socket_filter =
-			requires (SockFilter sf, const NetAddr& addr, QVPN::Core::BaseTypes::UShort port, BaseTypes::UByte proto, BaseTypes::UByte net, const SockFilter& csf_ref, const QVPNSocketData& csd_r) {
+			requires (SockFilter sf, const NetAddr& addr, QVPN::Core::BaseTypes::UShort port, BaseTypes::UByte proto, BaseTypes::UByte net, const SockFilter& csf_ref, const QVPNSocketData& csd_r, const QVPNServerSocketData& cssd_r) {
 
 			typename SockFilter::SocketFilter_t;
 
 			SockFilter{ csd_r };
+			SockFilter{ cssd_r };
 
 				{ sf.net_ver(net) } -> std::same_as<void>;
 				{ sf.ipv4() } -> std::same_as<void>;
@@ -1102,6 +1295,15 @@ namespace std
 	struct hash<QVPN::Core::QVPNSocketData> {
 
 		size_t operator()(const QVPN::Core::QVPNSocketData& data) const {
+			return hash<std::string>()(data.to_string());
+		}
+
+	};
+
+	template<>
+	struct hash<QVPN::Core::QVPNServerSocketData> {
+
+		size_t operator()(const QVPN::Core::QVPNServerSocketData& data) const {
 			return hash<std::string>()(data.to_string());
 		}
 

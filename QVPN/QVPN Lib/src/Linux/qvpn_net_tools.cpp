@@ -31,6 +31,11 @@ QVPN::NetTools::QVPNNetTools::SocketFilter QVPN::NetTools::QVPNNetTools::create_
 	return SocketFilter(s_data);
 }
 
+QVPN::NetTools::QVPNNetTools::SocketFilter QVPN::NetTools::QVPNNetTools::create_socket_filter(const QVPN::Core::QVPNServerSocketData& s_data)
+{
+	return SocketFilter(s_data);
+}
+
 UShort QVPN::NetTools::QVPNNetTools::hton(UShort num)
 {
 	return htons(num);

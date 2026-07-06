@@ -20,7 +20,7 @@ void EnableANSI() {
 #endif    
 }
 
-//TODO: ПЕРЕДЕЛАТЬ Server Driver на очередь с ключом пакетов по портам и адресам
+//TODO: ПЕРЕДЕЛАТЬ Server Driver на thread pool
 int main(int argc, const char* argv[])
 {
     EnableANSI();
