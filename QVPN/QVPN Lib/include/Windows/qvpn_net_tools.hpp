@@ -503,6 +503,7 @@ namespace QVPN {
 			}
 
 			bool is_valid() const;
+			const QVPNSocketData& get_socket_data() const;
 
 			template <QVPN::Core::is_addr Addr>
 			QVPN::Core::NetStatus connect(const Addr& addr, const UShort port)
@@ -651,6 +652,8 @@ namespace QVPN {
 				return sf_data;
 			}
 
+			QVPN::Core::SocketRepairStatus append_socket_to_connection(const QVPNSocketData& connection_data, UInt local_isn, UInt remote_isn);
+
 		};
 
 
@@ -694,6 +697,7 @@ namespace QVPN {
 			}
 
 			bool is_valid() const;
+			const QVPNSocketData& get_socket_data() const;
 
 			template <QVPN::Core::is_addr Addr>
 			QVPN::Core::NetStatus connect(const Addr& addr, const UShort port)

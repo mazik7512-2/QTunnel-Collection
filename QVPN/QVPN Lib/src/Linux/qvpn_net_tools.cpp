@@ -1,6 +1,8 @@
 #include <qvpn_net_tools.hpp>
 #include <endian.h>
 
+
+
 using QVPNNetTools = QVPN::NetTools::QVPNNetTools;
 using UByte = QVPN::Core::BaseTypes::UByte;
 using UShort = QVPN::Core::BaseTypes::UShort;
@@ -23,6 +25,13 @@ QVPN::NetTools::QVPNNetTools::RawSocket QVPN::NetTools::QVPNNetTools::create_raw
 	QVPNSocketSettings sock_s(false);
 	auto sock = QVPN::NetTools::QVPNNetTools::RawSocket(meta.get_socket_family(net_proto), meta.get_raw_socket_type(t_proto), meta.get_raw_socket_proto(t_proto));
 	sock.apply_settings(sock_s);
+	return sock;
+}
+
+QVPN::NetTools::QVPNNetTools::Socket QVPN::NetTools::QVPNNetTools::create_socket_by_connection(NetProtocol net_proto, TransportProtocol t_proto, const QVPNSocketData& connection_data, UInt local_isn, UInt remote_isn)
+{
+	auto sock = create_socket(net_proto, t_proto);
+	sock.append_socket_to_connection(connection_data, local_isn, remote_isn);
 	return sock;
 }
 
@@ -171,6 +180,11 @@ bool QVPN::NetTools::QVPN_Socket::is_valid() const
 	return true;
 }
 
+const QVPN::Core::QVPNSocketData& QVPN::NetTools::QVPN_Socket::get_socket_data() const
+{
+	return socket_data_;
+}
+
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::listen(int con_limit)
 {
 	int err = 0;
@@ -237,6 +251,21 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::shutdown()
 void QVPN::NetTools::QVPN_Socket::close_socket() const
 {
 	close(socket_);
+}
+
+QVPN::Core::SocketRepairStatus QVPN::NetTools::QVPN_Socket::append_socket_to_connection(const QVPNSocketData& connection_data, UInt local_isn, UInt remote_isn)
+{
+	using QVPN::Core::SocketRepairStatus;
+
+	switch (socket_data_.transport_proto)
+	{
+	case TransportProtocol::TCP:
+		return NetTools::details::SocketAppendToConnection<TransportProtocol::TCP>{}(socket_, connection_data, local_isn, remote_isn);
+	case TransportProtocol::UDP:
+		return NetTools::details::SocketAppendToConnection<TransportProtocol::UDP>{}(socket_, connection_data);
+	default:
+		return SocketRepairStatus{ false, -1, "Not supported for this protocol"};
+	}
 }
 
 
@@ -374,6 +403,11 @@ bool QVPN::NetTools::QVPN_RawSocket::is_valid() const
 	if (socket_ < 0)
 		return false;
 	return true;
+}
+
+const QVPN::Core::QVPNSocketData& QVPN::NetTools::QVPN_RawSocket::get_socket_data() const
+{
+	return socket_data_;
 }
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::listen(int con_limit)

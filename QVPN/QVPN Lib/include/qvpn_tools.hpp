@@ -502,7 +502,6 @@ namespace QVPN {
 				//return ret;
 			}
 
-
 		};
 
 	}

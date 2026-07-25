@@ -12,6 +12,10 @@
 #include <qvpn_socket_filters.hpp>
 #include <linux/bpf.h>
 #include <bpf/libbpf.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netinet/tcp.h>
 
 using SOCKET = long int;
 
@@ -74,6 +78,9 @@ namespace QVPN {
 
 			static Socket create_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
 			static RawSocket create_raw_socket(QVPN::Core::NetProtocol net_proto, QVPN::Core::TransportProtocol t_proto);
+
+			static Socket create_socket_by_connection(NetProtocol net_proto, TransportProtocol t_proto, const QVPNSocketData& connection_data, UInt local_isn, UInt remote_isn);
+
 			static SocketFilter create_socket_filter(const QVPN::Core::QVPNSocketData& s_data);
 			static SocketFilter create_socket_filter(const QVPN::Core::QVPNServerSocketData& s_data);
 
@@ -168,7 +175,7 @@ namespace QVPN {
 				socklen_t addr_len = 4;
 				serverAddr.sin_family = AF_INET;
 				serverAddr.sin_port = htons(port);
-				serverAddr.sin_addr.s_addr = htonl(addr.to_uint());//std::visit([](const auto& address) { return address.to_uint(); }, addr);
+				serverAddr.sin_addr.s_addr = htonl(addr.to_uint());
 				int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
 				if (res == -1)
 					err = errno;
@@ -186,7 +193,6 @@ namespace QVPN {
 				socklen_t addr_len = sizeof(serverAddr);
 				serverAddr.sin6_family = AF_INET6;
 				serverAddr.sin6_port = htons(port);
-				//serverAddr.sin6_addr.u.Byte = addr.to_bytes();//std::visit([](const auto& address) { return address.to_bytes(); }, addr);
 				auto bytes = addr.to_bytes();
 				memcpy(&serverAddr.sin6_addr.__in6_u.__u6_addr8, bytes.data(), bytes.size());
 				int res = bind(socket, (sockaddr*)&serverAddr, sizeof(serverAddr));
@@ -209,7 +215,7 @@ namespace QVPN {
 				case QVPN::Core::NetProtocol::IPv6:
 					return qvpn_bind_(socket, addr.to_ipv6(), port);
 				default:
-					return QVPN::Core::NetData{ false, 0 };
+					return QVPN::Core::NetData{ false, -1, NetAddr{}, 0 };
 				}
 			}
 
@@ -235,7 +241,7 @@ namespace QVPN {
 
 
 			template <class Socket>
-			requires QVPN::Core::is_socket<Socket, QVPN::Core::NetAddr> || QVPN::Core::is_raw_socket<Socket, QVPN::Core::NetAddr, typename Socket::SocketFilter>
+				requires QVPN::Core::is_socket<Socket, QVPN::Core::NetAddr> || QVPN::Core::is_raw_socket<Socket, QVPN::Core::NetAddr, typename Socket::SocketFilter>
 			struct SocketAccept<NetProtocol::IPv4, QVPN::Core::NetAddr, Socket>
 			{
 				Socket operator()(SOCKET& socket, NetProtocol net_proto, TransportProtocol t_proto)
@@ -508,6 +514,95 @@ namespace QVPN {
 			}
 
 
+			template <TransportProtocol Proto>
+			class SocketAppendToConnection
+			{
+			public:
+				QVPN::Core::SocketRepairStatus operator()(SOCKET& sock, const QVPNSocketData& connection_data)
+				{
+					return QVPN::Core::SocketRepairStatus{ false, -1, "Not supported for this proto"};
+				}
+			};
+
+			template<>
+			class SocketAppendToConnection<TransportProtocol::TCP>
+			{
+			public:
+
+				// isn`s must be in network order
+				QVPN::Core::SocketRepairStatus operator()(SOCKET& sock, const QVPNSocketData& connection_data, UInt local_isn, UInt remote_isn)
+				{
+					using QVPN::Core::SocketRepairStatus;
+					// set repair mode on
+					int repair = 1;
+					printf("Set repair mode on\n");
+					if (setsockopt(sock, SOL_TCP, TCP_REPAIR, &repair, sizeof(repair)) < 0)
+						return SocketRepairStatus{ false, errno, strerror(errno) };
+
+					//
+					int queue = TCP_SEND_QUEUE;
+					printf("Set send queue\n");
+					if (setsockopt(sock, SOL_TCP, TCP_REPAIR_QUEUE, &queue, sizeof(queue)) < 0)
+						return SocketRepairStatus{ false, errno, strerror(errno) };
+
+					// set start seq
+					printf("Set client seq\n");
+					UInt seq = local_isn + 1;
+					if (setsockopt(sock, SOL_TCP, TCP_QUEUE_SEQ, &seq, sizeof(seq)) < 0)
+						return SocketRepairStatus{ false, errno, strerror(errno) };
+
+					// set server seq 
+					queue = TCP_RECV_QUEUE;
+					printf("Set server seq\n");
+					if (setsockopt(sock, SOL_TCP, TCP_REPAIR_QUEUE, &queue, sizeof(queue)) < 0)
+						return SocketRepairStatus{ false, errno, strerror(errno) };
+
+					// set rcv next
+					uint32_t rcv_nxt = remote_isn + 1;
+					printf("Set rcv next\n");
+					if (setsockopt(sock, SOL_TCP, TCP_QUEUE_SEQ, &rcv_nxt, sizeof(rcv_nxt)) < 0)
+						return SocketRepairStatus{ false, errno, strerror(errno) };
+
+					// bind to local addr
+					auto bind_res = details::qvpn_bind_(sock, connection_data.local_addr, connection_data.local_port);
+					printf("Bind to local addr\n");
+					if (!bind_res.success)
+						return SocketRepairStatus{ false, bind_res.status, strerror(bind_res.status) };
+
+					// connect (in repair mode, doesnt install connection, just write in table)
+					auto con_res = details::qvpn_connect_(sock, connection_data.remote_addr, connection_data.remote_port);
+					printf("Repair connect\n");
+					if (!con_res.success)
+						return SocketRepairStatus{ false, con_res.status, strerror(con_res.status) };
+
+					// set state to estabilished
+					int state = TCP_ESTABLISHED; // = 6
+					printf("Set state to estabilished\n");
+					if (setsockopt(sock, SOL_TCP, TCP_REPAIR, &state, sizeof(state)) < 0)
+						return SocketRepairStatus{ false, errno, strerror(errno) };
+
+					// TODO: проблема с автоматическим ack
+					// 7. turn off repair mode
+					repair = 0;
+					printf("Set repair mode off\n");
+					if (setsockopt(sock, SOL_TCP, TCP_REPAIR, &repair, sizeof(repair)) < 0)
+						return SocketRepairStatus{ false, errno, strerror(errno) };
+
+					return QVPN::Core::SocketRepairStatus{ true, 0, strerror(errno) };
+				}
+			};
+
+
+			template<>
+			class SocketAppendToConnection<TransportProtocol::UDP>
+			{
+			public:
+				QVPN::Core::SocketRepairStatus operator()(SOCKET& sock, const QVPNSocketData& connection_data)
+				{
+					return QVPN::Core::SocketRepairStatus{ true, 0, ""};
+				}
+			};
+
 		}
 
 
@@ -551,6 +646,7 @@ namespace QVPN {
 			}
 
 			bool is_valid() const;
+			const QVPNSocketData& get_socket_data() const;
 
 			template <QVPN::Core::is_addr Addr>
 			QVPN::Core::NetStatus connect(const Addr& addr, const UShort port)
@@ -710,6 +806,8 @@ namespace QVPN {
 				return sf_data;
 			}
 
+			QVPN::Core::SocketRepairStatus append_socket_to_connection(const QVPNSocketData& connection_data, UInt local_isn, UInt remote_isn);
+
 		};
 
 
@@ -753,6 +851,7 @@ namespace QVPN {
 			}
 
 			bool is_valid() const;
+			const QVPNSocketData& get_socket_data() const;
 
 			template <QVPN::Core::is_addr Addr>
 			QVPN::Core::NetStatus connect(const Addr& addr, const UShort port)

@@ -180,6 +180,11 @@ bool QVPN::NetTools::QVPN_Socket::is_valid() const
 	return true;
 }
 
+const QVPN::Core::QVPNSocketData& QVPN::NetTools::QVPN_Socket::get_socket_data() const
+{
+	return socket_data_;
+}
+
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::listen(int con_limit)
 {
@@ -248,6 +253,12 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_Socket::shutdown()
 void QVPN::NetTools::QVPN_Socket::close_socket() const
 {
 	closesocket(socket_);
+}
+
+QVPN::Core::SocketRepairStatus QVPN::NetTools::QVPN_Socket::append_socket_to_connection(const QVPNSocketData& connection_data, UInt local_isn, UInt remote_isn)
+{
+	// in windows no default implementation
+	return QVPN::Core::SocketRepairStatus{ false, -1, "Not supported in this platform"};
 }
 
 QVPN::NetTools::QVPNMetaSocketData::SockParam QVPN::NetTools::QVPNMetaSocketData::get_socket_family(QVPN::Core::NetProtocol net_proto)
@@ -381,6 +392,11 @@ bool QVPN::NetTools::QVPN_RawSocket::is_valid() const
 	if (socket_ < 0)
 		return false;
 	return true;
+}
+
+const QVPN::Core::QVPNSocketData& QVPN::NetTools::QVPN_RawSocket::get_socket_data() const
+{
+	return socket_data_;
 }
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::listen(int con_limit)

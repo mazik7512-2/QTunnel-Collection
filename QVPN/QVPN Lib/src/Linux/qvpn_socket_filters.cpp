@@ -200,8 +200,8 @@ QVPN::NetTools::QVPN_SocketFilter::QVPN_SocketFilter(const QVPN::Core::QVPNSocke
     switch (s_data.net_proto)
     {
     case QVPN::Core::NetProtocol::IPv4:
-        filter_.src_ip = s_data.local_addr.to_uint();
-        filter_.dst_ip = s_data.remote_addr.to_uint();
+        filter_.dst_ip = htonl(s_data.local_addr.to_uint());
+        filter_.src_ip = htonl(s_data.remote_addr.to_uint());
         break;
     case QVPN::Core::NetProtocol::IPv6:
         break;
@@ -209,8 +209,8 @@ QVPN::NetTools::QVPN_SocketFilter::QVPN_SocketFilter(const QVPN::Core::QVPNSocke
         break;
     }
 
-    filter_.src_port = s_data.local_port;
-    filter_.dst_port = s_data.remote_port;
+    filter_.dst_port = htons(s_data.local_port);
+    filter_.src_port = htons(s_data.remote_port);
 }
 
 QVPN::NetTools::QVPN_SocketFilter::QVPN_SocketFilter(const QVPN::Core::QVPNServerSocketData& s_data)
@@ -221,8 +221,8 @@ QVPN::NetTools::QVPN_SocketFilter::QVPN_SocketFilter(const QVPN::Core::QVPNServe
     switch (s_data.net_proto)
     {
     case QVPN::Core::NetProtocol::IPv4:
-        filter_.src_ip = s_data.server_local_addr.to_uint();
-        filter_.dst_ip = s_data.remote_addr.to_uint();
+        filter_.dst_ip = htonl(s_data.server_local_addr.to_uint());
+        filter_.src_ip = htonl(s_data.remote_addr.to_uint());
         break;
     case QVPN::Core::NetProtocol::IPv6:
         break;
@@ -230,8 +230,8 @@ QVPN::NetTools::QVPN_SocketFilter::QVPN_SocketFilter(const QVPN::Core::QVPNServe
         break;
     }
 
-    filter_.src_port = s_data.local_port;
-    filter_.dst_port = s_data.remote_port;
+    filter_.dst_port = htons(s_data.local_port);
+    filter_.src_port = htons(s_data.remote_port);
 }
 
 

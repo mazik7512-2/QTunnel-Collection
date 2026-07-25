@@ -13,7 +13,6 @@ typedef unsigned int __wsum;
 
 
 
-
 struct filter_key {
 
 	// TODO: добавить сюда поля для ipv6
@@ -90,7 +89,17 @@ int filter_by_addr_port_ipv4(struct __sk_buff* skb)
 		.dst_port = dst_port,
 	};
 
+	bpf_printk("Packet received: protocol=%d, src=%u, dst=%u",
+		ip.protocol, key.src_ip, key.dst_ip);
+	bpf_printk(" src_port=%u, dst_port=%u\n\n",
+		src_port, dst_port);
+
 	__u8* valid = bpf_map_lookup_elem(&filter_map, &key);
+
+	if (valid && *valid)
+		bpf_printk("+++ Packet is valid +++");
+	else
+		bpf_printk("--- Packet is invalid---");
 
 	if (valid && *valid)
 		return -1; // accept

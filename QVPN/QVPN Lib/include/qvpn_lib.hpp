@@ -498,6 +498,13 @@ namespace QVPN {
 			BaseTypes::UShort port;
 		};
 
+		struct SocketRepairStatus
+		{
+			bool success;
+			int status;
+			std::string_view error_str;
+		};
+
 		template <class OStream>
 		concept is_output_stream =
 			requires (OStream os, std::string_view s) {
@@ -1037,7 +1044,8 @@ namespace QVPN {
 
 		template <class SocketImpl, class Addr>
 		concept is_socket =
-			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit, const QVPNSocketSettings & sock_settings) {
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit, 
+		const QVPNSocketSettings & sock_settings, BaseTypes::UInt arg, const QVPNSocketData& sock_data) {
 
 			SocketImpl::buffer_size;
 
@@ -1070,6 +1078,9 @@ namespace QVPN {
 			{ t.template safe_recv<details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
 
 			{ t.is_valid() } -> std::same_as<bool>;
+			{ t.get_socket_data() } -> std::same_as<const QVPNSocketData&>;
+
+			{ t.append_socket_to_connection(sock_data, arg, arg) } -> std::same_as<SocketRepairStatus>;
 		};
 
 		template <class SocketImpl, class Addr, class SockFilter>
@@ -1110,6 +1121,7 @@ namespace QVPN {
 			{ t.template safe_recv<details::DummyNetLevelProtoTemplate, details::DummyTransportLevelProtoTemplate, details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
 
 			{ t.is_valid() } -> std::same_as<bool>;
+			{ t.get_socket_data() } -> std::same_as<const QVPNSocketData&>;
 
 			{ t.filter(csf) } -> std::same_as<void>;
 		};
