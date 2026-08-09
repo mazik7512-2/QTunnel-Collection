@@ -81,32 +81,49 @@ namespace QVPN {
 
 			Filter_t source(const QVPN::Core::IPv4Address& addr) const noexcept
 			{
-				return Filter_t("localAddr = " + addr.to_string());
+				return Filter_t("ip.SrcAddr = " + addr.to_string());
 			}
 
 			Filter_t source(const QVPN::Core::NetAddr& addr) const noexcept
 			{
-				return Filter_t("localAddr = " + addr.to_string());
+				switch (addr.get_addr_family())
+				{
+				case QVPN::Core::IPv4:
+					return Filter_t("ip.SrcAddr = " + addr.to_string());
+				case QVPN::Core::IPv6:
+					return Filter_t("ip6.SrcAddr = " + addr.to_string());
+				default:
+					return Filter_t("Address type not supported");
+				}
+				
 			}
 
 			Filter_t dest(const QVPN::Core::IPv4Address& addr) const noexcept
 			{
-				return Filter_t("remoteAddr = " + addr.to_string());
+				return Filter_t("ip.DstAddr = " + addr.to_string());
 			}
 
 			Filter_t dest(const QVPN::Core::NetAddr& addr) const noexcept
 			{
-				return Filter_t("remoteAddr = " + addr.to_string());
+				switch (addr.get_addr_family())
+				{
+				case QVPN::Core::IPv4:
+					return Filter_t("ip.DstAddr = " + addr.to_string());
+				case QVPN::Core::IPv6:
+					return Filter_t("ip6.DstAddr = " + addr.to_string());
+				default:
+					return Filter_t("Address type not supported");
+				}
 			}
 
 			Filter_t src_port(unsigned int port) const noexcept
 			{
-				return Filter_t("localPort = " + std::to_string(port));
+				return Filter_t("tcp.SrcPort = " + std::to_string(port) + " || udp.SrcPort = " + std::to_string(port));
 			}
 
 			Filter_t dst_port(unsigned int port) const noexcept
 			{
-				return Filter_t("remotePort = " + std::to_string(port));
+				return Filter_t("tcp.DstPort = " + std::to_string(port) + " || udp.DstPort = " + std::to_string(port));
 			}
 
 			Filter_t tcp_src_port(unsigned int port) const noexcept
@@ -202,10 +219,13 @@ namespace QVPN {
 				filters_out_.push_back(!Filter::source(driver_.get_vpn_address())); //for localhost server
 				filters_out_.push_back(!Filter::dest(driver_.get_vpn_address())); // for client outgoing traffic
 				filters_out_.push_back(Filter::outgoing_traffic());
+				filters_out_.push_back(!Filter::tcp_dst_port(22)); // not ssh
+				filters_out_.push_back(!Filter::local_traffic());
 			}
 
 			void start_capture_outgoing_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
 			{
+				logger_.info("Filters (out): {}", outgoing_filters_data);
 				out_hDivert_ = WinDivertOpen(outgoing_filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
 				if (out_hDivert_ != INVALID_HANDLE_VALUE)
 				{
@@ -279,10 +299,13 @@ namespace QVPN {
 			{
 				filters_in_.push_back(Filter::incoming_traffic());
 				filters_in_.push_back(Filter::source(driver_.get_vpn_address()));
+				filters_in_.push_back(!Filter::tcp_src_port(22)); // not ssh
+				filters_in_.push_back(!Filter::local_traffic());
 			}
 
 			void start_capture_incoming_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
 			{
+				logger_.info("Filters: {}", incoming_filters_data);
 				in_hDivert_ = WinDivertOpen(incoming_filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
 				if (in_hDivert_ != INVALID_HANDLE_VALUE)
 				{
@@ -320,16 +343,24 @@ namespace QVPN {
 						continue;
 					}
 
+					logger_.success("Received packet. Packet size = {}", packet_len);
+
 					auto package = pp.pre_parse(packet, packet + packet_len);
+
+					std::visit([](auto& p) { std::cout << p.to_packet_friendly_view() << std::endl; }, package);
+
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, package);
 
 					auto data_size = std::distance(data_b, data_e);
 					if (data_size == 0) // this is not our packet
 					{
+						logger_.warning("This is not our packet. Zero payload size.");
 						if (!WinDivertSend(in_hDivert_, packet, sizeof(packet), &packet_len, &addr))
 						{
-							logger_.fail("Failed to reinject packet. Error #{}", GetLastError());
+							logger_.fail("Failed to reinject incoming packet (not our). Error #{}", GetLastError());
+							continue;
 						}
+						logger_.success("Packet (not our) succesfully reinjected.");
 						continue;
 					}
 
@@ -361,12 +392,14 @@ namespace QVPN {
 							}, 
 							package);
 							
-						auto bytes_pair = std::visit([](auto& p) { return p.bytes(); }, package);
-						auto size = std::distance(bytes_pair.first, bytes_pair.second);
-						if (!WinDivertSend(in_hDivert_, bytes_pair.first, size, NULL, &addr))
+						auto [res_b, res_e] = std::visit([](auto& p) { return p.bytes(); }, package);
+						UINT size = static_cast<UINT>(std::distance(res_b, res_e));
+						if (!WinDivertSend(in_hDivert_, res_b, sizeof(packet), &size, &addr))
 						{
-							logger_.fail("Failed to reinject packet. Error #{}", GetLastError());
+							logger_.fail("Failed to reinject incoming packet. Error #{}", GetLastError());
+							continue;
 						}
+						logger_.success("Packet successfully reinject into original connection.");
 					}
 					
 				}

@@ -4,6 +4,10 @@
 #include <random>
 #include <qvpn_tools.hpp>
 
+
+using UByte = QVPN::Core::BaseTypes::UByte;
+using UShort = QVPN::Core::BaseTypes::UShort;
+
 QVPN::Core::IPv4Address::IPv4Address()
 {
 	ip_ = { 0, 0, 0, 0 };
@@ -499,4 +503,111 @@ std::string QVPN::Core::QVPNServerSocketData::to_string() const
 
 	auto str = ss.str();
 	return str;
+}
+
+std::string_view QVPN::Core::QVPNVerboser::net_verbose(NetProtocol net)
+{
+	return net_verbose_[net];
+}
+
+void QVPN::Core::QVPNVerboser::register_net_verbose(NetProtocol net, std::string_view verbose)
+{
+	net_verbose_[net] = verbose;
+}
+
+std::string_view QVPN::Core::QVPNVerboser::transport_verbose(TransportProtocol transport)
+{
+	return transport_verbose_[transport];
+}
+
+void QVPN::Core::QVPNVerboser::register_transport_verbose(TransportProtocol transport, std::string_view verbose)
+{
+	transport_verbose_[transport] = verbose;
+}
+
+std::string QVPN::Core::QVPNVerboser::tcp_flags(TcpFlagsObject flags)
+{
+	std::string flags_data{"["};
+	for (size_t i = 0; i < tcp_flags_.size() ; ++i)
+	{
+		auto flag = flags[i];
+		if (flag)
+		{
+			flags_data.append(tcp_flags_[i]);
+			flags_data.append(" ");
+		}
+	}
+	flags_data.pop_back();
+	flags_data.append("]");
+	return flags_data;
+}
+
+QVPN::Core::TcpFlagsObject::TcpFlagsObject(UShort flags)
+	: flags_(flags)
+{}
+
+QVPN::Core::TcpFlagsObject::TcpFlagsObject(UByte ns, UByte cwr, UByte ecn, UByte urg, UByte ack, UByte psh, UByte rst, UByte syn, UByte fin)
+	: flags_(0)
+{
+	flags_ = ns << 8 | cwr << 7 | ecn << 6 | urg << 5 | ack << 4 | psh << 3 | rst << 2 | syn << 1 | fin;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_ns() const
+{
+	return flags_ & 0x100;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_cwr() const
+{
+	return flags_ & 0x80;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_ecn() const
+{
+	return flags_ & 0x40;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_urg() const
+{
+	return flags_ & 0x20;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_ack() const
+{
+	return flags_ & 0x10;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_psh() const
+{
+	return flags_ & 0x8;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_rst() const
+{
+	return flags_ & 0x4;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_syn() const
+{
+	return flags_ & 0x2;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_fin() const
+{
+	return flags_ & 0x1;
+}
+
+UByte QVPN::Core::TcpFlagsObject::get_without_ns() const
+{
+	return flags_ & 0xFF;
+}
+
+QVPN::Core::TcpFlagsObject::operator UShort() const
+{
+	return flags_;
+}
+
+UByte QVPN::Core::TcpFlagsObject::operator[](size_t i) const
+{
+	return static_cast<UByte>(flags_ >> i & 0x1);
 }

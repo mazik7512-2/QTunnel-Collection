@@ -21,6 +21,9 @@ void EnableANSI() {
 #endif   
 }
 
+
+// TODO: возможно стоит добавить свой DNS (заместо secure)
+
 int main(int argc, const char* argv[])
 {
     EnableANSI();

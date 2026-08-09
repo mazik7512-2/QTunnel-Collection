@@ -13,6 +13,8 @@ using UInt = QVPN::Core::DataStructures::UInt;
 using ubyte_const_iter = QVPN::Core::DataStructures::ubyte_const_iter;
 using HttpRequestType = QVPN::Core::DataStructures::HttpRequestType;
 
+using Verbose = QVPN::Core::QVPNVerboser;
+
 constexpr auto default_ip_quart_size = 5;
 constexpr auto bytes_in_quartet = 4;
 constexpr auto default_ip_bytes = default_ip_quart_size * bytes_in_quartet;
@@ -349,12 +351,12 @@ UByte QVPN::Core::DataStructures::TcpPacketLittleEndian::get_tcp_header_length()
 
 UByte QVPN::Core::DataStructures::TcpPacketLittleEndian::get_tcp_reserved() const
 {
-	return header_[12] & 0x7;
+	return header_[12] >> 1 & 0x7;
 }
 
-UByte QVPN::Core::DataStructures::TcpPacketLittleEndian::get_tcp_flags() const
+QVPN::Core::DataStructures::TcpFlagsObject QVPN::Core::DataStructures::TcpPacketLittleEndian::get_tcp_flags() const
 {
-	return header_[13];
+	return TcpFlagsObject(static_cast<UShort>((header_[12] & 0x1) << 1 | header_[13]));
 }
 
 UShort QVPN::Core::DataStructures::TcpPacketLittleEndian::get_tcp_window_size() const
@@ -388,7 +390,7 @@ std::string QVPN::Core::DataStructures::TcpPacketLittleEndian::to_tcp_friendly_v
 	ss << "Source port: " << std::to_string(get_tcp_src_port()) << " Dest port: " << std::to_string(get_tcp_dst_port()) << std::endl;
 	ss << "Seq: " << std::to_string(get_tcp_seq_number()) << std::endl;
 	ss << "Ack: " << std::to_string(get_tcp_ack_number()) << std::endl;
-	ss << "Length: " << std::to_string(get_tcp_header_length() * bytes_in_quartet) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << std::to_string(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
+	ss << "Length: " << std::to_string(get_tcp_header_length() * bytes_in_quartet) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << Verbose::tcp_flags(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
 	ss << "Checksum: 0x" << std::hex << get_tcp_checksum() << std::dec << " Urgent: " << std::to_string(get_tcp_urgent_pointer()) << std::endl;
 
 	return ss.str();
@@ -546,7 +548,7 @@ UInt QVPN::Core::DataStructures::TcpPacketLittleEndian::get_receiver_number() co
 	return get_tcp_ack_number();
 }
 
-UByte QVPN::Core::DataStructures::TcpPacketLittleEndian::get_flags() const
+UShort QVPN::Core::DataStructures::TcpPacketLittleEndian::get_flags() const
 {
 	return get_tcp_flags();
 }
@@ -571,7 +573,7 @@ void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_receiver_number(UInt
 	set_tcp_ack_number(number);
 }
 
-void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_flags(UByte flags)
+void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_flags(UShort flags)
 {
 	set_tcp_flags(flags);
 }
@@ -610,9 +612,10 @@ void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_tcp_ack_number(UInt 
 	header_[11] = number & 0xFF;
 }
 
-void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_tcp_flags(UByte flags)
+void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_tcp_flags(TcpFlagsObject flags)
 {
-	header_[13] = flags;
+	header_[12] = header_[12] | flags.get_ns();
+	header_[13] = flags.get_without_ns();
 }
 
 void QVPN::Core::DataStructures::TcpPacketLittleEndian::set_tcp_offset(UByte offset)
@@ -825,7 +828,7 @@ UInt QVPN::Core::DataStructures::UdpPacketLittleEndian::get_receiver_number() co
 	return 0;
 }
 
-UByte QVPN::Core::DataStructures::UdpPacketLittleEndian::get_flags() const
+UShort QVPN::Core::DataStructures::UdpPacketLittleEndian::get_flags() const
 {
 	return 0;
 }
@@ -859,7 +862,7 @@ void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_receiver_number(UInt
 {
 }
 
-void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_flags(UByte flags)
+void QVPN::Core::DataStructures::UdpPacketLittleEndian::set_flags(UShort flags)
 {
 }
 
@@ -1310,9 +1313,9 @@ UByte QVPN::Core::DataStructures::TcpPacketView::get_tcp_reserved() const
 	return tcp_header_[12] & 0xF;
 }
 
-UByte QVPN::Core::DataStructures::TcpPacketView::get_tcp_flags() const
+QVPN::Core::DataStructures::TcpFlagsObject QVPN::Core::DataStructures::TcpPacketView::get_tcp_flags() const
 {
-	return tcp_header_[13];
+	return TcpFlagsObject(static_cast<UShort>((tcp_header_[12] & 0x1) << 1 | tcp_header_[13]));
 }
 
 UShort QVPN::Core::DataStructures::TcpPacketView::get_tcp_window_size() const
@@ -1346,7 +1349,7 @@ std::string QVPN::Core::DataStructures::TcpPacketView::to_tcp_friendly_view() co
 	ss << "Source port: " << std::to_string(get_tcp_src_port()) << " Dest port: " << std::to_string(get_tcp_dst_port()) << std::endl;
 	ss << "Seq: " << std::to_string(get_tcp_seq_number()) << std::endl;
 	ss << "Ack: " << std::to_string(get_tcp_ack_number()) << std::endl;
-	ss << "Length: " << std::to_string(get_tcp_header_length() * bytes_in_quartet) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << std::to_string(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
+	ss << "Length: " << std::to_string(get_tcp_header_length() * bytes_in_quartet) << " Reserverd: " << std::to_string(get_tcp_reserved()) << " Flags: " << Verbose::tcp_flags(get_tcp_flags()) << " Window size: " << std::to_string(get_tcp_window_size()) << std::endl;
 	ss << "Checksum: 0x" << std::hex << get_tcp_checksum() << std::dec << " Urgent: " << std::to_string(get_tcp_urgent_pointer()) << std::endl;
 
 	return ss.str();
@@ -1497,7 +1500,7 @@ UInt QVPN::Core::DataStructures::TcpPacketView::get_receiver_number() const
 	return get_tcp_ack_number();
 }
 
-UByte QVPN::Core::DataStructures::TcpPacketView::get_flags() const
+UShort QVPN::Core::DataStructures::TcpPacketView::get_flags() const
 {
 	return get_tcp_flags();
 }
@@ -1522,7 +1525,7 @@ void QVPN::Core::DataStructures::TcpPacketView::set_receiver_number(UInt number)
 	set_tcp_ack_number(number);
 }
 
-void QVPN::Core::DataStructures::TcpPacketView::set_flags(UByte flags)
+void QVPN::Core::DataStructures::TcpPacketView::set_flags(UShort flags)
 {
 	set_tcp_flags(flags);
 }
@@ -1578,9 +1581,10 @@ void QVPN::Core::DataStructures::TcpPacketView::set_tcp_ack_number(UInt number)
 	tcp_header_[11] = number & 0xFF;
 }
 
-void QVPN::Core::DataStructures::TcpPacketView::set_tcp_flags(UByte flags)
+void QVPN::Core::DataStructures::TcpPacketView::set_tcp_flags(TcpFlagsObject flags)
 {
-	tcp_header_[13] = flags;
+	tcp_header_[12] = tcp_header_[12] | flags.get_ns();
+	tcp_header_[13] = flags.get_without_ns();
 }
 
 QVPN::Core::DataStructures::UdpPacketView::UdpPacketView()
@@ -1765,7 +1769,7 @@ UInt QVPN::Core::DataStructures::UdpPacketView::get_receiver_number() const
 	return 0;
 }
 
-UByte QVPN::Core::DataStructures::UdpPacketView::get_flags() const
+UShort QVPN::Core::DataStructures::UdpPacketView::get_flags() const
 {
 	return 0;
 }
@@ -1799,7 +1803,7 @@ void QVPN::Core::DataStructures::UdpPacketView::set_receiver_number(UInt number)
 {
 }
 
-void QVPN::Core::DataStructures::UdpPacketView::set_flags(UByte flags)
+void QVPN::Core::DataStructures::UdpPacketView::set_flags(UShort flags)
 {
 }
 
@@ -4365,7 +4369,7 @@ UInt QVPN::Core::DataStructures::DummyTransportPacket::get_receiver_number() con
 	return 0;
 }
 
-UByte QVPN::Core::DataStructures::DummyTransportPacket::get_flags() const
+UShort QVPN::Core::DataStructures::DummyTransportPacket::get_flags() const
 {
 	return 0;
 }
@@ -4380,7 +4384,7 @@ void QVPN::Core::DataStructures::DummyTransportPacket::set_receiver_number(UInt 
 
 }
 
-void QVPN::Core::DataStructures::DummyTransportPacket::set_flags(UByte flags)
+void QVPN::Core::DataStructures::DummyTransportPacket::set_flags(UShort flags)
 {
 
 }

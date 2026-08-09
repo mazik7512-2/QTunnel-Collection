@@ -22,6 +22,7 @@ using SOCKET = long int;
 
 namespace std
 {
+	/*
 	// for socket family class
 	template<>
 	struct hash<QVPN::Core::NetProtocol> {
@@ -30,6 +31,7 @@ namespace std
 		}
 
 	};
+	*/
 }
 
 namespace QVPN {
@@ -564,6 +566,7 @@ namespace QVPN {
 						return SocketRepairStatus{ false, errno, strerror(errno) };
 
 					// bind to local addr
+					printf("trying bind to %s:%d\n", connection_data.local_addr.to_string().c_str(), connection_data.local_port);
 					auto bind_res = details::qvpn_bind_(sock, connection_data.local_addr, connection_data.local_port);
 					printf("Bind to local addr\n");
 					if (!bind_res.success)

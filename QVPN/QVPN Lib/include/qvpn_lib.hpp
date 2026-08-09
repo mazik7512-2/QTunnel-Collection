@@ -1296,6 +1296,78 @@ namespace QVPN {
 			}
 		};
 
+
+		enum TCPFlags : BaseTypes::UShort
+		{
+			FIN = 0x01,
+			SYN = 0x02,
+			RST = 0x04,
+			PSH = 0x08,
+			ACK = 0x10,
+			URG = 0x20,
+			ECE = 0x40,
+			CWR = 0x80,
+			NS = 0x100,
+
+			// helpers
+			SYN_ACK = 0x12,
+		};
+
+
+		class TcpFlagsObject
+		{
+		public:
+			using UByte = BaseTypes::UByte;
+			using UShort = BaseTypes::UShort;
+
+		private:
+			UShort flags_ = 0;
+
+		public:
+
+			TcpFlagsObject(UShort flags);
+			TcpFlagsObject(UByte ns, UByte cwr, UByte ecn, UByte urg, UByte ack, UByte psh, UByte rst, UByte syn, UByte fin);
+
+			UByte get_ns() const;
+			UByte get_cwr() const;
+			UByte get_ecn() const;
+			UByte get_urg() const;
+			UByte get_ack() const;
+			UByte get_psh() const;
+			UByte get_rst() const;
+			UByte get_syn() const;
+			UByte get_fin() const;
+
+			UByte get_without_ns() const;
+
+			// to short, from shosrt
+			operator UShort() const;
+			UByte operator[](size_t i) const;
+		};
+
+
+		class QVPNVerboser
+		{
+		private:
+
+			static inline std::unordered_map<NetProtocol, std::string> net_verbose_ = { { NetProtocol::IPv4, "IPv4"}, { NetProtocol::IPv6, "IPv6"} };
+			static inline std::unordered_map<TransportProtocol, std::string> transport_verbose_ = { { TransportProtocol::TCP, "TCP"}, { TransportProtocol::UDP, "UDP"} };
+			static inline std::array<std::string_view, 9> tcp_flags_ = { "FIN", "SYN", "RST", "PSH", "ACK", "URG", "ECE", "CWR", "NS"};
+			
+
+		public:
+
+			static std::string_view net_verbose(NetProtocol net);
+			static void register_net_verbose(NetProtocol net, std::string_view verbose);
+
+			static std::string_view transport_verbose(TransportProtocol transport);
+			static void register_transport_verbose(TransportProtocol transport, std::string_view verbose);
+			
+			static std::string tcp_flags(TcpFlagsObject flags);
+
+		};
+
+
 	}
 
 }

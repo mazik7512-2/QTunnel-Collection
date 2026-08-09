@@ -568,10 +568,12 @@ namespace QVPN
 			PacketBuilderSignal build_packet(Iter begin, Iter end)
 			{
 				auto size = std::distance(begin, end);
+				if (size <= QVPNPacketManager::packet_manager_data_size)
+					return PacketBuilderSignal::PACKET_NO_BUILDER_DATA;
 				auto no_pb_header_size = size - QVPNPacketManager::packet_manager_data_size;
 				auto offset = begin[1] << 8 | begin[2];
 				auto original_size = begin[3] << 8 | begin[4];
-				if (no_pb_header_size <= QVPNPacketManager::packet_manager_data_size || offset >= original_size || no_pb_header_size + offset > original_size) // check if corrupted or not our packet
+				if (offset >= original_size || no_pb_header_size + offset > original_size) // check if corrupted or not our packet
 					return PacketBuilderSignal::PACKET_NO_BUILDER_DATA;
 				auto p_id = static_cast<UByte>(begin[0]);
 				auto it = packets_.find(p_id); // а если придет несколько пакетов? или это уже в safe recv?
@@ -2111,7 +2113,7 @@ namespace QVPN
 				}
 			}
 
-			std::optional<PackedSocket> connect_to_server_impl_(Socket& response_socket, QVPNServerSocketData& key, const QTunnelProxyData& proxy_data)
+			void connect_to_server_impl_(Socket& response_socket, QVPNServerSocketData& key, std::unordered_map<QVPNServerSocketData, PackedSocket>& sock_map, const QTunnelProxyData& proxy_data)
 			{
 				std::stringstream ss{};
 				auto raw_socket = NetTools::create_raw_socket(key.remote_addr.get_addr_family(), key.transport_proto);
@@ -2124,7 +2126,7 @@ namespace QVPN
 				{
 					ss << "Failed to create socket to " << key.remote_addr.to_string() << ":" << key.remote_port << ".";
 					logger_.fail(ss.str());
-					return std::nullopt;
+					return;
 				}
 
 				auto bind_res = raw_socket.bind(NetAddr{}, key.local_port); // NetAddr{} - IN6ADDR_ANY
@@ -2132,7 +2134,7 @@ namespace QVPN
 				if (!bind_res.success)
 				{
 					logger_.fail("Failed bind socket to port {}. Error #{}", key.local_port, bind_res.status);
-					return std::nullopt;
+					return;
 				}
 				logger_.success("Socket successfully binded to port {}", key.local_port);
 
@@ -2141,6 +2143,12 @@ namespace QVPN
 
 				key.server_local_addr = raw_socket.get_local_addr();
 
+				auto it = sock_map.find(key);
+				if (it != sock_map.end())
+				{
+					return;
+				}
+
 				auto s_filter = NetTools::create_socket_filter(key);
 				raw_socket.filter(s_filter);
 
@@ -2148,7 +2156,7 @@ namespace QVPN
 				{
 					ss << "Failed to connect to " << key.remote_addr.to_string() << ":" << key.remote_port << ". Error #" << res.status;
 					logger_.fail(ss.str());
-					return std::nullopt;
+					return;
 				}
 
 				ss << "Socket from (" << key.client_local_addr.to_string() << ":" << key.local_port << "/" << key.server_local_addr.to_string() << ":" << key.local_port << ") to (" << key.remote_addr.to_string() << ":" << key.remote_port << ") created and connected.";
@@ -2159,25 +2167,32 @@ namespace QVPN
 				install_connection_by_protocols(proxy_data, key, raw_socket, shadow_socket);
 				add_to_response_socket_map(response_socket, raw_socket, shadow_socket, key);
 
-				return PackedSocket{ shadow_socket, raw_socket };
+				PackedSocket p_socket{ shadow_socket, raw_socket };
+				
+				sock_map[key] = p_socket;
 			}
 
 			void connect_to_server_(Socket& response_socket, QVPNServerSocketData& key, std::unordered_map<QVPNServerSocketData, PackedSocket>& sock_map, const QTunnelProxyData& proxy_data)
 			{
-				auto sock = connect_to_server_impl_(response_socket, key, proxy_data);
+				/*
+				auto sock = connect_to_server_impl_(response_socket, key, sock_map, proxy_data);
 				if (sock.has_value())
 				{
 					sock_map[key] = *sock;
 				}
+				*/
 			}
 
 			void connect_if_not_to_server(Socket& response_socket, QVPNServerSocketData& key, std::unordered_map<QVPNServerSocketData, PackedSocket>& sock_map, const QTunnelProxyData& proxy_data)
 			{
-				auto it = sock_map.find(key);
+				/*
+				auto it = sock_map.find(key); //TODO: вставлять адрес сервера нужно раньше чем эта точка, иначе он постоянно будет пытаться подключиться, т.к. адрес пустой
 				if (it == sock_map.end())
 				{
 					connect_to_server_(response_socket, key, sock_map, proxy_data);
 				}
+				*/
+				connect_to_server_impl_(response_socket, key, sock_map, proxy_data);
 			}
 
 			NetPacketObjectType generate_net_header(const QTunnelProxyData& data, UShort total_len, bool dont_fragment = true, bool more_fragment = false, UShort offset = 0)
@@ -2385,7 +2400,7 @@ namespace QVPN
 					QTunnelProxyData proxy_data = decoded_data->create_and_inverse_addrs(*decoded_data);
 
 					QVPNServerSocketData key { 
-						decoded_data->get_net_proto(), decoded_data->get_transport_proto(), decoded_data->get_src_addr(), decoded_data->get_src_addr(), 
+						decoded_data->get_net_proto(), decoded_data->get_transport_proto(), decoded_data->get_src_addr(), Addr{},
 						decoded_data->get_src_port(), decoded_data->get_dst_addr(), decoded_data->get_dst_port()
 					};
 

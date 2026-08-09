@@ -16,6 +16,7 @@
 
 namespace std
 {
+	/*
 	// for socket family class
 	template<>
 	struct hash<QVPN::Core::NetProtocol> {
@@ -24,6 +25,7 @@ namespace std
 		}
 
 	};
+	*/
 }
 
 namespace QVPN {
@@ -757,7 +759,7 @@ namespace QVPN {
 			}
 
 			template <QVPN::Core::is_addr Addr>
-			QVPN_Socket accept()
+			QVPN_RawSocket accept()
 			{
 				return QVPN::NetTools::details::SocketAccept<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_RawSocket>{}(socket_, socket_data_.local_addr.get_addr_family(), socket_data_.transport_proto);
 			}

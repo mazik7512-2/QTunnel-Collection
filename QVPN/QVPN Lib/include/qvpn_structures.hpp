@@ -36,6 +36,9 @@ namespace QVPN {
 			using ubyte_const_iter = std::vector<UByte>::const_iterator;
 
 
+			using TcpFlagsObject = QVPN::Core::TcpFlagsObject;
+			using TCPFlags = QVPN::Core::TCPFlags;
+
 			enum QVPNCharset
 			{
 				CP866 = 866,
@@ -972,7 +975,7 @@ namespace QVPN {
 
 				{ t.get_sender_number() } -> std::same_as<UInt>;
 				{ t.get_receiver_number() } -> std::same_as<UInt>;
-				{ t.get_flags() } -> std::same_as<UByte>;
+				{ t.get_flags() } -> std::same_as<UShort>;
 
 				{ t.set_sender_number(number) } -> std::same_as<void>;
 				{ t.set_receiver_number(number) } -> std::same_as<void>;
@@ -990,7 +993,7 @@ namespace QVPN {
 
 			template <class TcpImpl>
 			concept TcpPacketLike =
-				requires (TcpImpl t, UInt number, UByte flags, UShort ushort) {
+				requires (TcpImpl t, UInt number, TcpFlagsObject flags, UShort ushort, UByte byte) {
 
 					{ TcpImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
@@ -1000,7 +1003,7 @@ namespace QVPN {
 					{ t.get_tcp_ack_number() } -> std::same_as<UInt>;
 					{ t.get_tcp_header_length() } -> std::same_as<UByte>;
 					{ t.get_tcp_reserved() } -> std::same_as<UByte>;
-					{ t.get_tcp_flags() } -> std::same_as<UByte>;
+					{ t.get_tcp_flags() } -> std::same_as<TcpFlagsObject>;
 					{ t.get_tcp_window_size() } -> std::same_as<UShort>;
 					{ t.get_tcp_checksum() } -> std::same_as<UShort>;
 					{ t.get_tcp_urgent_pointer() } -> std::same_as<UShort>;
@@ -1013,26 +1016,11 @@ namespace QVPN {
 					{ t.set_tcp_seq_number(number) } -> std::same_as<void>;
 					{ t.set_tcp_ack_number(number) } -> std::same_as<void>;
 					{ t.set_tcp_flags(flags) } -> std::same_as<void>;
-					{ t.set_tcp_offset(flags) } -> std::same_as<void>;
+					{ t.set_tcp_offset(byte) } -> std::same_as<void>;
 					{ t.set_tcp_window(ushort) } -> std::same_as<void>;
 					{ t.set_tcp_urgent(ushort) } -> std::same_as<void>;
 
 			}&& UnifiedTransportLike<TcpImpl>&& UnifiedPacketLike<TcpImpl>;
-
-
-			enum TCPFlags : UByte
-			{
-				FIN = 0x01,
-				SYN = 0x02,
-				RST = 0x04,
-				PSH = 0x08,
-				ACK = 0x10,
-				URG = 0x20,
-
-				// helpers
-				SYN_ACK = 0x12,
-			};
-
 
 			class TcpPacketView;
 
@@ -1065,7 +1053,7 @@ namespace QVPN {
 				UInt get_tcp_ack_number() const;
 				UByte get_tcp_header_length() const;
 				UByte get_tcp_reserved() const;
-				UByte get_tcp_flags() const;
+				TcpFlagsObject get_tcp_flags() const;
 				UShort get_tcp_window_size() const;
 				UShort get_tcp_checksum() const;
 				UShort get_tcp_urgent_pointer() const;
@@ -1084,14 +1072,14 @@ namespace QVPN {
 
 				UInt get_sender_number() const;
 				UInt get_receiver_number() const;
-				UByte get_flags() const;
+				UShort get_flags() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_transport_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_transport_bytes();
 
 				void set_sender_number(UInt number);
 				void set_receiver_number(UInt number);
-				void set_flags(UByte flags);
+				void set_flags(UShort flags);
 
 				void set_dst_port(UShort port);
 				void set_src_port(UShort port);
@@ -1099,7 +1087,7 @@ namespace QVPN {
 				void set_transport_length(UShort length);
 				void set_tcp_seq_number(UInt number);
 				void set_tcp_ack_number(UInt number);
-				void set_tcp_flags(UByte flags);
+				void set_tcp_flags(TcpFlagsObject flags);
 				void set_tcp_offset(UByte offset);
 				void set_tcp_window(UShort window);
 				void set_tcp_urgent(UShort urgent);
@@ -1157,7 +1145,7 @@ namespace QVPN {
 				UInt get_tcp_ack_number() const;
 				UByte get_tcp_header_length() const;
 				UByte get_tcp_reserved() const;
-				UByte get_tcp_flags() const;
+				TcpFlagsObject get_tcp_flags() const;
 				UShort get_tcp_window_size() const;
 				UShort get_tcp_checksum() const;
 				UShort get_tcp_urgent_pointer() const;
@@ -1177,14 +1165,14 @@ namespace QVPN {
 
 				UInt get_sender_number() const;
 				UInt get_receiver_number() const;
-				UByte get_flags() const;
+				UShort get_flags() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_transport_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_transport_bytes();
 
 				void set_sender_number(UInt number);
 				void set_receiver_number(UInt number);
-				void set_flags(UByte flags);
+				void set_flags(UShort flags);
 				void set_tcp_offset(UByte offset);
 				void set_tcp_window(UShort window);
 				void set_tcp_urgent(UShort urgent);
@@ -1195,7 +1183,7 @@ namespace QVPN {
 				void set_transport_length(UShort length);
 				void set_tcp_seq_number(UInt number);
 				void set_tcp_ack_number(UInt number);
-				void set_tcp_flags(UByte flags);
+				void set_tcp_flags(TcpFlagsObject flags);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -1314,7 +1302,7 @@ namespace QVPN {
 
 				UInt get_sender_number() const;
 				UInt get_receiver_number() const;
-				UByte get_flags() const;
+				UShort get_flags() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_transport_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_transport_bytes();
@@ -1323,7 +1311,7 @@ namespace QVPN {
 
 				void set_sender_number(UInt number);
 				void set_receiver_number(UInt number);
-				void set_flags(UByte flags);
+				void set_flags(UShort flags);
 
 				void set_dst_port(UShort port);
 				void set_src_port(UShort port);
@@ -1388,7 +1376,7 @@ namespace QVPN {
 
 				UInt get_sender_number() const;
 				UInt get_receiver_number() const;
-				UByte get_flags() const;
+				UShort get_flags() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_transport_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_transport_bytes();
@@ -1397,7 +1385,7 @@ namespace QVPN {
 
 				void set_sender_number(UInt number);
 				void set_receiver_number(UInt number);
-				void set_flags(UByte flags);
+				void set_flags(UShort flags);
 
 				void set_dst_port(UShort port);
 				void set_src_port(UShort port);
@@ -1502,11 +1490,11 @@ namespace QVPN {
 
 				UInt get_sender_number() const;
 				UInt get_receiver_number() const;
-				UByte get_flags() const;
+				UShort get_flags() const;
 
 				void set_sender_number(UInt number);
 				void set_receiver_number(UInt number);
-				void set_flags(UByte flags);
+				void set_flags(UShort flags);
 
 				std::string to_transport_friendly_view() const;
 
