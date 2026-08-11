@@ -274,6 +274,7 @@ namespace QVPN {
 
 					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data(ver, transport_proto, ip_src, port_src, ip_dest, port_dst, std::move(qtunnel_proto_data));
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, package);
+					std::visit([](auto& p) {std::cout << p.to_packet_friendly_view() << std::endl; }, package);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
 
 				}

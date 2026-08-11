@@ -272,7 +272,7 @@ namespace QVPN
 		class SplittedPacket
 		{
 		private:
-			using SeparatorType = std::pair<size_t, size_t>;
+			using SeparatorType = std::pair<UShort, UShort>;
 
 			UByte packet_id_;
 
@@ -285,12 +285,13 @@ namespace QVPN
 			SplittedPacket() = default;
 
 			void set_packet_id(UByte id);
+			void next_id();
 
 			template <std::random_access_iterator Iter>
 			void add_data(Iter begin, Iter end)
 			{
 				auto data_start = data_.size();
-				auto data_end = std::distance(begin, end);
+				auto data_end = data_start + std::distance(begin, end);
 
 				std::copy(begin, end, std::back_inserter(data_));
 				separators_.emplace_back(std::make_pair<>(data_start, data_end));
@@ -337,15 +338,14 @@ namespace QVPN
 			SplittedPacketView() = default;
 
 			void set_packet_id(UByte id);
+			void next_id();
 
 			template <std::random_access_iterator Iter>
 			void add_data(Iter begin, Iter end)
 			{
 				auto data_start = data_size_;
-				auto data_end = std::distance(begin, end);
+				auto data_end = data_size_ + std::distance(begin, end);
 				
-
-				//std::copy(begin, end, std::back_inserter(data_));
 				if (data_ == nullptr)
 					data_ = begin;
 
@@ -567,17 +567,19 @@ namespace QVPN
 			template <std::random_access_iterator Iter>
 			PacketBuilderSignal build_packet(Iter begin, Iter end)
 			{
+				using QVPN::Core::Tools::gLogger;
 				auto size = std::distance(begin, end);
 				if (size <= QVPNPacketManager::packet_manager_data_size)
 					return PacketBuilderSignal::PACKET_NO_BUILDER_DATA;
 				auto no_pb_header_size = size - QVPNPacketManager::packet_manager_data_size;
 				auto offset = begin[1] << 8 | begin[2];
 				auto original_size = begin[3] << 8 | begin[4];
+				
 				if (offset >= original_size || no_pb_header_size + offset > original_size) // check if corrupted or not our packet
 					return PacketBuilderSignal::PACKET_NO_BUILDER_DATA;
 				auto p_id = static_cast<UByte>(begin[0]);
 				auto it = packets_.find(p_id); // а если придет несколько пакетов? или это уже в safe recv?
-
+				gLogger.info("pb_data (build) - [id:{}, offset:{}, orig_size:{}, fact_size: {}]", p_id, offset, original_size, no_pb_header_size);
 				if (it != packets_.end())
 				{
 					it->second.add_data(begin + 1, end);
@@ -1284,12 +1286,14 @@ namespace QVPN
 			{
 				// first must be split, after encode
 				SplittedPacketView sp_view = packet_manager_.split_packet_view(begin, end);
-
+				auto [d_b, d_e] = data.get_proto_data_bytes();
+				QVPN::Core::Tools::gLogger.info("QTunnel proxy data size: {}", std::distance(d_b, d_e));
 				// proxy data encoded only in first splitting
 				// first splitting will be always
 				SplittedPacket sp{};
 				auto [pb_data, b, e] = sp_view.get_raw_with_pb_data(0);
-				auto first_encoded_data = settings_.layers_encode(pb_data, data, b, e);
+				logger_.info("pb_data (split) - [id:{}, offset:{}, orig_size:{}, fact_size:{}]", pb_data.get_packet_id(), pb_data.get_offset(), pb_data.get_original_size(), e - b);
+				auto first_encoded_data = settings_.layers_encode(pb_data, data, b, e); 
 				sp.add_data(first_encoded_data.data(), first_encoded_data.data() + first_encoded_data.size());
 
 				for (auto i = 1; i < sp_view.size(); ++i)
@@ -2161,8 +2165,6 @@ namespace QVPN
 
 				ss << "Socket from (" << key.client_local_addr.to_string() << ":" << key.local_port << "/" << key.server_local_addr.to_string() << ":" << key.local_port << ") to (" << key.remote_addr.to_string() << ":" << key.remote_port << ") created and connected.";
 				logger_.success(ss.str());
-
-				// TODO: какие-то ошибки с сокетами, возможно нужно убрать shadow socket, или какие-то ошибки с bind
 
 				install_connection_by_protocols(proxy_data, key, raw_socket, shadow_socket);
 				add_to_response_socket_map(response_socket, raw_socket, shadow_socket, key);

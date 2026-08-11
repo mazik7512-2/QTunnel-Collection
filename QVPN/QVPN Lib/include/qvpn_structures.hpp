@@ -1106,8 +1106,8 @@ namespace QVPN {
 
 
 				// no checksum calcs
-				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
-				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
+				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
+				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
 
 			};
 
@@ -1198,8 +1198,8 @@ namespace QVPN {
 				ViewType to_transport_view();
 
 				// no checksum calcs
-				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
-				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
+				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
+				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
 
 			};
 
@@ -4122,7 +4122,7 @@ namespace QVPN {
 
 				UInt get_seq() const;
 				UInt get_ack() const;
-				UByte get_flags() const;
+				TcpFlagsObject get_flags() const;
 
 				UByte get_offset() const;
 				UShort get_window() const;

@@ -542,6 +542,10 @@ std::string QVPN::Core::QVPNVerboser::tcp_flags(TcpFlagsObject flags)
 	return flags_data;
 }
 
+QVPN::Core::TcpFlagsObject::TcpFlagsObject(TCPFlags flags)
+	: flags_(flags)
+{}
+
 QVPN::Core::TcpFlagsObject::TcpFlagsObject(UShort flags)
 	: flags_(flags)
 {}

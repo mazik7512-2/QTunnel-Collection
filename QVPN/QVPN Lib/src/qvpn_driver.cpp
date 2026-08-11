@@ -138,6 +138,11 @@ void QVPN::Core::SplittedPacket::set_packet_id(UByte id)
     packet_id_ = id;
 }
 
+void QVPN::Core::SplittedPacket::next_id()
+{
+    ++packet_id_;
+}
+
 std::vector<UByte> QVPN::Core::SplittedPacket::get(size_t elem)
 {
     auto [b, e] = separators_[elem];
@@ -173,7 +178,7 @@ std::vector<UByte> QVPN::Core::SplittedPacket::operator[](size_t elem)
 std::pair<QVPN::Core::PacketBuilderData, std::vector<UByte>> QVPN::Core::SplittedPacket::get_with_pb_data(size_t elem)
 {
     auto [b, e] = separators_[elem];
-    UShort offset = (b >> 8 & 0xFF) | (b & 0xFF);
+    UShort offset = b;
     auto size = data_.size();
 
     std::vector<UByte> res{};
@@ -186,9 +191,8 @@ std::pair<QVPN::Core::PacketBuilderData, std::vector<UByte>> QVPN::Core::Splitte
 std::tuple<QVPN::Core::PacketBuilderData, UByte*, UByte*> QVPN::Core::SplittedPacket::get_raw_with_pb_data(size_t elem)
 {
     auto [b, e] = separators_[elem];
-    UShort offset = (b >> 8 & 0xFF) | (b & 0xFF);
+    UShort offset = b;
     auto size = data_.size();
-
     PacketBuilderData pb_data(packet_id_, offset, size);
 
     return std::tuple<PacketBuilderData, UByte*, UByte*>(pb_data, data_.data() + b, data_.data() + e);
@@ -196,14 +200,14 @@ std::tuple<QVPN::Core::PacketBuilderData, UByte*, UByte*> QVPN::Core::SplittedPa
 
 std::pair<UByte*, UByte*> QVPN::Core::SplittedPacket::get_raw_packet(size_t elem)
 {
-    auto [b, e] = separators_[elem];    
+    auto [b, e] = separators_[elem];
     return std::pair<UByte*, UByte*>(data_.data() + b, data_.data() + e);
 }
 
 QVPN::Core::PacketBuilderData QVPN::Core::SplittedPacket::get_packet_builder_data(size_t elem)
 {
     auto [b, e] = separators_[elem];
-    UShort offset = (b >> 8 & 0xFF) | (b & 0xFF);
+    UShort offset = b;
     UShort size = data_.size();
     return PacketBuilderData(packet_id_, offset, size);
 }
@@ -324,6 +328,11 @@ void QVPN::Core::SplittedPacketView::set_packet_id(UByte id)
     packet_id_ = id;
 }
 
+void QVPN::Core::SplittedPacketView::next_id()
+{
+    ++packet_id_;
+}
+
 std::vector<UByte> QVPN::Core::SplittedPacketView::get(size_t elem)
 {
     auto [b, e] = separators_[elem];
@@ -359,7 +368,7 @@ std::vector<UByte> QVPN::Core::SplittedPacketView::operator[](size_t elem)
 std::pair<QVPN::Core::PacketBuilderData, std::vector<UByte>> QVPN::Core::SplittedPacketView::get_with_pb_data(size_t elem)
 {
     auto [b, e] = separators_[elem];
-    UShort offset = (b >> 8 & 0xFF) | (b & 0xFF);
+    UShort offset = b;
     auto size = data_size_;
 
     std::vector<UByte> res{};
@@ -372,11 +381,10 @@ std::pair<QVPN::Core::PacketBuilderData, std::vector<UByte>> QVPN::Core::Splitte
 std::tuple<QVPN::Core::PacketBuilderData, UByte*, UByte*> QVPN::Core::SplittedPacketView::get_raw_with_pb_data(size_t elem)
 {
     auto [b, e] = separators_[elem];
-    UShort offset = (b >> 8 & 0xFF) | (b & 0xFF);
+    UShort offset = b;
     auto size = data_size_;
 
     PacketBuilderData pb_data(packet_id_, offset, size);
-
     return std::tuple<PacketBuilderData, UByte*, UByte*>(pb_data, data_ + b, data_ + e);
 }
 
@@ -389,7 +397,7 @@ std::pair<UByte*, UByte*> QVPN::Core::SplittedPacketView::get_raw_packet(size_t 
 QVPN::Core::PacketBuilderData QVPN::Core::SplittedPacketView::get_packet_builder_data(size_t elem)
 {
     auto [b, e] = separators_[elem];
-    UShort offset = (b >> 8 & 0xFF) | (b & 0xFF);
+    UShort offset = b;
     UShort size = data_size_;
     return PacketBuilderData(packet_id_, offset, size);
 }
@@ -408,7 +416,7 @@ std::pair<QVPN::Core::SplittedPacketView::DataIterator_t, QVPN::Core::SplittedPa
 // User statistic data
 
 QVPN::Core::UserStatisticData::UserStatisticData()
-    : user_("Anonymous"), socket_data_(), traffic_size_(0)
+    : user_("Anonymous"), socket_data_(), traffic_size_(0), traffic_type_(TrafficType::TRAFFIC_ERROR_TYPE)
 {
 }
 
@@ -506,17 +514,17 @@ void QVPN::Core::PacketBuilderData::set_original_size(UShort size)
 
 UByte QVPN::Core::PacketBuilderData::get_packet_id() const
 {
-    return UByte();
+    return packet_id_;
 }
 
 QVPN::Core::BaseTypes::UShort QVPN::Core::PacketBuilderData::get_offset() const
 {
-    return UShort();
+    return offset_;
 }
 
 QVPN::Core::BaseTypes::UShort QVPN::Core::PacketBuilderData::get_original_size() const
 {
-    return UShort();
+    return original_size_;
 }
 
 std::array<UByte, QVPN::Core::packet_builder_data_size> QVPN::Core::PacketBuilderData::to_bytes() const

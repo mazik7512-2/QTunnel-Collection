@@ -1325,6 +1325,7 @@ namespace QVPN {
 
 		public:
 
+			TcpFlagsObject(TCPFlags flags);
 			TcpFlagsObject(UShort flags);
 			TcpFlagsObject(UByte ns, UByte cwr, UByte ecn, UByte urg, UByte ack, UByte psh, UByte rst, UByte syn, UByte fin);
 

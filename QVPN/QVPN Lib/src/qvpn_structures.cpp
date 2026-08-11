@@ -455,7 +455,7 @@ QVPN::Core::DataStructures::TcpPacketLittleEndian::ViewType QVPN::Core::DataStru
 	return ViewType(start, end);
 }
 
-std::vector<UByte> QVPN::Core::DataStructures::TcpPacketLittleEndian::generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e)
+std::vector<UByte> QVPN::Core::DataStructures::TcpPacketLittleEndian::generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e)
 {
 	std::vector<UByte> bytes{};
 
@@ -465,8 +465,8 @@ std::vector<UByte> QVPN::Core::DataStructures::TcpPacketLittleEndian::generate_o
 	bytes.push_back(seq >> 24 & 0xFF); bytes.push_back(seq >> 16 & 0xFF); bytes.push_back(seq >> 8 & 0xFF); bytes.push_back(seq & 0xFF);
 	bytes.push_back(ack >> 24 & 0xFF); bytes.push_back(ack >> 16 & 0xFF); bytes.push_back(ack >> 8 & 0xFF); bytes.push_back(ack & 0xFF);
 
-	bytes.push_back(offset << 4); // + reserved bytes
-	bytes.push_back(flags);
+	bytes.push_back(offset << 4 | 0 | flags.get_ns() & 0x1); // + reserved bytes
+	bytes.push_back(flags.get_without_ns());
 
 	bytes.push_back(window_size >> 8 & 0xFF); bytes.push_back(window_size & 0xFF);
 
@@ -479,7 +479,7 @@ std::vector<UByte> QVPN::Core::DataStructures::TcpPacketLittleEndian::generate_o
 	return bytes;
 }
 
-QVPN::Core::DataStructures::TcpPacketLittleEndian::ObjectType QVPN::Core::DataStructures::TcpPacketLittleEndian::generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e)
+QVPN::Core::DataStructures::TcpPacketLittleEndian::ObjectType QVPN::Core::DataStructures::TcpPacketLittleEndian::generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e)
 {
 	auto bytes = generate_object_bytes(src_port, dst_port, seq, ack, offset, flags, window_size, urgent, opt_b, opt_e);
 	return ObjectType(bytes.data(), bytes.data() + bytes.size());
@@ -1419,12 +1419,12 @@ QVPN::Core::DataStructures::TcpPacketView::ViewType QVPN::Core::DataStructures::
 	return ViewType(start, end);
 }
 
-std::vector<UByte> QVPN::Core::DataStructures::TcpPacketView::generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e)
+std::vector<UByte> QVPN::Core::DataStructures::TcpPacketView::generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e)
 {
 	return TcpPacketLittleEndian::generate_object_bytes(src_port, dst_port, seq, ack, offset, flags, window_size, urgent, opt_b, opt_e);
 }
 
-QVPN::Core::DataStructures::TcpPacketView::ObjectType QVPN::Core::DataStructures::TcpPacketView::generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, UByte flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e)
+QVPN::Core::DataStructures::TcpPacketView::ObjectType QVPN::Core::DataStructures::TcpPacketView::generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e)
 {
 	return TcpPacketLittleEndian::generate_object(src_port, dst_port, seq, ack, offset, flags, window_size, urgent, opt_b, opt_e);
 }
@@ -3975,29 +3975,29 @@ UInt QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_ack() const
 	return static_cast<UInt>(data_[6] << 24 | data_[7] << 16 | data_[8] << 8 | data_[9]);
 }
 
-UByte QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_flags() const
+QVPN::Core::TcpFlagsObject QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_flags() const
 {
-	return static_cast<UByte>(data_[10]);
+	return TcpFlagsObject(data_[10] << 8 | data_[11]);
 }
 
 UByte QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_offset() const
 {
-	return static_cast<UByte>(data_[11]);
+	return static_cast<UByte>(data_[12]);
 }
 
 UShort QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_window() const
 {
-	return static_cast<UShort>(data_[12] << 8 | data_[13]);;
+	return static_cast<UShort>(data_[13] << 8 | data_[14]);;
 }
 
 UShort QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_urgent_pointer() const
 {
-	return static_cast<UShort>(data_[14] << 8 | data_[15]);
+	return static_cast<UShort>(data_[15] << 8 | data_[16]);
 }
 
 std::pair<UByte*, UByte*> QVPN::Core::DataStructures::QTunnelTCPViewScheme::get_options() const
 {
-	auto start = (length_ > 16) ? 16 : length_; // no options
+	auto start = (length_ > 17) ? 17 : length_; // no options
 	return std::pair<UByte*, UByte*>(data_ + start, data_ + length_);
 }
 
@@ -4031,7 +4031,8 @@ std::vector<UByte> QVPN::Core::DataStructures::QTunnelTCPViewScheme::generate_ob
 	res.push_back(seq >> 24 & 0xFF); res.push_back(seq >> 16 & 0xFF);  res.push_back(seq >> 8 & 0xFF); res.push_back(seq & 0xFF);
 	res.push_back(ack >> 24 & 0xFF); res.push_back(ack >> 16 & 0xFF);  res.push_back(ack >> 8 & 0xFF); res.push_back(ack & 0xFF);
 
-	res.push_back(flags);
+	res.push_back(flags.get_ns());
+	res.push_back(flags.get_without_ns());
 	res.push_back(offset);
 
 	res.push_back(window >> 8 & 0xFF); res.push_back(window & 0xFF);
