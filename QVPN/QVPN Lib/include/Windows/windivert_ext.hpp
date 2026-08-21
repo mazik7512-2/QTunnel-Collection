@@ -274,7 +274,7 @@ namespace QVPN {
 
 					QVPN::Core::DataStructures::QTunnelProxy<Addr> proxy_data(ver, transport_proto, ip_src, port_src, ip_dest, port_dst, std::move(qtunnel_proto_data));
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, package);
-					std::visit([](auto& p) {std::cout << p.to_packet_friendly_view() << std::endl; }, package);
+					std::visit([](auto& p) {std::cout << "outgoing capture" << std::endl << p.to_packet_friendly_view() << std::endl; }, package);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
 
 				}
@@ -348,7 +348,7 @@ namespace QVPN {
 
 					auto package = pp.pre_parse(packet, packet + packet_len);
 
-					std::visit([](auto& p) { std::cout << p.to_packet_friendly_view() << std::endl; }, package);
+					std::visit([](auto& p) { std::cout << "Incoming packet" << std::endl << p.to_packet_friendly_view() << std::endl; }, package);
 
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, package);
 
@@ -361,7 +361,7 @@ namespace QVPN {
 							logger_.fail("Failed to reinject incoming packet (not our). Error #{}", GetLastError());
 							continue;
 						}
-						logger_.success("Packet (not our) succesfully reinjected.");
+						logger_.warning("Packet (not our) succesfully reinjected.");
 						continue;
 					}
 
@@ -377,22 +377,25 @@ namespace QVPN {
 						auto src_addr = decoded_data->get_src_addr();
 						auto src_port = decoded_data->get_src_port();
 
-						auto [qtp_b, qtp_e] = decoded_data->get_proto_data();
+						auto [qtp_b, qtp_e] = decoded_data->get_proto_data_bytes();
 
 						auto [b, e] = decoded_data->get_raw_data();
 
 						std::visit([&src_addr, &src_port, &dst_addr, &dst_port, &qtp_b, &qtp_e, &b, &e](auto& p)
 							{
+								// TODO: recalc size
 								p.set_src_addr(src_addr);
 								p.set_src_port(src_port);
 								p.set_dst_port(dst_port); 
 								p.set_dst_addr(dst_addr);
 								p.set_qtunnel_proto_data(qtp_b, qtp_e);
 								p.set_payload(b, e);
+								p.recalculate_lengths();
 								p.recalculate_checksums();
 							}, 
 							package);
-							
+
+						std::visit([](auto& p) { std::cout << "Incoming packet (after modified)" << std::endl << p.to_packet_friendly_view() << std::endl; }, package);
 						auto [res_b, res_e] = std::visit([](auto& p) { return p.bytes(); }, package);
 						UINT size = static_cast<UINT>(std::distance(res_b, res_e));
 						if (!WinDivertSend(in_hDivert_, res_b, sizeof(packet), &size, &addr))

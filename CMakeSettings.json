@@ -53,6 +53,36 @@
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_clang_x64" ],
       "wslPath": "Ubuntu"
+    },
+    {
+      "name": "WSL-GCC-Release",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeExecutable": "cmake",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "linux_x64" ],
+      "variables": [
+        {
+          "name": "QVPN_BUILD_SERVER",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "QVPN_BUILD_ALL",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "QVPN_BUILD_LIB",
+          "value": "True",
+          "type": "BOOL"
+        }
+      ],
+      "intelliSenseMode": "linux-gcc-x64",
+      "wslPath": "Ubuntu"
     }
   ]
 }

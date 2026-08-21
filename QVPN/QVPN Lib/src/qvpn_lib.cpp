@@ -301,6 +301,14 @@ QVPN::Core::NetAddr::NetAddr(std::initializer_list<UByte> list)
 	std::copy(list.begin(), list.end(), std::back_inserter(ip_));
 }
 
+QVPN::Core::NetAddr::NetAddr(AddrInt_t data)
+{
+	ip_.push_back(data >> 24 & 0xFF);
+	ip_.push_back(data >> 16 & 0xFF);
+	ip_.push_back(data >> 8 & 0xFF);
+	ip_.push_back(data & 0xFF);
+}
+
 QVPN::Core::NetAddr::NetAddr(const IPv4Address& data)
 {
 	auto bytes = data.to_bytes();
@@ -558,42 +566,42 @@ QVPN::Core::TcpFlagsObject::TcpFlagsObject(UByte ns, UByte cwr, UByte ecn, UByte
 
 UByte QVPN::Core::TcpFlagsObject::get_ns() const
 {
-	return flags_ & 0x100;
+	return flags_ >> 8 & 0x1;
 }
 
 UByte QVPN::Core::TcpFlagsObject::get_cwr() const
 {
-	return flags_ & 0x80;
+	return flags_ >> 7 & 0x1;
 }
 
 UByte QVPN::Core::TcpFlagsObject::get_ecn() const
 {
-	return flags_ & 0x40;
+	return flags_ >> 6 & 0x1;
 }
 
 UByte QVPN::Core::TcpFlagsObject::get_urg() const
 {
-	return flags_ & 0x20;
+	return flags_ >> 5 & 0x1;
 }
 
 UByte QVPN::Core::TcpFlagsObject::get_ack() const
 {
-	return flags_ & 0x10;
+	return flags_ >> 4 & 0x1;
 }
 
 UByte QVPN::Core::TcpFlagsObject::get_psh() const
 {
-	return flags_ & 0x8;
+	return flags_ >> 3 & 0x1;
 }
 
 UByte QVPN::Core::TcpFlagsObject::get_rst() const
 {
-	return flags_ & 0x4;
+	return flags_ >> 2 & 0x1;
 }
 
 UByte QVPN::Core::TcpFlagsObject::get_syn() const
 {
-	return flags_ & 0x2;
+	return flags_ >> 1 & 0x1;
 }
 
 UByte QVPN::Core::TcpFlagsObject::get_fin() const

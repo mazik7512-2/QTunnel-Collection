@@ -487,7 +487,7 @@ namespace QVPN {
 
 			template <class Ip4PacketImpl>
 			concept Ip4PacketLike =
-				requires (Ip4PacketImpl t) {
+				requires (Ip4PacketImpl t, UShort length) {
 
 				typename Ip4PacketImpl::DataIterator_t;
 				typename Ip4PacketImpl::ConstDataIterator_t;
@@ -514,7 +514,7 @@ namespace QVPN {
 
 				{ t.set_ip_source(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
 				{ t.set_ip_dest(std::declval<const QVPN::Core::IPv4Address&>()) } -> std::same_as<void>;
-
+				{ t.set_ip_total_length(length) } -> std::same_as<void>;
 				{ t.set_ip_checksum(std::declval<const UShort>()) } -> std::same_as<void>;
 
 			}&& UnifiedIpPacketLike<Ip4PacketImpl>&& UnifiedPacketLike<Ip4PacketImpl>;
@@ -609,7 +609,7 @@ namespace QVPN {
 
 				void set_ip_source(const QVPN::Core::IPv4Address& src);
 				void set_ip_dest(const QVPN::Core::IPv4Address& dst);
-
+				void set_ip_total_length(UShort length);
 				void set_ip_checksum(const UShort checksum);
 
 				/* Unified Ip Packet implementaion */
@@ -709,7 +709,7 @@ namespace QVPN {
 
 				void set_ip_source(const QVPN::Core::IPv4Address& src);
 				void set_ip_dest(const QVPN::Core::IPv4Address& dst);
-
+				void set_ip_total_length(UShort length);
 				void set_ip_checksum(const UShort checksum);
 
 				/* Unified Ip Packet implementaion */
@@ -977,6 +977,8 @@ namespace QVPN {
 				{ t.get_receiver_number() } -> std::same_as<UInt>;
 				{ t.get_flags() } -> std::same_as<UShort>;
 
+				{ ct.is_reset_connection_packet() } -> std::same_as<bool>;
+
 				{ t.set_sender_number(number) } -> std::same_as<void>;
 				{ t.set_receiver_number(number) } -> std::same_as<void>;
 				{ t.set_flags(flags) } -> std::same_as<void>;
@@ -1019,6 +1021,7 @@ namespace QVPN {
 					{ t.set_tcp_offset(byte) } -> std::same_as<void>;
 					{ t.set_tcp_window(ushort) } -> std::same_as<void>;
 					{ t.set_tcp_urgent(ushort) } -> std::same_as<void>;
+					{ t.set_tcp_length(byte) } -> std::same_as<void>;
 
 			}&& UnifiedTransportLike<TcpImpl>&& UnifiedPacketLike<TcpImpl>;
 
@@ -1074,6 +1077,8 @@ namespace QVPN {
 				UInt get_receiver_number() const;
 				UShort get_flags() const;
 
+				bool is_reset_connection_packet() const;
+
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_transport_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_transport_bytes();
 
@@ -1084,13 +1089,14 @@ namespace QVPN {
 				void set_dst_port(UShort port);
 				void set_src_port(UShort port);
 
-				void set_transport_length(UShort length);
+				void set_transport_length(UShort bytes_length);
 				void set_tcp_seq_number(UInt number);
 				void set_tcp_ack_number(UInt number);
 				void set_tcp_flags(TcpFlagsObject flags);
 				void set_tcp_offset(UByte offset);
 				void set_tcp_window(UShort window);
 				void set_tcp_urgent(UShort urgent);
+				void set_tcp_length(UByte word_length);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -1167,6 +1173,8 @@ namespace QVPN {
 				UInt get_receiver_number() const;
 				UShort get_flags() const;
 
+				bool is_reset_connection_packet() const;
+
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_transport_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_transport_bytes();
 
@@ -1176,11 +1184,12 @@ namespace QVPN {
 				void set_tcp_offset(UByte offset);
 				void set_tcp_window(UShort window);
 				void set_tcp_urgent(UShort urgent);
+				void set_tcp_length(UByte word_length);
 
 				void set_dst_port(UShort port);
 				void set_src_port(UShort port);
 
-				void set_transport_length(UShort length);
+				void set_transport_length(UShort bytes_length);
 				void set_tcp_seq_number(UInt number);
 				void set_tcp_ack_number(UInt number);
 				void set_tcp_flags(TcpFlagsObject flags);
@@ -1304,6 +1313,8 @@ namespace QVPN {
 				UInt get_receiver_number() const;
 				UShort get_flags() const;
 
+				bool is_reset_connection_packet() const;
+
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_transport_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_transport_bytes();
 
@@ -1377,6 +1388,8 @@ namespace QVPN {
 				UInt get_sender_number() const;
 				UInt get_receiver_number() const;
 				UShort get_flags() const;
+
+				bool is_reset_connection_packet() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_transport_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_transport_bytes();
@@ -1491,6 +1504,8 @@ namespace QVPN {
 				UInt get_sender_number() const;
 				UInt get_receiver_number() const;
 				UShort get_flags() const;
+
+				bool is_reset_connection_packet() const;
 
 				void set_sender_number(UInt number);
 				void set_receiver_number(UInt number);
@@ -4209,6 +4224,10 @@ namespace QVPN {
 					return std::pair<UByte*, UByte*>(data.data(), data.data() + data.size());
 				}
 
+				std::string to_string() const
+				{
+					return std::format("size = {}", get_length());
+				}
 			};
 
 
@@ -4367,6 +4386,12 @@ namespace QVPN {
 						proxy_data.get_dst_port(), b, e);
 				}	
 
+				std::string to_string() const
+				{
+					using Verb = QVPNVerboser;
+					return std::format("({}, {}, {}:{}->{}:{})/{}", Verb::net_verbose(net_protocol), Verb::transport_verbose(transport_protocol), source_addr.to_string(), source_port, dst_addr.to_string(), dst_port, proto_data.to_string());
+				}
+
 			};
 
 
@@ -4417,7 +4442,8 @@ namespace QVPN {
 
 
 				}
-
+				
+				// packet payload
 				std::pair<UByte*, UByte*> get_raw_data()
 				{
 					auto start = data_.data();
@@ -4484,6 +4510,20 @@ namespace QVPN {
 					TcpPacket::recalculate_transport_checksum(pseudo, b, e);
 				}
 
+				void recalculate_lengths()
+				{
+					auto [nb, ne] = Ipv4Packet::to_bytes();
+					auto [tb, te] = TcpPacket::to_bytes();
+					auto [db, de] = DataPacket::to_bytes();
+
+					auto n_size = std::distance(nb, ne);
+					auto t_size = std::distance(tb, te);
+					auto d_size = std::distance(db, de);
+
+					Ipv4Packet::set_ip_total_length(n_size + t_size + d_size);
+					TcpPacket::set_transport_length(t_size);
+				}
+
 				template <std::random_access_iterator Iter>
 				FullPacket new_packet_by_payload(Iter begin, Iter end) const
 				{
@@ -4507,6 +4547,7 @@ namespace QVPN {
 				void set_qtunnel_proto_data(QTunnelProtoData& data)
 				{
 					auto [b, e] = data.get_proto_data();
+					
 					QTunnelTCPViewScheme scheme(b, e);
 					set_tcp_seq_number(scheme.get_seq());
 					set_tcp_ack_number(scheme.get_ack());
@@ -4594,6 +4635,20 @@ namespace QVPN {
 					auto dst = Ipv4Packet::get_ip_dest();
 					auto pseudo = TransportIpv4PseudoHeader(src, dst, Ipv4Packet::get_ip_protocol(), length);
 					UdpPacket::recalculate_transport_checksum(pseudo, b, e);
+				}
+
+				void recalculate_lengths()
+				{
+					auto [nb, ne] = Ipv4Packet::to_bytes();
+					auto [tb, te] = UdpPacket::to_bytes();
+					auto [db, de] = DataPacket::to_bytes();
+
+					auto n_size = std::distance(nb, ne);
+					auto t_size = std::distance(tb, te);
+					auto d_size = std::distance(db, de);
+
+					Ipv4Packet::set_ip_total_length(n_size + t_size + d_size);
+					UdpPacket::set_transport_length(t_size);
 				}
 
 				template <std::random_access_iterator Iter>
@@ -4703,6 +4758,21 @@ namespace QVPN {
 					TcpPacket_View::recalculate_transport_checksum(pseudo, b, e);
 				}
 
+				void recalculate_lengths()
+				{
+					auto [nb, ne] = Ipv4Packet_View::to_bytes();
+					auto [tb, te] = TcpPacket_View::to_bytes();
+					auto [db, de] = DataPacket_View::to_bytes();
+
+					auto n_size = std::distance(nb, ne);
+					auto t_size = std::distance(tb, te);
+					auto d_size = std::distance(db, de);
+
+					Ipv4Packet_View::set_ip_total_length(n_size + t_size + d_size);
+					TcpPacket_View::set_transport_length(t_size);
+				}
+
+
 				template <std::random_access_iterator Iter>
 				FullPacket new_packet_by_payload(Iter begin, Iter end) const
 				{
@@ -4742,6 +4812,8 @@ namespace QVPN {
 					set_tcp_seq_number(scheme.get_seq());
 					set_tcp_ack_number(scheme.get_ack());
 					set_tcp_flags(scheme.get_flags());
+
+					printf("Scheme flags: %s", QVPNVerboser::tcp_flags(scheme.get_flags()).c_str());
 
 					set_tcp_offset(scheme.get_offset());
 					set_tcp_window(scheme.get_window());
@@ -4819,6 +4891,20 @@ namespace QVPN {
 					auto dst = Ipv4Packet_View::get_ip_dest();
 					auto pseudo = TransportIpv4PseudoHeader(src, dst, Ipv4Packet_View::get_ip_protocol(), length);
 					UdpPacketView::recalculate_transport_checksum(pseudo, b, e);
+				}
+
+				void recalculate_lengths()
+				{
+					auto [nb, ne] = Ipv4Packet_View::to_bytes();
+					auto [tb, te] = UdpPacket_View::to_bytes();
+					auto [db, de] = DataPacket_View::to_bytes();
+
+					auto n_size = std::distance(nb, ne);
+					auto t_size = std::distance(tb, te);
+					auto d_size = std::distance(db, de);
+
+					Ipv4Packet_View::set_ip_total_length(n_size + t_size + d_size);
+					UdpPacket_View::set_transport_length(t_size);
 				}
 
 				template <std::random_access_iterator Iter>
@@ -4916,6 +5002,20 @@ namespace QVPN {
 					TcpPacket_View::recalculate_transport_checksum(pseudo, b, e);
 				}
 
+				void recalculate_lengths()
+				{
+					auto [nb, ne] = Ipv4Packet_View::to_bytes();
+					auto [tb, te] = TcpPacket_View::to_bytes();
+					auto [db, de] = DataPacket_View::to_bytes();
+
+					auto n_size = std::distance(nb, ne);
+					auto t_size = std::distance(tb, te);
+					auto d_size = std::distance(db, de);
+
+					Ipv4Packet_View::set_ip_total_length(n_size + t_size + d_size);
+					TcpPacket_View::set_transport_length(t_size);
+				}
+
 				template <std::random_access_iterator Iter>
 				FullPacket new_packet_by_payload(Iter begin, Iter end) const
 				{
@@ -4955,6 +5055,8 @@ namespace QVPN {
 					set_tcp_seq_number(scheme.get_seq());
 					set_tcp_ack_number(scheme.get_ack());
 					set_tcp_flags(scheme.get_flags());
+
+					printf("Scheme flags: %s\n\n", QVPNVerboser::tcp_flags(scheme.get_flags()).c_str());
 
 					set_tcp_offset(scheme.get_offset());
 					set_tcp_window(scheme.get_window());
@@ -5021,6 +5123,20 @@ namespace QVPN {
 					auto dst = Ipv4Packet_View::get_ip_dest();
 					auto pseudo = TransportIpv4PseudoHeader(src, dst, Ipv4Packet_View::get_ip_protocol(), length);
 					UdpPacketView::recalculate_transport_checksum(pseudo, b, e);
+				}
+
+				void recalculate_lengths()
+				{
+					auto [nb, ne] = Ipv4Packet_View::to_bytes();
+					auto [tb, te] = UdpPacket_View::to_bytes();
+					auto [db, de] = DataPacket_View::to_bytes();
+
+					auto n_size = std::distance(nb, ne);
+					auto t_size = std::distance(tb, te);
+					auto d_size = std::distance(db, de);
+
+					Ipv4Packet_View::set_ip_total_length(n_size + t_size + d_size);
+					UdpPacket_View::set_transport_length(t_size);
 				}
 
 				template <std::random_access_iterator Iter>
@@ -5127,6 +5243,11 @@ namespace QVPN {
 				void recalculate_checksums()
 				{
 					
+				}
+
+				void recalculate_lengths()
+				{
+
 				}
 
 				QTunnelProtoData collect_proto_data()

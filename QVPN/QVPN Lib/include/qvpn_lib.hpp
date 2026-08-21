@@ -362,6 +362,7 @@ namespace QVPN {
 
 			NetAddr(AddrBytes_t data);
 			NetAddr(std::initializer_list<UByte> list);
+			NetAddr(AddrInt_t data);
 			NetAddr(const IPv4Address& data);
 			NetAddr(const IPv6Address& data);
 			NetAddr(std::string_view data);
@@ -741,9 +742,15 @@ namespace QVPN {
 
 			NetStatus status;
 			BaseTypes::Long size;
-			std::array<BaseTypes::UByte, buffer_size> data;
+			std::array<BaseTypes::UByte, buffer_size> data; // TODO: переделать на кучу
 		};
 
+		template <is_addr Addr>
+		struct ReceiveDataWInfo : ReceiveData
+		{
+			Addr net_addr;
+			BaseTypes::UShort port;
+		};
 
 		enum class BytesParseSignal
 		{
@@ -1072,8 +1079,8 @@ namespace QVPN {
 
 			{ t.apply_settings(sock_settings) } -> std::same_as<void>;
 
-			{ t.template send_to<Addr>(addr, port, begin, end) } -> std::same_as<NetStatus>;
-			{ t.template recv_from<Addr>(addr, port) } -> std::same_as<ReceiveData>;
+			{ t.template send_to<Addr>(addr, port, begin, end, flags) } -> std::same_as<NetStatus>;
+			{ t.template recv_from<Addr>(flags) } -> std::same_as<ReceiveDataWInfo<Addr>>;
 
 			{ t.template safe_recv<details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
 
@@ -1115,8 +1122,8 @@ namespace QVPN {
 
 			{ t.apply_settings(sock_settings) } -> std::same_as<void>;
 
-			{ t.template send_to<Addr>(addr, port, begin, end) } -> std::same_as<NetStatus>;
-			{ t.template recv_from<Addr>(addr, port) } -> std::same_as<ReceiveData>;
+			{ t.template send_to<Addr>(addr, port, begin, end, flags) } -> std::same_as<NetStatus>;
+			{ t.template recv_from<Addr>(flags) } -> std::same_as<ReceiveDataWInfo<Addr>>;
 
 			{ t.template safe_recv<details::DummyNetLevelProtoTemplate, details::DummyTransportLevelProtoTemplate, details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
 

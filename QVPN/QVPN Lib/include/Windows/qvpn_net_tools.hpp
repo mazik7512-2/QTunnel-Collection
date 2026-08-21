@@ -307,7 +307,7 @@ namespace QVPN {
 			struct SocketSendTo
 			{
 				template <std::random_access_iterator Iter>
-				QVPN::Core::NetStatus operator()(SOCKET& socket, NetProtocol net_proto, const Addr& addr, const UShort port, Iter begin, Iter end)
+				QVPN::Core::NetStatus operator()(SOCKET& socket, NetProtocol net_proto, const Addr& addr, const UShort port, Iter begin, Iter end, int flags)
 				{
 					return QVPN::Core::NetStatus{};
 				}
@@ -318,7 +318,7 @@ namespace QVPN {
 			struct SocketSendTo<NetProtocol::IPv4, QVPN::Core::NetAddr, Socket>
 			{
 				template <std::random_access_iterator Iter>
-				QVPN::Core::NetStatus operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port, Iter begin, Iter end)
+				QVPN::Core::NetStatus operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port, Iter begin, Iter end, int flags)
 				{
 					bool s = true;
 					sockaddr_in sock_addr{};
@@ -328,7 +328,7 @@ namespace QVPN {
 					int addr_len = sizeof(sock_addr);
 					int err = 0;
 					auto size = std::distance(begin, end);
-					auto sock = ::sendto(socket, reinterpret_cast<const char*>(begin), size, 0, (sockaddr*)&sock_addr, addr_len);
+					auto sock = ::sendto(socket, reinterpret_cast<const char*>(begin), size, flags, (sockaddr*)&sock_addr, addr_len);
 					if (sock == SOCKET_ERROR)
 					{
 						err = WSAGetLastError();
@@ -343,7 +343,7 @@ namespace QVPN {
 			struct SocketSendTo<NetProtocol::IPv6, QVPN::Core::NetAddr, Socket>
 			{
 				template <std::random_access_iterator Iter>
-				QVPN::Core::NetStatus operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port, Iter begin, Iter end)
+				QVPN::Core::NetStatus operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port, Iter begin, Iter end, int flags)
 				{
 					bool s = true;
 					sockaddr_in6 sock_addr{};
@@ -354,7 +354,7 @@ namespace QVPN {
 					int addr_len = sizeof(sock_addr);
 					int err = 0;
 					auto size = std::distance(begin, end);
-					auto sock = ::sendto(socket, reinterpret_cast<const char*>(begin), size, 0, (sockaddr*)&sock_addr, addr_len);
+					auto sock = ::sendto(socket, reinterpret_cast<const char*>(begin), size, flags, (sockaddr*)&sock_addr, addr_len);
 					if (sock == SOCKET_ERROR)
 					{
 						err = WSAGetLastError();
@@ -370,14 +370,14 @@ namespace QVPN {
 			struct SocketSendTo<NetProtocol::NET_UNDEFINED, QVPN::Core::NetAddr, Socket>
 			{
 				template <std::random_access_iterator Iter>
-				QVPN::Core::NetStatus operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port, Iter begin, Iter end)
+				QVPN::Core::NetStatus operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port, Iter begin, Iter end, int flags)
 				{
 					switch (net_proto)
 					{
 					case NetProtocol::IPv4:
-						return SocketSendTo<NetProtocol::IPv4, QVPN::Core::NetAddr, Socket>{}(socket, net_proto, addr, port, begin, end);
+						return SocketSendTo<NetProtocol::IPv4, QVPN::Core::NetAddr, Socket>{}(socket, net_proto, addr, port, begin, end, flags);
 					case NetProtocol::IPv6:
-						return SocketSendTo<NetProtocol::IPv6, QVPN::Core::NetAddr, Socket>{}(socket, net_proto, addr, port, begin, end);
+						return SocketSendTo<NetProtocol::IPv6, QVPN::Core::NetAddr, Socket>{}(socket, net_proto, addr, port, begin, end, flags);
 					}
 					return QVPN::Core::NetStatus{};
 				}
@@ -389,9 +389,9 @@ namespace QVPN {
 				requires QVPN::Core::is_socket<Socket, Addr> || QVPN::Core::is_raw_socket<Socket, Addr, typename Socket::SocketFilter>
 			struct SocketRecvFrom
 			{
-				QVPN::Core::ReceiveData operator()(SOCKET& socket, NetProtocol net_proto, const Addr& addr, const UShort port)
+				QVPN::Core::ReceiveDataWInfo<Addr> operator()(SOCKET& socket, NetProtocol net_proto, int flags)
 				{
-					return QVPN::Core::ReceiveData{};
+					return QVPN::Core::ReceiveDataWInfo<Addr>{};
 				}
 			};
 
@@ -399,7 +399,7 @@ namespace QVPN {
 				requires QVPN::Core::is_socket<Socket, QVPN::Core::NetAddr> || QVPN::Core::is_raw_socket<Socket, QVPN::Core::NetAddr, typename Socket::SocketFilter>
 			struct SocketRecvFrom<NetProtocol::IPv4, QVPN::Core::NetAddr, Socket>
 			{
-				QVPN::Core::ReceiveData operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port)
+				QVPN::Core::ReceiveDataWInfo<NetAddr> operator()(SOCKET& socket, NetProtocol net_proto, int flags)
 				{
 					bool s = true;
 					std::array<UByte, QVPN::Core::ReceiveData::buffer_size> data{};
@@ -407,14 +407,14 @@ namespace QVPN {
 					// sock_addr - out param
 					int addr_len = sizeof(sock_addr);
 					int err = 0;
-					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), 0, (sockaddr*)&sock_addr, &addr_len);
+					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), flags, (sockaddr*)&sock_addr, &addr_len);
 					if (sock == SOCKET_ERROR)
 					{
 						err = WSAGetLastError();
 						s = false;
 					}
 					QVPN::Core::NetStatus status{ s, err };
-					return QVPN::Core::ReceiveData{ status, sock, std::move(data)};
+					return QVPN::Core::ReceiveDataWInfo<NetAddr>{ status, sock, std::move(data), NetAddr{ sock_addr.sin_addr.S_un.S_addr }, sock_addr.sin_port};
 				}
 			};
 
@@ -422,7 +422,7 @@ namespace QVPN {
 				requires QVPN::Core::is_socket<Socket, QVPN::Core::NetAddr> || QVPN::Core::is_raw_socket<Socket, QVPN::Core::NetAddr, typename Socket::SocketFilter>
 			struct SocketRecvFrom<NetProtocol::IPv6, QVPN::Core::NetAddr, Socket>
 			{
-				QVPN::Core::ReceiveData operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port)
+				QVPN::Core::ReceiveData operator()(SOCKET& socket, NetProtocol net_proto, int flags)
 				{
 					bool s = true;
 					std::array<UByte, QVPN::Core::ReceiveData::buffer_size> data{};
@@ -430,14 +430,14 @@ namespace QVPN {
 					// sock_addr - out param
 					int addr_len = sizeof(sock_addr);
 					int err = 0;
-					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), 0, (sockaddr*)&sock_addr, &addr_len);
+					auto sock = ::recvfrom(socket, reinterpret_cast<char*>(data.data()), data.size(), flags, (sockaddr*)&sock_addr, &addr_len);
 					if (sock == SOCKET_ERROR)
 					{
 						err = WSAGetLastError();
 						s = false;
 					}
 					QVPN::Core::NetStatus status{s, err };
-					return QVPN::Core::ReceiveData{ status, sock, std::move(data) };
+					return QVPN::Core::ReceiveDataWInfo{ status, sock, std::move(data), NetAddr{sock_addr.sin6_addr.u.Byte, sock_addr.sin6_addr.u.Byte + addr_len}, sock_addr.sin6_port };
 				}
 			};
 
@@ -446,14 +446,14 @@ namespace QVPN {
 				requires QVPN::Core::is_socket<Socket, QVPN::Core::NetAddr> || QVPN::Core::is_raw_socket<Socket, QVPN::Core::NetAddr, typename Socket::SocketFilter>
 			struct SocketRecvFrom<NetProtocol::NET_UNDEFINED, QVPN::Core::NetAddr, Socket>
 			{
-				QVPN::Core::ReceiveData operator()(SOCKET& socket, NetProtocol net_proto, const QVPN::Core::NetAddr& addr, const UShort port)
+				QVPN::Core::ReceiveData operator()(SOCKET& socket, NetProtocol net_proto, int flags)
 				{
 					switch (net_proto)
 					{
 					case NetProtocol::IPv4:
-						return SocketRecvFrom<NetProtocol::IPv4, QVPN::Core::NetAddr, Socket>{}(socket, net_proto, addr, port);
+						return SocketRecvFrom<NetProtocol::IPv4, QVPN::Core::NetAddr, Socket>{}(socket, net_proto, flags);
 					case NetProtocol::IPv6:
-						return SocketRecvFrom<NetProtocol::IPv6, QVPN::Core::NetAddr, Socket>{}(socket, net_proto, addr, port);
+						return SocketRecvFrom<NetProtocol::IPv6, QVPN::Core::NetAddr, Socket>{}(socket, net_proto, flags);
 					}
 					return QVPN::Core::ReceiveData{};
 				}
@@ -621,15 +621,16 @@ namespace QVPN {
 			}
 
 			template <QVPN::Core::is_addr Addr>
-			QVPN::Core::NetStatus send_to(const Addr& addr, const UShort port, const UByte* begin, const UByte* end)
+			QVPN::Core::NetStatus send_to(const Addr& addr, const UShort port, const UByte* begin, const UByte* end, int flags = 0)
 			{
-				return NetTools::details::SocketSendTo<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_Socket>{}(socket_, addr.get_addr_family(), addr, port, begin, end);
+				return NetTools::details::SocketSendTo<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_Socket>{}(socket_, addr.get_addr_family(), addr, port, begin, end, flags);
 			}
 
 			template <QVPN::Core::is_addr Addr>
-			QVPN::Core::ReceiveData recv_from(const Addr& addr, const UShort port)
+			QVPN::Core::ReceiveDataWInfo<Addr> recv_from(int flags = 0)
 			{
-				return NetTools::details::SocketRecvFrom<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_Socket>{}(socket_, addr.get_addr_family(), addr, port);
+				auto& addr = get_local_addr();
+				return NetTools::details::SocketRecvFrom<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_Socket>{}(socket_, addr.get_addr_family(), flags);
 			}
 
 			// Return full app level data
@@ -817,15 +818,16 @@ namespace QVPN {
 			}
 
 			template <QVPN::Core::is_addr Addr>
-			QVPN::Core::NetStatus send_to(const Addr& addr, const UShort port, const UByte* begin, const UByte* end)
+			QVPN::Core::NetStatus send_to(const Addr& addr, const UShort port, const UByte* begin, const UByte* end, int flags = 0)
 			{
-				return NetTools::details::SocketSendTo<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_RawSocket>{}(socket_, addr.get_addr_family(), addr, port, begin, end);
+				return NetTools::details::SocketSendTo<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_RawSocket>{}(socket_, addr.get_addr_family(), addr, port, begin, end, flags);
 			}
 
 			template <QVPN::Core::is_addr Addr>
-			QVPN::Core::ReceiveData recv_from(const Addr& addr, const UShort port)
+			QVPN::Core::ReceiveDataWInfo<Addr> recv_from(int flags = 0)
 			{
-				return NetTools::details::SocketRecvFrom<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_RawSocket>{}(socket_, addr.get_addr_family(), addr, port);
+				auto& addr = get_local_addr();
+				return NetTools::details::SocketRecvFrom<QVPN::Core::NetProtocol::NET_UNDEFINED, Addr, QVPN_RawSocket>{}(socket_, addr.get_addr_family(), flags);
 			}
 
 			// Return full app level data
