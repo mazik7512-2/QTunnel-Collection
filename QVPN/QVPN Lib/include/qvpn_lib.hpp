@@ -383,14 +383,11 @@ namespace QVPN {
 		};
 
 
-		template <is_addr Addr>
-		class UnifiedNetAddr : public Addr
+		struct NetAddrHasher
 		{
-		public:
-
-			std::shared_ptr<Addr> get_addr() const
+			size_t operator()(const NetAddr& addr) const
 			{
-				return std::make_shared<Addr>(static_cast<Addr*>(this));
+				return std::hash<std::string>()(addr.to_string());
 			}
 		};
 	}
@@ -1348,20 +1345,135 @@ namespace QVPN {
 
 			UByte get_without_ns() const;
 
-			// to short, from shosrt
+			// to short, from short
 			operator UShort() const;
 			UByte operator[](size_t i) const;
 		};
 
+		template<QVPNPlatform Platform>
+		class QVPNCmdColor
+		{
+
+		};
+
+		template<>
+		class QVPNCmdColor<QVPNPlatform::WINDOWS> : std::string_view
+		{
+		public:
+
+			constexpr QVPNCmdColor(std::string_view v)
+				: std::string_view(v) {}
+
+			constexpr QVPNCmdColor(const char* v)
+				: std::string_view(v) {}
+
+		};
+
+		template<>
+		class QVPNCmdColor<QVPNPlatform::LINUX> : std::string_view
+		{
+		public:
+
+			constexpr QVPNCmdColor(std::string_view v)
+				: std::string_view(v) {}
+
+			constexpr QVPNCmdColor(const char* v)
+				: std::string_view(v) {}
+		};
+
+		using WinColor = QVPNCmdColor<QVPNPlatform::WINDOWS>;
+		using LinuxColor = QVPNCmdColor<QVPNPlatform::LINUX>;
+
+
+		struct CmdColorizer
+		{
+			constexpr static std::string_view HEADER = "\033[95m";
+			constexpr static std::string_view OKBLUE = "\033[94m";
+			constexpr static std::string_view OKCYAN = "\033[96m";
+			constexpr static std::string_view OKGREEN = "\033[92m";
+			constexpr static std::string_view WARNING = "\033[93m";
+			constexpr static std::string_view FAIL = "\033[91m";
+			constexpr static std::string_view ENDC = "\033[0m";
+			constexpr static std::string_view BOLD = "\033[1m";
+			constexpr static std::string_view UNDERLINE = "\033[4m";
+			constexpr static std::string_view DEFAULT = "\033[0m";
+		};
+
+
+		template <QVPNPlatform Platform>
+		class QVPNColorizer
+		{
+
+		};
+
+		template<>
+		class QVPNColorizer<QVPNPlatform::WINDOWS>
+		{
+			constexpr static WinColor HEADER = "\033[95m";
+			constexpr static WinColor OKBLUE = "\033[94m";
+			constexpr static WinColor OKCYAN = "\033[96m";
+			constexpr static WinColor OKGREEN = "\033[92m";
+			constexpr static WinColor WARNING = "\033[93m";
+			constexpr static WinColor FAIL = "\033[91m";
+			constexpr static WinColor ENDC = "\033[0m";
+			constexpr static WinColor BOLD = "\033[1m";
+			constexpr static WinColor UNDERLINE = "\033[4m";
+			constexpr static WinColor DEFAULT = "\033[0m";
+		};
+
+		template<>
+		class QVPNColorizer<QVPNPlatform::LINUX>
+		{
+			constexpr static LinuxColor HEADER = "\033[95m";
+			constexpr static LinuxColor OKBLUE = "\033[94m";
+			constexpr static LinuxColor OKCYAN = "\033[96m";
+			constexpr static LinuxColor OKGREEN = "\033[92m";
+			constexpr static LinuxColor WARNING = "\033[93m";
+			constexpr static LinuxColor FAIL = "\033[91m";
+			constexpr static LinuxColor ENDC = "\033[0m";
+			constexpr static LinuxColor BOLD = "\033[1m";
+			constexpr static LinuxColor UNDERLINE = "\033[4m";
+			constexpr static LinuxColor DEFAULT = "\033[0m";
+		};
+
+
+		class VerbosedNetAddr : public NetAddr
+		{
+		private:
+			std::string verbose_{};
+			std::string_view color_{};
+
+		public:
+
+			VerbosedNetAddr() : NetAddr() {}
+
+			VerbosedNetAddr(const NetAddr& addr, std::string_view verbose, std::string_view cmd_color)
+				: NetAddr(addr), verbose_(verbose), color_(cmd_color) {}
+
+			std::string_view get_verbose() const
+			{
+				return verbose_;
+			}
+
+			std::string_view get_color() const
+			{
+				return color_;
+			}
+
+		};
 
 		class QVPNVerboser
 		{
 		private:
 
+			using UByte = BaseTypes::UByte;
+
 			static inline std::unordered_map<NetProtocol, std::string> net_verbose_ = { { NetProtocol::IPv4, "IPv4"}, { NetProtocol::IPv6, "IPv6"} };
 			static inline std::unordered_map<TransportProtocol, std::string> transport_verbose_ = { { TransportProtocol::TCP, "TCP"}, { TransportProtocol::UDP, "UDP"} };
 			static inline std::array<std::string_view, 9> tcp_flags_ = { "FIN", "SYN", "RST", "PSH", "ACK", "URG", "ECE", "CWR", "NS"};
+			static inline std::array<std::string_view, 3> ipv4_flags_ = { "RESERVED", "DF", "MF" };
 			
+			static inline std::unordered_map<NetAddr, VerbosedNetAddr, NetAddrHasher> verb_addrs_ = {};
 
 		public:
 
@@ -1372,14 +1484,19 @@ namespace QVPN {
 			static void register_transport_verbose(TransportProtocol transport, std::string_view verbose);
 			
 			static std::string tcp_flags(TcpFlagsObject flags);
+			static std::string ipv4_flags(UByte flags);
+
+			static void register_addr_verbose(const NetAddr& addr, std::string_view verbose, std::string_view cmd_color = CmdColorizer::OKBLUE);
+			static std::string addr_verbose(const NetAddr& addr);
 
 		};
 
 
-	}
+}
 
 }
 
+// TODO: переделать на указания хеш функции, без std::hash
 // for server driver
 namespace std
 {

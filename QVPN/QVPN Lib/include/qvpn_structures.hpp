@@ -450,6 +450,8 @@ namespace QVPN {
 
 				{ t.to_object() } -> std::same_as<typename PacketImpl::ObjectType>;
 				{ t.to_view() } -> std::same_as<typename PacketImpl::ViewType>;
+
+				{ ct.get_size() } -> std::same_as<UShort>;
 			};
 
 			template <class IpPacketImpl>
@@ -461,8 +463,6 @@ namespace QVPN {
 
 				typename IpPacketImpl::DataIterator_t;
 				typename IpPacketImpl::ConstDataIterator_t;
-
-					{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 
 					{ t.get_src_addr() } -> std::same_as<NetAddr>;
 					{ t.get_dst_addr() } -> std::same_as<NetAddr>;
@@ -502,6 +502,8 @@ namespace QVPN {
 				{ t.get_ip_total_length() } -> std::same_as<UShort>;
 				{ t.get_ip_id() } -> std::same_as<UShort>;
 				{ t.get_ip_flags() } -> std::same_as<UByte>;
+				{ t.get_ip_df_flag() } -> std::same_as<UByte>;
+				{ t.get_ip_mf_flag() } -> std::same_as<UByte>;
 				{ t.get_ip_offset() } -> std::same_as<UShort>;
 				{ t.get_ip_ttl() } -> std::same_as<UByte>;
 				{ t.get_ip_protocol() } -> std::same_as<TransportProtocol>;
@@ -562,7 +564,6 @@ namespace QVPN {
 			private:
 
 				std::vector<UByte> header_;
-				UByte* next_protocol_;
 
 			public:
 
@@ -580,7 +581,7 @@ namespace QVPN {
 
 				void parse_packet(UByte* begin, UByte* end);
 
-				UByte* get_next_protocol_byte();
+				UShort get_size() const;
 
 				NetProtocol get_ip_version() const;
 				UByte get_ip_header_length() const;
@@ -593,6 +594,9 @@ namespace QVPN {
 				UShort get_ip_id() const;
 
 				UByte  get_ip_flags() const;
+				UByte get_ip_df_flag() const;
+				UByte get_ip_mf_flag() const;
+
 				UShort get_ip_offset() const;
 
 				UByte get_ip_ttl() const;
@@ -638,6 +642,9 @@ namespace QVPN {
 					return ObjectType(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
 				}
 
+				static inline std::vector<UByte> generate_object_bytes(ViewType parent, const NetAddr& src, const NetAddr& dst, UShort total_length);
+				static inline ObjectType generate_object(ViewType parent, const NetAddr& src, const NetAddr& dst, UShort total_length);
+
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
@@ -660,8 +667,6 @@ namespace QVPN {
 				UByte* header_;
 				const int ip4_header_size_ = 20;
 
-				UByte* next_protocol_;
-
 				UByte* additional_header_;
 				int add_header_size_ = 0;
 
@@ -680,7 +685,7 @@ namespace QVPN {
 
 				void set_data(UByte* begin, UByte* end);
 
-				UByte* get_next_protocol_byte();
+				UShort get_size() const;
 
 				NetProtocol get_ip_version() const;
 				UByte get_ip_header_length() const;
@@ -693,6 +698,9 @@ namespace QVPN {
 				UShort get_ip_id() const;
 
 				UByte  get_ip_flags() const;
+				UByte get_ip_df_flag() const;
+				UByte get_ip_mf_flag() const;
+
 				UShort get_ip_offset() const;
 
 				UByte get_ip_ttl() const;
@@ -740,6 +748,11 @@ namespace QVPN {
 				{
 					return ObjectType::generate_object(strategy, src, dst, proto, total_length, DF, MF, offset);
 				}
+
+
+				static inline std::vector<UByte> generate_object_bytes(ViewType parent, const NetAddr& src, const NetAddr& dst, UShort total_length);
+
+				static inline ObjectType generate_object(ViewType parent, const NetAddr& src, const NetAddr& dst, UShort total_length);
 
 
 				/* Unified Packet implementaion */
@@ -816,6 +829,48 @@ namespace QVPN {
 
 			}
 
+			inline std::vector<UByte> Ipv4PacketLittleEndian::generate_object_bytes(ViewType parent, const NetAddr& src, const NetAddr& dst, UShort total_length)
+			{
+				auto [b, e] = parent.to_bytes();
+
+				std::vector<UByte> obj_bytes{ b, e };
+				ViewType packet(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
+
+				packet.set_src_addr(src);
+				packet.set_dst_addr(dst);
+				packet.set_ip_total_length(total_length);
+				packet.recalculate_ip_checksum();
+
+				return obj_bytes;
+			}
+
+			inline Ipv4PacketLittleEndian::ObjectType Ipv4PacketLittleEndian::generate_object(ViewType parent, const NetAddr& src, const NetAddr& dst, UShort total_length)
+			{
+				auto obj_bytes = generate_object_bytes(parent, src, dst, total_length);
+				return ObjectType(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
+			}
+
+			inline std::vector<UByte> Ipv4PacketView::generate_object_bytes(ViewType parent, const NetAddr& src, const NetAddr& dst, UShort total_length)
+			{
+				auto [b, e] = parent.to_bytes();
+
+				std::vector<UByte> obj_bytes{ b, e };
+				ViewType packet(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
+
+				packet.set_src_addr(src);
+				packet.set_dst_addr(dst);
+				packet.set_ip_total_length(total_length);
+				packet.recalculate_ip_checksum();
+
+				return obj_bytes;
+			}
+
+			inline Ipv4PacketView::ObjectType Ipv4PacketView::generate_object(ViewType parent, const NetAddr& src, const NetAddr& dst, UShort total_length)
+			{
+				auto obj_bytes = generate_object_bytes(parent, src, dst, total_length);
+				return ObjectType(obj_bytes.data(), obj_bytes.data() + obj_bytes.size());
+			}
+
 
 			class DummyNetPacket
 			{
@@ -841,7 +896,7 @@ namespace QVPN {
 				// NetLayer implementation
 				/////////////////////
 
-				UByte* get_next_protocol_byte() const;
+				UShort get_size() const;
 
 				NetAddr get_src_addr() const;
 				NetAddr get_dst_addr() const;
@@ -950,9 +1005,273 @@ namespace QVPN {
 
 			};
 
+
+			struct QTunnelProtoData
+			{
+				std::vector<UByte> data{}; // 2 byte - length, after array of bytes
+
+			public:
+
+				QTunnelProtoData()
+				{
+					data.push_back(0);
+					data.push_back(0);
+				}
+
+				QTunnelProtoData(UShort length, UByte* begin, UByte* end)
+				{
+					data.push_back(length >> 8 & 0xFF);
+					data.push_back(length & 0xFF);
+					std::copy(begin, end, std::back_inserter(data));
+				}
+
+				QTunnelProtoData(UByte* begin, UByte* end)
+				{
+					std::copy(begin, end, std::back_inserter(data));
+				}
+
+				QTunnelProtoData(QTunnelProtoData&& other) noexcept
+				{
+					data = std::move(other.data);
+				}
+
+				QTunnelProtoData& operator=(QTunnelProtoData&& other) noexcept
+				{
+					data = std::move(other.data);
+					return *this;
+				}
+
+				UShort get_length() const
+				{
+					if (data.size() == 0)
+						return 0;
+					return static_cast<UShort>(data[0] << 8 | data[1]);
+				}
+
+				std::pair<UByte*, UByte*> get_proto_data()
+				{
+					auto length = get_length();
+					auto start = sizeof(length);
+					return std::pair<UByte*, UByte*>(data.data() + start, data.data() + data.size());
+				}
+
+				std::pair<UByte*, UByte*> to_bytes()
+				{
+					return std::pair<UByte*, UByte*>(data.data(), data.data() + data.size());
+				}
+
+				std::string to_string() const
+				{
+					return std::format("size = {}", get_length());
+				}
+			};
+
+
+			template <QVPN::Core::is_addr Addr>
+			struct QTunnelProxy
+			{
+			public:
+				NetProtocol net_protocol{};
+				TransportProtocol transport_protocol{};
+				Addr source_addr{};
+				UShort source_port{};
+
+				Addr dst_addr{};
+				UShort dst_port{};
+
+				mutable QTunnelProtoData proto_data;
+
+			public:
+
+				QTunnelProxy() = default;
+
+				QTunnelProxy(NetProtocol net_p, TransportProtocol transport_p, const Addr& src, UShort src_p, const Addr& dst, UShort dst_p, UByte* begin, UByte* end)
+				{
+					net_protocol = net_p;
+					transport_protocol = transport_p;
+					source_addr = src;
+					source_port = src_p;
+					dst_addr = dst;
+					dst_port = dst_p;
+
+					proto_data = QTunnelProtoData(begin, end);
+				}
+
+				QTunnelProxy(NetProtocol net_p, TransportProtocol transport_p, const Addr& src, UShort src_p, const Addr& dst, UShort dst_p, QTunnelProtoData&& proto_d)
+				{
+					net_protocol = net_p;
+					transport_protocol = transport_p;
+					source_addr = src;
+					source_port = src_p;
+					dst_addr = dst;
+					dst_port = dst_p;
+
+					proto_data = std::move(proto_d);
+				}
+
+				NetProtocol get_net_proto() const
+				{
+					return net_protocol;
+				}
+
+				TransportProtocol get_transport_proto() const
+				{
+					return transport_protocol;
+				}
+
+				Addr get_src_addr() const
+				{
+					return source_addr;
+				}
+
+				UShort get_src_port() const
+				{
+					return source_port;
+				}
+
+				Addr get_dst_addr() const
+				{
+					return dst_addr;
+				}
+
+				UShort get_dst_port() const
+				{
+					return dst_port;
+				}
+
+				std::pair<UByte*, UByte*> get_proto_data() const
+				{
+					return proto_data.get_proto_data();
+				}
+
+				std::pair<UByte*, UByte*> get_proto_data_bytes() const
+				{
+					return proto_data.to_bytes();
+				}
+
+				bool check_validity() const
+				{
+					bool b = false;
+					switch (net_protocol) {
+					case IPv4:
+						b = true;
+						break;
+					case IPv6:
+						return false; // TODO: доделать ipv6
+					case NET_UNDEFINED:
+						return false;
+						break;
+					default:
+						return false;
+					}
+
+					switch (transport_protocol) {
+					case TCP:
+						b = true;
+						break;
+					case UDP:
+						b = true;
+						break;
+					case TRANSPORT_UNDEFINED:
+						return false;
+					default:
+						return false;
+					}
+					return true;
+				}
+
+				UShort get_proxy_data_size() const
+				{
+					UShort size = sizeof(net_protocol) + sizeof(transport_protocol) + source_addr.get_addr_size() + sizeof(source_port) + dst_addr.get_addr_size() + sizeof(dst_port) + proto_data.get_length() + 2; // 2 - size of proto data length field
+					return size;
+				}
+
+				static inline QTunnelProxy create_and_inverse_addrs(const QTunnelProxy<Addr>& proxy_data)
+				{
+					auto [b, e] = proxy_data.get_proto_data_bytes();
+					return QTunnelProxy(proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_src_addr(),
+						proxy_data.get_src_port(), b, e);
+				}
+
+				static inline QTunnelProxy create(const QTunnelProxy<Addr>& proxy_data)
+				{
+					auto [b, e] = proxy_data.get_proto_data_bytes();
+					return QTunnelProxy(proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_src_addr(), proxy_data.get_src_port(), proxy_data.get_dst_addr(),
+						proxy_data.get_dst_port(), b, e);
+				}
+
+				std::string to_string() const
+				{
+					using Verb = QVPNVerboser;
+					return std::format("({}, {}, {}:{}->{}:{})/{}", Verb::net_verbose(net_protocol), Verb::transport_verbose(transport_protocol), source_addr.to_string(), source_port, dst_addr.to_string(), dst_port, proto_data.to_string());
+				}
+
+			};
+
+
+			template <QVPN::Core::is_addr Addr>
+			class QTunnelData : public QTunnelProxy<Addr>
+			{
+				std::vector<UByte> data_;
+				using ProxyData = QTunnelProxy<Addr>;
+			public:
+
+				QTunnelData(std::vector<UByte>&& data)
+					: QTunnelProxy<Addr>()
+				{
+					data_ = std::move(data);
+					ProxyData::net_protocol = static_cast<NetProtocol>(data_[0]);
+					ProxyData::transport_protocol = static_cast<TransportProtocol>(data_[1]);
+					data_.erase(data_.begin(), data_.begin() + 2);
+					switch (ProxyData::net_protocol)
+					{
+
+					case NetProtocol::IPv4:
+					{
+						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 4);
+						ProxyData::source_port = data_[4] << 8 | data_[5];
+						ProxyData::dst_addr = Addr(data_.begin() + 6, data_.begin() + 10);
+						ProxyData::dst_port = data_[10] << 8 | data_[11];
+						break;
+					}
+
+					case NetProtocol::IPv6:
+					{
+						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 16);
+						ProxyData::source_port = data_[16] << 8 | data_[17];
+						ProxyData::dst_addr = Addr(data_.begin() + 18, data_.begin() + 34);
+						ProxyData::dst_port = data_[34] << 8 | data_[35];
+						break;
+					}
+					}
+					auto meta_data_size = ProxyData::source_addr.get_addr_size() * 2 + 4; // 2 addrs (src + dst) and 2 ports (src + dst)
+					data_.erase(data_.begin(), data_.begin() + meta_data_size);
+
+					// also proto data
+
+					UShort size = static_cast<UShort>(data_[0] << 8 | data_[1]);
+					auto full_size = size + sizeof(size);
+					ProxyData::proto_data = QTunnelProtoData(size, data_.data() + 2, data_.data() + full_size);
+					data_.erase(data_.begin(), data_.begin() + full_size); // erase proto data and here payload
+
+
+				}
+
+				// packet payload
+				std::pair<UByte*, UByte*> get_raw_data()
+				{
+					auto start = data_.data();
+					auto end = data_.data() + data_.size();
+					return std::pair<UByte*, UByte*>(start, end);
+				}
+			};
+
+			using QVPNProxyData_Ipv4 = QTunnelProxy<QVPN::Core::IPv4Address>;
+
+
 			template <class TransportImpl>
 			concept UnifiedTransportLike =
-				requires (TransportImpl t, const TransportImpl ct, UShort port, UShort length, UInt number, UByte flags) {
+				requires (TransportImpl t, const TransportImpl ct, UShort port, UShort length, UInt number, UByte flags, UShort checksum) {
 
 				typename TransportImpl::ObjectType;
 				typename TransportImpl::ViewType;
@@ -968,10 +1287,9 @@ namespace QVPN {
 				{ t.set_src_port(port) } -> std::same_as<void>;
 
 				{ t.set_transport_length(length) } -> std::same_as<void>;
+				{ t.set_transport_checksum(checksum) } -> std::same_as<void>;
 
 				{ t.recalculate_transport_checksum(std::declval<const TransportIpv4PseudoHeader&>(), std::declval<typename TransportImpl::ConstDataIterator_t>(), std::declval<typename TransportImpl::ConstDataIterator_t>()) } -> std::same_as<void>;
-
-				{ t.get_next_protocol_byte() } -> std::same_as<UByte*>;
 
 				{ t.get_sender_number() } -> std::same_as<UInt>;
 				{ t.get_receiver_number() } -> std::same_as<UInt>;
@@ -995,7 +1313,7 @@ namespace QVPN {
 
 			template <class TcpImpl>
 			concept TcpPacketLike =
-				requires (TcpImpl t, UInt number, TcpFlagsObject flags, UShort ushort, UByte byte) {
+				requires (TcpImpl t, UInt number, TcpFlagsObject flags, UShort ushort, UByte byte, UByte* pbyte) {
 
 					{ TcpImpl(std::declval<UByte*>(), std::declval<UByte*>()) };
 					{ t.parse_packet(std::declval<UByte*>(), std::declval<UByte*>()) } -> std::same_as<void>;
@@ -1022,8 +1340,12 @@ namespace QVPN {
 					{ t.set_tcp_window(ushort) } -> std::same_as<void>;
 					{ t.set_tcp_urgent(ushort) } -> std::same_as<void>;
 					{ t.set_tcp_length(byte) } -> std::same_as<void>;
+					{ t.set_tcp_options(pbyte, pbyte) } -> std::same_as<void>;
 
 			}&& UnifiedTransportLike<TcpImpl>&& UnifiedPacketLike<TcpImpl>;
+
+
+			class QTunnelTCPViewScheme;
 
 			class TcpPacketView;
 
@@ -1031,7 +1353,6 @@ namespace QVPN {
 			{
 			private:
 				std::vector<UByte> header_;
-				UByte* next_protocol_;
 
 			public:
 
@@ -1048,7 +1369,7 @@ namespace QVPN {
 				void parse_packet(UByte* begin, UByte* end);
 				void set_data(UByte* begin, UByte* end);
 
-				UByte* get_next_protocol_byte();
+				UShort get_size() const;
 
 				UShort get_tcp_src_port() const;
 				UShort get_tcp_dst_port() const;
@@ -1090,6 +1411,7 @@ namespace QVPN {
 				void set_src_port(UShort port);
 
 				void set_transport_length(UShort bytes_length);
+				void set_transport_checksum(UShort checksum);
 				void set_tcp_seq_number(UInt number);
 				void set_tcp_ack_number(UInt number);
 				void set_tcp_flags(TcpFlagsObject flags);
@@ -1097,6 +1419,7 @@ namespace QVPN {
 				void set_tcp_window(UShort window);
 				void set_tcp_urgent(UShort urgent);
 				void set_tcp_length(UByte word_length);
+				void set_tcp_options(UByte* begin, UByte* end);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -1115,6 +1438,12 @@ namespace QVPN {
 				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
 				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
 
+				template <is_addr Addr = NetAddr>
+				static std::vector<UByte> generate_object_bytes(const QTunnelProxy<Addr>& proxy_data);
+
+				template <is_addr Addr = NetAddr>
+				static ObjectType generate_object(const QTunnelProxy<Addr>& proxy_data);
+
 			};
 
 
@@ -1126,8 +1455,6 @@ namespace QVPN {
 
 				UByte* options_;
 				int tcp_options_size = 0;
-
-				UByte* next_protocol_;
 
 			public:
 
@@ -1143,7 +1470,7 @@ namespace QVPN {
 				void parse_packet(UByte* begin, UByte* end);
 				void set_data(UByte* begin, UByte* end);
 
-				UByte* get_next_protocol_byte();
+				UShort get_size() const;
 
 				UShort get_tcp_src_port() const;
 				UShort get_tcp_dst_port() const;
@@ -1190,9 +1517,11 @@ namespace QVPN {
 				void set_src_port(UShort port);
 
 				void set_transport_length(UShort bytes_length);
+				void set_transport_checksum(UShort checksum);
 				void set_tcp_seq_number(UInt number);
 				void set_tcp_ack_number(UInt number);
 				void set_tcp_flags(TcpFlagsObject flags);
+				void set_tcp_options(UByte* begin, UByte* end);
 
 				/* Unified Packet implementaion */
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
@@ -1209,6 +1538,12 @@ namespace QVPN {
 				// no checksum calcs
 				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
 				static ObjectType generate_object(UShort src_port, UShort dst_port, UInt seq, UInt ack, UByte offset, TcpFlagsObject flags, UShort window_size, UShort urgent, UByte* opt_b, UByte* opt_e);
+
+				template <is_addr Addr = NetAddr>
+				static std::vector<UByte> generate_object_bytes(const QTunnelProxy<Addr>& proxy_data);
+
+				template <is_addr Addr = NetAddr>
+				static ObjectType generate_object(const QTunnelProxy<Addr>& proxy_data);
 
 			};
 
@@ -1268,6 +1603,7 @@ namespace QVPN {
 
 			}&& UnifiedTransportLike<UdpImpl>&& UnifiedPacketLike<UdpImpl>;
 
+			class QTunnelUDPViewScheme;
 
 			class UdpPacketView;
 
@@ -1275,7 +1611,6 @@ namespace QVPN {
 			{
 			private:
 				std::vector<UByte> header_;
-				UByte* next_protocol_;
 
 			public:
 
@@ -1291,7 +1626,7 @@ namespace QVPN {
 				void parse_packet(UByte* begin, UByte* end);
 				void set_data(UByte* begin, UByte* end);
 
-				UByte* get_next_protocol_byte();
+				UShort get_size() const;
 
 				UShort get_udp_src_port() const;
 				UShort get_udp_dst_port() const;
@@ -1301,6 +1636,7 @@ namespace QVPN {
 
 
 				void set_udp_checksum(UShort checksum);
+				void set_transport_checksum(UShort checksum);
 
 				/* Unified transport implementation */
 
@@ -1344,6 +1680,13 @@ namespace QVPN {
 				// no checksum calcs
 				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UShort length);
 				static ObjectType generate_object(UShort src_port, UShort dst_port, UShort length);
+
+				template <is_addr Addr = NetAddr>
+				static std::vector<UByte> generate_object_bytes(const QTunnelProxy<Addr>& proxy_data);
+
+				template <is_addr Addr = NetAddr>
+				static ObjectType generate_object(const QTunnelProxy<Addr>& proxy_data);
+
 			};
 
 
@@ -1352,8 +1695,6 @@ namespace QVPN {
 			private:
 				UByte* header_;
 				const int udp_header_size = 8;
-
-				UByte* next_protocol_;
 
 			public:
 
@@ -1369,7 +1710,7 @@ namespace QVPN {
 				void parse_packet(UByte* begin, UByte* end);
 				void set_data(UByte* begin, UByte* end);
 
-				UByte* get_next_protocol_byte();
+				UShort get_size() const;
 
 				UShort get_udp_src_port() const;
 				UShort get_udp_dst_port() const;
@@ -1379,6 +1720,7 @@ namespace QVPN {
 
 
 				void set_udp_checksum(UShort checksum);
+				void set_transport_checksum(UShort checksum);
 
 				UShort get_src_port() const;
 				UShort get_dst_port() const;
@@ -1420,6 +1762,13 @@ namespace QVPN {
 				// no checksum calcs
 				static std::vector<UByte> generate_object_bytes(UShort src_port, UShort dst_port, UShort length);
 				static ObjectType generate_object(UShort src_port, UShort dst_port, UShort length);
+
+				template <is_addr Addr = NetAddr>
+				static std::vector<UByte> generate_object_bytes(const QTunnelProxy<Addr>& proxy_data);
+
+				template <is_addr Addr = NetAddr>
+				static ObjectType generate_object(const QTunnelProxy<Addr>& proxy_data);
+
 			};
 
 
@@ -1498,8 +1847,9 @@ namespace QVPN {
 				void set_transport_length(UShort length);
 
 				void recalculate_transport_checksum(const TransportIpv4PseudoHeader& pseudo_header, ConstDataIterator_t begin, ConstDataIterator_t end);
+				void set_transport_checksum(UShort checksum);
 
-				UByte* get_next_protocol_byte() const;
+				UShort get_size() const;
 
 				UInt get_sender_number() const;
 				UInt get_receiver_number() const;
@@ -1591,6 +1941,8 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_payload() const;
 				std::pair<DataIterator_t, DataIterator_t> get_payload();
 
+				UShort get_size() const;
+
 				void set_payload(UByte* begin, UByte* end);
 				void set_data(UByte* begin, UByte* end);
 
@@ -1634,6 +1986,8 @@ namespace QVPN {
 
 				void set_payload(UByte* begin, UByte* end);
 				void set_data(UByte* begin, UByte* end);
+
+				UShort get_size() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_data_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_data_bytes();
@@ -1692,6 +2046,7 @@ namespace QVPN {
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
 				std::pair<DataIterator_t, DataIterator_t> to_bytes();
 
+				UShort get_size() const;
 
 				ObjectType to_object();
 				ViewType to_view();
@@ -4066,7 +4421,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: NetLayer(begin, end), TransportLayer(NetLayer::get_next_protocol_byte(), end), DataLayer(TransportLayer::get_next_protocol_byte(), end) {}
+					: NetLayer(begin, end), TransportLayer(begin + NetLayer::get_size(), end), DataLayer(begin + NetLayer::get_size() + TransportLayer::get_size(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -4093,6 +4448,7 @@ namespace QVPN {
 			using UdpPacket_View = UdpPacket_<UdpPacketView>;
 
 			using DataPacket_View = DataPacket_<DataPacketView>;
+
 			/////////////////////////////////////////////////////////////////
 			/* Full fat default packets */
 			using Ipv4TcpFatPacket = FullPacket<Ipv4Packet, TcpPacket, DataPacket, ClassType::OBJECT>;
@@ -4108,8 +4464,6 @@ namespace QVPN {
 			using Ipv4TcpPacket_View = FullPacket<Ipv4Packet_View, TcpPacket_View, DataPacket_View, ClassType::VIEW>;
 			using Ipv4UdpPacket_View = FullPacket<Ipv4Packet_View, UdpPacket_View, DataPacket_View, ClassType::VIEW>;
 			/////////////////////////////////////////////////////////////////
-
-
 
 
 			// QTunnel
@@ -4170,66 +4524,6 @@ namespace QVPN {
 
 			};
 
-			struct QTunnelProtoData
-			{
-				std::vector<UByte> data{}; // 2 byte - length, after array of bytes
-
-			public:
-
-				QTunnelProtoData()
-				{
-					data.push_back(0);
-					data.push_back(0);
-				}
-
-				QTunnelProtoData(UShort length, UByte* begin, UByte* end)
-				{
-					data.push_back(length >> 8 & 0xFF);
-					data.push_back(length & 0xFF);
-					std::copy(begin, end, std::back_inserter(data));
-				}
-
-				QTunnelProtoData(UByte* begin, UByte* end)
-				{
-					std::copy(begin, end, std::back_inserter(data));
-				}
-
-				QTunnelProtoData(QTunnelProtoData&& other) noexcept
-				{
-					data = std::move(other.data);
-				}
-
-				QTunnelProtoData& operator=(QTunnelProtoData&& other) noexcept
-				{
-					data = std::move(other.data);
-					return *this;
-				}
-
-				UShort get_length() const
-				{
-					if (data.size() == 0)
-						return 0;
-					return static_cast<UShort>(data[0] << 8 | data[1]);
-				}
-
-				std::pair<UByte*, UByte*> get_proto_data()
-				{
-					auto length = get_length();
-					auto start = sizeof(length);
-					return std::pair<UByte*, UByte*>(data.data() + start, data.data() + data.size());
-				}
-
-				std::pair<UByte*, UByte*> to_bytes()
-				{
-					return std::pair<UByte*, UByte*>(data.data(), data.data() + data.size());
-				}
-
-				std::string to_string() const
-				{
-					return std::format("size = {}", get_length());
-				}
-			};
-
 
 			template <TransportProtocol Proto>
 			class QTunnelTransportSchemeAdapter
@@ -4253,208 +4547,6 @@ namespace QVPN {
 					: QTunnelUDPViewScheme(begin, end) {}
 			};
 
-			template <QVPN::Core::is_addr Addr>
-			struct QTunnelProxy
-			{
-			public:
-				NetProtocol net_protocol{};
-				TransportProtocol transport_protocol{};
-				Addr source_addr{};
-				UShort source_port{};
-
-				Addr dst_addr{};
-				UShort dst_port{};
-
-				mutable QTunnelProtoData proto_data;
-
-			public:
-
-				QTunnelProxy() = default;
-
-				QTunnelProxy(NetProtocol net_p, TransportProtocol transport_p, const Addr& src, UShort src_p, const Addr& dst, UShort dst_p, UByte* begin, UByte* end)
-				{
-					net_protocol = net_p;
-					transport_protocol = transport_p;
-					source_addr = src;
-					source_port = src_p;
-					dst_addr = dst;
-					dst_port = dst_p;
-
-					proto_data = QTunnelProtoData(begin, end);
-				}
-
-				QTunnelProxy(NetProtocol net_p, TransportProtocol transport_p, const Addr& src, UShort src_p, const Addr& dst, UShort dst_p, QTunnelProtoData&& proto_d)
-				{
-					net_protocol = net_p;
-					transport_protocol = transport_p;
-					source_addr = src;
-					source_port = src_p;
-					dst_addr = dst;
-					dst_port = dst_p;
-
-					proto_data = std::move(proto_d);
-				}
-
-				NetProtocol get_net_proto() const
-				{
-					return net_protocol;
-				}
-
-				TransportProtocol get_transport_proto() const
-				{
-					return transport_protocol;
-				}
-
-				Addr get_src_addr() const
-				{
-					return source_addr;
-				}
-
-				UShort get_src_port() const
-				{
-					return source_port;
-				}
-
-				Addr get_dst_addr() const
-				{
-					return dst_addr;
-				}
-
-				UShort get_dst_port() const
-				{
-					return dst_port;
-				}
-
-				std::pair<UByte*, UByte*> get_proto_data() const
-				{
-					return proto_data.get_proto_data();
-				}
-
-				std::pair<UByte*, UByte*> get_proto_data_bytes() const
-				{
-					return proto_data.to_bytes();
-				}
-
-				bool check_validity() const
-				{
-					bool b = false;
-					switch (net_protocol) {
-					case IPv4:
-						b = true;
-						break;
-					case IPv6:
-						return false; // TODO: доделать ipv6
-					case NET_UNDEFINED:
-						return false;
-						break;
-					default:
-						return false;
-					}
-
-					switch (transport_protocol) {
-					case TCP:
-						b = true;
-						break;
-					case UDP:
-						b = true;
-						break;
-					case TRANSPORT_UNDEFINED:
-						return false;
-					default:
-						return false;
-					}
-					return true;
-				}
-
-				UShort get_proxy_data_size() const
-				{
-					UShort size = sizeof(net_protocol) + sizeof(transport_protocol) + source_addr.get_addr_size() + sizeof(source_port) + dst_addr.get_addr_size() + sizeof(dst_port) + proto_data.get_length() + 2; // 2 - size of proto data length field
-					return size;
-				}
-
-				static inline QTunnelProxy create_and_inverse_addrs(const QTunnelProxy<Addr>& proxy_data)
-				{
-					auto [b, e] = proxy_data.get_proto_data_bytes();
-					return QTunnelProxy(proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_dst_addr(), proxy_data.get_dst_port(), proxy_data.get_src_addr(),
-						proxy_data.get_src_port(), b, e);
-				}
-
-				static inline QTunnelProxy create(const QTunnelProxy<Addr>& proxy_data)
-				{
-					auto [b, e] = proxy_data.get_proto_data_bytes();
-					return QTunnelProxy(proxy_data.get_net_proto(), proxy_data.get_transport_proto(), proxy_data.get_src_addr(), proxy_data.get_src_port(), proxy_data.get_dst_addr(),
-						proxy_data.get_dst_port(), b, e);
-				}	
-
-				std::string to_string() const
-				{
-					using Verb = QVPNVerboser;
-					return std::format("({}, {}, {}:{}->{}:{})/{}", Verb::net_verbose(net_protocol), Verb::transport_verbose(transport_protocol), source_addr.to_string(), source_port, dst_addr.to_string(), dst_port, proto_data.to_string());
-				}
-
-			};
-
-
-			template <is_addr Addr>
-			class QTunnelData : public QTunnelProxy<Addr>
-			{
-				std::vector<UByte> data_;
-				using ProxyData = QTunnelProxy<Addr>;
-			public:
-
-				QTunnelData(std::vector<UByte>&& data) 
-					: QTunnelProxy<Addr>()
-				{
-					data_ = std::move(data);
-					ProxyData::net_protocol = static_cast<NetProtocol>(data_[0]);
-					ProxyData::transport_protocol = static_cast<TransportProtocol>(data_[1]);
-					data_.erase(data_.begin(), data_.begin() + 2);
-					switch (ProxyData::net_protocol)
-					{
-
-					case NetProtocol::IPv4:
-					{
-						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 4);
-						ProxyData::source_port = data_[4] << 8 | data_[5];
-						ProxyData::dst_addr = Addr(data_.begin() + 6, data_.begin() + 10);
-						ProxyData::dst_port = data_[10] << 8 | data_[11];
-						break;
-					}
-
-					case NetProtocol::IPv6:
-					{
-						ProxyData::source_addr = Addr(data_.begin(), data_.begin() + 16);
-						ProxyData::source_port = data_[16] << 8 | data_[17];
-						ProxyData::dst_addr = Addr(data_.begin() + 18, data_.begin() + 34);
-						ProxyData::dst_port = data_[34] << 8 | data_[35];
-						break;
-					}
-					}
-					auto meta_data_size = ProxyData::source_addr.get_addr_size() * 2 + 4; // 2 addrs (src + dst) and 2 ports (src + dst)
-					data_.erase(data_.begin(), data_.begin() + meta_data_size);
-
-					// also proto data
-
-					UShort size = static_cast<UShort>(data_[0] << 8 | data_[1]);
-					auto full_size = size + sizeof(size);
-					ProxyData::proto_data = QTunnelProtoData(size, data_.data() + 2, data_.data() + full_size);
-					data_.erase(data_.begin(), data_.begin() + full_size); // erase proto data and here payload
-
-
-				}
-				
-				// packet payload
-				std::pair<UByte*, UByte*> get_raw_data()
-				{
-					auto start = data_.data();
-					auto end = data_.data() + data_.size();
-					return std::pair<UByte*, UByte*>(start, end);
-				}
-			};
-
-			using QVPNProxyData_Ipv4 = QTunnelProxy<QVPN::Core::IPv4Address>;
-
-
 			// Full Packet specs
 
 			// Default (fat) specs
@@ -4469,7 +4561,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: Ipv4Packet(begin, end), TcpPacket(Ipv4Packet::get_next_protocol_byte(), end), DataPacket(TcpPacket::get_next_protocol_byte(), end) {}
+					: Ipv4Packet(begin, end), TcpPacket(begin + Ipv4Packet::get_size(), end), DataPacket(begin + Ipv4Packet::get_size() + TcpPacket::get_size(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -4532,8 +4624,48 @@ namespace QVPN {
 					FullPacket fp(n_b, n_e, t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					fp.set_transport_length(size);
+					fp.recalculate_lengths();
 					fp.recalculate_checksums();
 					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				FullPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelTCPViewScheme(pd_b, pd_e);
+					auto [opt_b, opt_e] = scheme.get_options();
+
+					auto t_header = TcpPacket::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_seq(), scheme.get_ack(),
+						scheme.get_offset(), scheme.get_flags(), scheme.get_window(), scheme.get_urgent_pointer(), opt_b, opt_e);
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto [old_n_b, old_n_e] = Ipv4Packet::to_bytes();
+					auto old_n_header = Ipv4Packet::ViewType(old_n_b, old_n_e);
+					auto n_header = Ipv4Packet::generate_object(old_n_header, proxy_data.get_src_addr(), proxy_data.get_dst_addr(), total_size);
+					auto [n_b, n_e] = n_header.to_bytes();
+
+					auto fp = FullPacket(n_b, n_e, t_b, t_e, begin, end);
+					fp.recalculate_lengths();
+					fp.recalculate_checksums();
+
+					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto fp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = fp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
 				}
 
 				QTunnelProtoData collect_proto_data()
@@ -4546,7 +4678,7 @@ namespace QVPN {
 
 				void set_qtunnel_proto_data(QTunnelProtoData& data)
 				{
-					auto [b, e] = data.get_proto_data();
+					auto [b, e] = data.to_bytes();
 					
 					QTunnelTCPViewScheme scheme(b, e);
 					set_tcp_seq_number(scheme.get_seq());
@@ -4556,6 +4688,10 @@ namespace QVPN {
 					set_tcp_offset(scheme.get_offset());
 					set_tcp_window(scheme.get_window());
 					set_tcp_urgent(scheme.get_urgent_pointer());
+
+					auto [opt_b, opt_e] = scheme.get_options();
+
+					set_tcp_options(opt_b, opt_e);
 				}
 
 				void set_qtunnel_proto_data(UByte* begin, UByte* end)
@@ -4568,6 +4704,10 @@ namespace QVPN {
 					set_tcp_offset(scheme.get_offset());
 					set_tcp_window(scheme.get_window());
 					set_tcp_urgent(scheme.get_urgent_pointer());
+
+					auto [opt_b, opt_e] = scheme.get_options();
+
+					set_tcp_options(opt_b, opt_e);
 				}
 
 				std::string to_packet_friendly_view() const
@@ -4596,7 +4736,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: Ipv4Packet(begin, end), UdpPacket(Ipv4Packet::get_next_protocol_byte(), end), DataPacket(UdpPacket::get_next_protocol_byte(), end) {}
+					: Ipv4Packet(begin, end), UdpPacket(begin + Ipv4Packet::get_size(), end), DataPacket(begin + Ipv4Packet::get_size() + UdpPacket::get_size(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -4659,8 +4799,47 @@ namespace QVPN {
 					FullPacket fp(n_b, n_e, t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					fp.set_transport_length(size);
+					fp.recalculate_lengths();
 					fp.recalculate_checksums();
 					return fp;
+				}
+
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				FullPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelUDPViewScheme(pd_b, pd_e);
+
+					auto t_header = UdpPacket::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_length());
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto [old_n_b, old_n_e] = Ipv4Packet::to_bytes();
+					auto old_n_header = Ipv4Packet::ViewType(old_n_b, old_n_e);
+					auto n_header = Ipv4Packet::generate_object(old_n_header, proxy_data.get_src_addr(), proxy_data.get_dst_addr(), total_size);
+					auto [n_b, n_e] = n_header.to_bytes();
+
+					auto fp = FullPacket(n_b, n_e, t_b, t_e, begin, end);
+					fp.recalculate_lengths();
+					fp.recalculate_checksums();
+
+					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto fp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = fp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
 				}
 
 				QTunnelProtoData collect_proto_data()
@@ -4673,13 +4852,13 @@ namespace QVPN {
 
 				void set_qtunnel_proto_data(QTunnelProtoData& data)
 				{
-					auto [b, e] = data.get_proto_data();
-					QTunnelTCPViewScheme scheme(b, e);
+					auto [b, e] = data.to_bytes();
+					QTunnelUDPViewScheme scheme(b, e);
 				}
 
 				void set_qtunnel_proto_data(UByte* begin, UByte* end)
 				{
-					QTunnelTCPViewScheme scheme(begin, end);
+					QTunnelUDPViewScheme scheme(begin, end);
 				}
 
 				std::string to_packet_friendly_view() const
@@ -4716,8 +4895,8 @@ namespace QVPN {
 					: data_(begin, end)
 				{
 					Ipv4Packet_View::set_data(data_.data(), data_.data() + data_.size());
-					TcpPacket_View::set_data(Ipv4Packet_View::get_next_protocol_byte(), data_.data() + data_.size());
-					DataPacket_View::set_data(TcpPacket_View::get_next_protocol_byte(), data_.data() + data_.size());
+					TcpPacket_View::set_data(data_.data() + Ipv4Packet_View::get_size(), data_.data() + data_.size());
+					DataPacket_View::set_data(data_.data() + Ipv4Packet_View::get_size() + TcpPacket_View::get_size(), data_.data() + data_.size());
 				}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
@@ -4729,8 +4908,8 @@ namespace QVPN {
 					data_.insert(data_.end(), data_begin, data_end);
 
 					Ipv4Packet_View::set_data(data_.data(), data_.data() + data_.size());
-					TcpPacket_View::set_data(Ipv4Packet_View::get_next_protocol_byte(), data_.data() + data_.size());
-					DataPacket_View::set_data(TcpPacket_View::get_next_protocol_byte(), data_.data() + data_.size());
+					TcpPacket_View::set_data(data_.data() + Ipv4Packet_View::get_size(), data_.data() + data_.size());
+					DataPacket_View::set_data(data_.data() + Ipv4Packet_View::get_size() + TcpPacket_View::get_size(), data_.data() + data_.size());
 				}
 
 				std::pair<FullPacket::ConstDataIterator_t, FullPacket::ConstDataIterator_t> bytes() const
@@ -4774,15 +4953,55 @@ namespace QVPN {
 
 
 				template <std::random_access_iterator Iter>
-				FullPacket new_packet_by_payload(Iter begin, Iter end) const
+				Ipv4TcpPacket new_packet_by_payload(Iter begin, Iter end) const
 				{
 					auto [n_b, n_e] = Ipv4Packet_View::to_bytes();
 					auto [t_b, t_e] = TcpPacket_View::to_bytes();
-					FullPacket fp(n_b, n_e, t_b, t_e, begin, end);
+					Ipv4TcpPacket fp(n_b, n_e, t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					fp.set_transport_length(size);
+					fp.recalculate_lengths();
 					fp.recalculate_checksums();
 					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				Ipv4TcpPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelTCPViewScheme(pd_b, pd_e);
+					auto [opt_b, opt_e] = scheme.get_options();
+
+					auto t_header = TcpPacket_View::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_seq(), scheme.get_ack(),
+						scheme.get_offset(), scheme.get_flags(), scheme.get_window(), scheme.get_urgent_pointer(), opt_b, opt_e);
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto [old_n_b, old_n_e] = Ipv4Packet_View::to_bytes();
+					auto old_n_header = Ipv4Packet_View::ViewType(old_n_b, old_n_e);
+					auto n_header = Ipv4Packet_View::generate_object(old_n_header, proxy_data.get_src_addr(), proxy_data.get_dst_addr(), total_size);
+					auto [n_b, n_e] = n_header.to_bytes();
+
+					auto fp = Ipv4TcpPacket(n_b, n_e, t_b, t_e, begin, end);
+					fp.recalculate_lengths();
+					fp.recalculate_checksums();
+
+					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto fp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = fp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
 				}
 
 				QTunnelProtoData collect_proto_data()
@@ -4795,7 +5014,7 @@ namespace QVPN {
 
 				void set_qtunnel_proto_data(QTunnelProtoData& data)
 				{
-					auto [b, e] = data.get_proto_data();
+					auto [b, e] = data.to_bytes();
 					QTunnelTCPViewScheme scheme(b, e);
 					set_tcp_seq_number(scheme.get_seq());
 					set_tcp_ack_number(scheme.get_ack());
@@ -4804,6 +5023,9 @@ namespace QVPN {
 					set_tcp_offset(scheme.get_offset());
 					set_tcp_window(scheme.get_window());
 					set_tcp_urgent(scheme.get_urgent_pointer());
+
+					auto [opt_b, opt_e] = scheme.get_options();
+					set_tcp_options(opt_b, opt_e);
 				}
 
 				void set_qtunnel_proto_data(UByte* begin, UByte* end)
@@ -4813,11 +5035,12 @@ namespace QVPN {
 					set_tcp_ack_number(scheme.get_ack());
 					set_tcp_flags(scheme.get_flags());
 
-					printf("Scheme flags: %s", QVPNVerboser::tcp_flags(scheme.get_flags()).c_str());
-
 					set_tcp_offset(scheme.get_offset());
 					set_tcp_window(scheme.get_window());
 					set_tcp_urgent(scheme.get_urgent_pointer());
+
+					auto [opt_b, opt_e] = scheme.get_options();
+					set_tcp_options(opt_b, opt_e);
 				}
 
 				std::string to_packet_friendly_view() const
@@ -4850,8 +5073,8 @@ namespace QVPN {
 					: data_(begin, end) 
 				{
 					Ipv4Packet_View::set_data(data_.data(), data_.data() + data_.size());
-					UdpPacket_View::set_data(Ipv4Packet_View::get_next_protocol_byte(), data_.data() + data_.size());
-					DataPacket_View::set_data(UdpPacket_View::get_next_protocol_byte(), data_.data() + data_.size());
+					UdpPacket_View::set_data(data_.data() + Ipv4Packet_View::get_size(), data_.data() + data_.size());
+					DataPacket_View::set_data(data_.data() + Ipv4Packet_View::get_size() + UdpPacket_View::get_size(), data_.data() + data_.size());
 				}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
@@ -4862,8 +5085,8 @@ namespace QVPN {
 					data_.insert(data_.end(), data_begin, data_end);
 
 					Ipv4Packet_View::set_data(data_.data(), data_.data() + data_.size());
-					UdpPacket_View::set_data(Ipv4Packet_View::get_next_protocol_byte(), data_.data() + data_.size());
-					DataPacket_View::set_data(UdpPacket_View::get_next_protocol_byte(), data_.data() + data_.size());
+					UdpPacket_View::set_data(data_.data() + Ipv4Packet_View::get_size(), data_.data() + data_.size());
+					DataPacket_View::set_data(data_.data() + Ipv4Packet_View::get_size() + UdpPacket_View::get_size(), data_.data() + data_.size());
 				}
 
 				std::pair<FullPacket::ConstDataIterator_t, FullPacket::ConstDataIterator_t> bytes() const
@@ -4908,15 +5131,53 @@ namespace QVPN {
 				}
 
 				template <std::random_access_iterator Iter>
-				FullPacket new_packet_by_payload(Iter begin, Iter end) const
+				Ipv4UdpPacket new_packet_by_payload(Iter begin, Iter end) const
 				{
 					auto [n_b, n_e] = Ipv4Packet_View::to_bytes();
 					auto [t_b, t_e] = UdpPacket_View::to_bytes();
-					FullPacket fp(n_b, n_e, t_b, t_e, begin, end);
+					Ipv4UdpPacket fp(n_b, n_e, t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					fp.set_transport_length(size);
+					fp.recalculate_lengths();
 					fp.recalculate_checksums();
 					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				Ipv4UdpPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelUDPViewScheme(pd_b, pd_e);
+
+					auto t_header = UdpPacket_View::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_length());
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto [old_n_b, old_n_e] = Ipv4Packet_View::to_bytes();
+					auto old_n_header = Ipv4Packet_View::ViewType(old_n_b, old_n_e);
+					auto n_header = Ipv4Packet_View::generate_object(old_n_header, proxy_data.get_src_addr(), proxy_data.get_dst_addr(), total_size);
+					auto [n_b, n_e] = n_header.to_bytes();
+
+					auto fp = Ipv4UdpPacket(n_b, n_e, t_b, t_e, begin, end);
+					fp.recalculate_lengths();
+					fp.recalculate_checksums();
+
+					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto fp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = fp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
 				}
 
 				QTunnelProtoData collect_proto_data()
@@ -4929,13 +5190,13 @@ namespace QVPN {
 
 				void set_qtunnel_proto_data(QTunnelProtoData& data)
 				{
-					auto [b, e] = data.get_proto_data();
-					QTunnelTCPViewScheme scheme(b, e);
+					auto [b, e] = data.to_bytes();
+					QTunnelUDPViewScheme scheme(b, e);
 				}
 
 				void set_qtunnel_proto_data(UByte* begin, UByte* end)
 				{
-					QTunnelTCPViewScheme scheme(begin, end);
+					QTunnelUDPViewScheme scheme(begin, end);
 				}
 
 				std::string to_packet_friendly_view() const
@@ -4967,7 +5228,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: Ipv4Packet_View(begin, end), TcpPacket_View(Ipv4Packet_View::get_next_protocol_byte(), end), DataPacket_View(TcpPacket_View::get_next_protocol_byte(), end) {}
+					: Ipv4Packet_View(begin, end), TcpPacket_View(begin + Ipv4Packet_View::get_size(), end), DataPacket_View(begin + Ipv4Packet_View::get_size() + TcpPacket_View::get_size(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -5017,15 +5278,55 @@ namespace QVPN {
 				}
 
 				template <std::random_access_iterator Iter>
-				FullPacket new_packet_by_payload(Iter begin, Iter end) const
+				Ipv4TcpPacket new_packet_by_payload(Iter begin, Iter end) const
 				{
 					auto [n_b, n_e] = Ipv4Packet_View::to_bytes();
 					auto [t_b, t_e] = TcpPacket_View::to_bytes();
-					FullPacket fp(n_b, n_e, t_b, t_e, begin, end);
+					Ipv4TcpPacket fp(n_b, n_e, t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					fp.set_transport_length(size);
+					fp.recalculate_lengths();
 					fp.recalculate_checksums();
 					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				Ipv4TcpPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelTCPViewScheme(pd_b, pd_e);
+					auto [opt_b, opt_e] = scheme.get_options();
+
+					auto t_header = TcpPacket_View::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_seq(), scheme.get_ack(),
+						scheme.get_offset(), scheme.get_flags(), scheme.get_window(), scheme.get_urgent_pointer(), opt_b, opt_e);
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto [old_n_b, old_n_e] = Ipv4Packet_View::to_bytes();
+					auto old_n_header = Ipv4Packet_View::ViewType(old_n_b, old_n_e);
+					auto n_header = Ipv4Packet_View::generate_object(old_n_header, proxy_data.get_src_addr(), proxy_data.get_dst_addr(), total_size);
+					auto [n_b, n_e] = n_header.to_bytes();
+
+					auto fp = Ipv4TcpPacket(n_b, n_e, t_b, t_e, begin, end);
+					fp.recalculate_lengths();
+					fp.recalculate_checksums();
+
+					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto fp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = fp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
 				}
 
 				QTunnelProtoData collect_proto_data()
@@ -5038,7 +5339,7 @@ namespace QVPN {
 
 				void set_qtunnel_proto_data(QTunnelProtoData& data)
 				{
-					auto [b, e] = data.get_proto_data();
+					auto [b, e] = data.to_bytes();
 					QTunnelTCPViewScheme scheme(b, e);
 					set_tcp_seq_number(scheme.get_seq());
 					set_tcp_ack_number(scheme.get_ack());
@@ -5047,6 +5348,9 @@ namespace QVPN {
 					set_tcp_offset(scheme.get_offset());
 					set_tcp_window(scheme.get_window());
 					set_tcp_urgent(scheme.get_urgent_pointer());
+
+					auto [opt_b, opt_e] = scheme.get_options();
+					set_tcp_options(opt_b, opt_e);
 				}
 
 				void set_qtunnel_proto_data(UByte* begin, UByte* end)
@@ -5056,11 +5360,12 @@ namespace QVPN {
 					set_tcp_ack_number(scheme.get_ack());
 					set_tcp_flags(scheme.get_flags());
 
-					printf("Scheme flags: %s\n\n", QVPNVerboser::tcp_flags(scheme.get_flags()).c_str());
-
 					set_tcp_offset(scheme.get_offset());
 					set_tcp_window(scheme.get_window());
 					set_tcp_urgent(scheme.get_urgent_pointer());
+
+					auto [opt_b, opt_e] = scheme.get_options();
+					set_tcp_options(opt_b, opt_e);
 				}
 
 				std::string to_packet_friendly_view() const
@@ -5089,7 +5394,7 @@ namespace QVPN {
 			public:
 
 				FullPacket(UByte* begin, UByte* end)
-					: Ipv4Packet_View(begin, end), UdpPacket_View(Ipv4Packet_View::get_next_protocol_byte(), end), DataPacket_View(UdpPacketView::get_next_protocol_byte(), end) {}
+					: Ipv4Packet_View(begin, end), UdpPacket_View(begin + Ipv4Packet_View::get_size(), end), DataPacket_View(begin + Ipv4Packet_View::get_size() + UdpPacketView::get_size(), end) {}
 
 				template <std::random_access_iterator NetIter, std::random_access_iterator TransportIter, std::random_access_iterator DataIter>
 				FullPacket(NetIter net_begin, NetIter net_end, TransportIter t_begin, TransportIter t_end, DataIter data_begin, DataIter data_end)
@@ -5140,15 +5445,53 @@ namespace QVPN {
 				}
 
 				template <std::random_access_iterator Iter>
-				FullPacket new_packet_by_payload(Iter begin, Iter end) const
+				Ipv4UdpPacket new_packet_by_payload(Iter begin, Iter end) const
 				{
 					auto [n_b, n_e] = Ipv4Packet_View::to_bytes();
 					auto [t_b, t_e] = UdpPacket_View::to_bytes();
-					FullPacket fp(n_b, n_e, t_b, t_e, begin, end);
+					Ipv4UdpPacket fp(n_b, n_e, t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					fp.set_transport_length(size);
+					fp.recalculate_lengths();
 					fp.recalculate_checksums();
 					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				Ipv4UdpPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelUDPViewScheme(pd_b, pd_e);
+
+					auto t_header = UdpPacket_View::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_length());
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto [old_n_b, old_n_e] = Ipv4Packet_View::to_bytes();
+					auto old_n_header = Ipv4Packet_View::ViewType(old_n_b, old_n_e);
+					auto n_header = Ipv4Packet_View::generate_object(old_n_header, proxy_data.get_src_addr(), proxy_data.get_dst_addr(), total_size);
+					auto [n_b, n_e] = n_header.to_bytes();
+
+					auto fp = Ipv4UdpPacket(n_b, n_e, t_b, t_e, begin, end);
+					fp.recalculate_lengths();
+					fp.recalculate_checksums();
+
+					return fp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto fp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = fp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
 				}
 
 				QTunnelProtoData collect_proto_data()
@@ -5161,13 +5504,13 @@ namespace QVPN {
 
 				void set_qtunnel_proto_data(QTunnelProtoData& data)
 				{
-					auto [b, e] = data.get_proto_data();
-					QTunnelTCPViewScheme scheme(b, e);
+					auto [b, e] = data.to_bytes();
+					QTunnelUDPViewScheme scheme(b, e);
 				}
 
 				void set_qtunnel_proto_data(UByte* begin, UByte* end)
 				{
-					QTunnelTCPViewScheme scheme(begin, end);
+					QTunnelUDPViewScheme scheme(begin, end);
 				}
 
 				std::string to_packet_friendly_view() const
@@ -5250,9 +5593,23 @@ namespace QVPN {
 
 				}
 
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				FullPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					return FullPacket();
+				}
+
 				QTunnelProtoData collect_proto_data()
 				{
 					return QTunnelProtoData();
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					std::vector<UByte> res{};
+
+					return res;
 				}
 
 				void set_qtunnel_proto_data(QTunnelProtoData& data)
@@ -5296,12 +5653,29 @@ namespace QVPN {
 
 				template <std::random_access_iterator Iter>
 				NoNetPacket(Iter begin, Iter end)
-					: TransportPacket(begin, end), DataPacket(TransportPacket::get_next_protocol_byte(), end)
+					: TransportPacket(begin, end), DataPacket(begin + TransportPacket::get_size(), end)
 				{
 
 				}
 
 			};
+
+
+
+			// default usings
+			using NoNetPacketTcpFatObject = NoNetPacket<TcpPacket, DataPacket, ClassType::OBJECT>;
+			using NoNetPacketUdpFatObject = NoNetPacket<UdpPacket, DataPacket, ClassType::OBJECT>;
+
+			using NoNetDummyPacketObject = NoNetPacket<DummyTransportPacket, DummyDataPacket, ClassType::OBJECT>;
+
+			// optimized using
+			using NoNetPacketTcpObject = NoNetPacket<TcpPacket_View, DataPacket_View, ClassType::OBJECT>;
+			using NoNetPacketUdpObject = NoNetPacket<UdpPacket_View, DataPacket_View, ClassType::OBJECT>;
+
+			// view usings
+			using NoNetPacketTcpView = NoNetPacket<TcpPacket_View, DataPacket_View, ClassType::VIEW>;
+			using NoNetPacketUdpView = NoNetPacket<UdpPacket_View, DataPacket_View, ClassType::VIEW>;
+
 
 
 			// Default specs for NoNetPacket
@@ -5320,7 +5694,7 @@ namespace QVPN {
 			public:
 				template <std::random_access_iterator Iter>
 				NoNetPacket(Iter begin, Iter end)
-					: TcpPacket(begin, end), DataPacket(TcpPacket::get_next_protocol_byte(), end)
+					: TcpPacket(begin, end), DataPacket(begin + TcpPacket::get_size(), end)
 				{
 
 				}
@@ -5374,6 +5748,54 @@ namespace QVPN {
 					return np;
 				}
 
+				void recalculate_lengths()
+				{
+					auto [t_b, t_e] = TcpPacket::to_bytes();
+					auto [d_b, d_e] = DataPacket::to_bytes();
+
+					auto t_size = std::distance(t_b, t_e);
+					auto d_size = std::distance(d_b, d_e);
+
+					set_transport_length(t_size);
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				NoNetPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto src = proxy_data.get_src_addr();
+					auto dst = proxy_data.get_dst_addr();
+
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelTCPViewScheme(pd_b, pd_e);
+					auto [opt_b, opt_e] = scheme.get_options();
+
+					auto t_header = TcpPacket::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_seq(), scheme.get_ack(),
+						scheme.get_offset(), scheme.get_flags(), scheme.get_window(), scheme.get_urgent_pointer(), opt_b, opt_e);
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto nnp = NoNetPacket(t_b, t_e, begin, end);
+					nnp.recalculate_lengths();
+					nnp.recalculate_checksums(src, dst, total_size);
+
+					return nnp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto nnp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = nnp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
+				}
+
 				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
 				{
 					TcpPacket::set_tcp_seq_number(seq);
@@ -5404,7 +5826,7 @@ namespace QVPN {
 			public:
 				template <std::random_access_iterator Iter>
 				NoNetPacket(Iter begin, Iter end)
-					: UdpPacket(begin, end), DataPacket(UdpPacket::get_next_protocol_byte(), end)
+					: UdpPacket(begin, end), DataPacket(begin + UdpPacket::get_size(), end)
 				{
 
 				}
@@ -5456,6 +5878,52 @@ namespace QVPN {
 					return np;
 				}
 
+				void recalculate_lengths()
+				{
+					auto [t_b, t_e] = UdpPacket::to_bytes();
+					auto [d_b, d_e] = DataPacket::to_bytes();
+
+					auto t_size = std::distance(t_b, t_e);
+					auto d_size = std::distance(d_b, d_e);
+
+					set_transport_length(t_size);
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				NoNetPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto src = proxy_data.get_src_addr();
+					auto dst = proxy_data.get_dst_addr();
+
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelUDPViewScheme(pd_b, pd_e);
+
+					auto t_header = UdpPacket::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_length());
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto nnp = NoNetPacket(t_b, t_e, begin, end);
+					nnp.recalculate_lengths();
+					nnp.recalculate_checksums(src, dst, total_size);
+
+					return nnp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto nnp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = nnp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
+				}
+
 				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
 				{
 
@@ -5489,7 +5957,7 @@ namespace QVPN {
 					: data_(begin, end)
 				{
 					TcpPacket_View::set_data(data_.data(), data_.data() + data_.size());
-					DataPacket_View::set_data(TcpPacket_View::get_next_protocol_byte(), data_.data() + data_.size());
+					DataPacket_View::set_data(data_.data() + TcpPacket_View::get_size(), data_.data() + data_.size());
 				}
 
 				template <std::random_access_iterator Iter>
@@ -5498,7 +5966,7 @@ namespace QVPN {
 					data_.insert(data_.end(), transport_begin, transport_end);
 					data_.insert(data_.end(), begin, end);
 					TcpPacket_View::set_data(data_.data(), data_.data() + data_.size());
-					DataPacket_View::set_data(TcpPacketView::get_next_protocol_byte(), data_.data() + data_.size());
+					DataPacket_View::set_data(data_.data() + TcpPacketView::get_size(), data_.data() + data_.size());
 				}
 
 				std::pair<NoNetPacket::ConstDataIterator_t, NoNetPacket::ConstDataIterator_t> bytes() const
@@ -5539,6 +6007,54 @@ namespace QVPN {
 					return np;
 				}
 
+				void recalculate_lengths()
+				{
+					auto [t_b, t_e] = TcpPacket_View::to_bytes();
+					auto [d_b, d_e] = DataPacket_View::to_bytes();
+
+					auto t_size = std::distance(t_b, t_e);
+					auto d_size = std::distance(d_b, d_e);
+
+					set_transport_length(t_size);
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				NoNetPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto src = proxy_data.get_src_addr();
+					auto dst = proxy_data.get_dst_addr();
+
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelTCPViewScheme(pd_b, pd_e);
+					auto [opt_b, opt_e] = scheme.get_options();
+
+					auto t_header = TcpPacket_View::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_seq(), scheme.get_ack(),
+						scheme.get_offset(), scheme.get_flags(), scheme.get_window(), scheme.get_urgent_pointer(), opt_b, opt_e);
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto nnp = NoNetPacket(t_b, t_e, begin, end);
+					nnp.recalculate_lengths();
+					nnp.recalculate_checksums(src, dst, total_size);
+
+					return nnp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto nnp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = nnp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
+				}
+
 				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
 				{
 					TcpPacket_View::set_tcp_seq_number(seq);
@@ -5574,7 +6090,7 @@ namespace QVPN {
 					: data_(begin, end)
 				{
 					UdpPacket_View::set_data(begin, end);
-					DataPacket_View::set_data(UdpPacket_View::get_next_protocol_byte(), end);
+					DataPacket_View::set_data(begin + UdpPacket_View::get_size(), end);
 				}
 
 				template <std::random_access_iterator Iter>
@@ -5583,7 +6099,7 @@ namespace QVPN {
 					data_.insert(data_.cend(), transport_begin, transport_end);
 					data_.insert(data_.cend(), begin, end);
 					UdpPacket_View::set_data(data_.data(), data_.data() + data_.size());
-					DataPacket_View::set_data(UdpPacket_View::get_next_protocol_byte(), data_.data() + data_.size());
+					DataPacket_View::set_data(begin + UdpPacket_View::get_size(), data_.data() + data_.size());
 				}
 
 				std::pair<NoNetPacket::ConstDataIterator_t, NoNetPacket::ConstDataIterator_t> bytes() const
@@ -5622,6 +6138,52 @@ namespace QVPN {
 					np.set_transport_length(size);
 					np.recalculate_checksums(src, dst, length);
 					return np;
+				}
+
+				void recalculate_lengths()
+				{
+					auto [t_b, t_e] = UdpPacket_View::to_bytes();
+					auto [d_b, d_e] = DataPacket_View::to_bytes();
+
+					auto t_size = std::distance(t_b, t_e);
+					auto d_size = std::distance(d_b, d_e);
+
+					set_transport_length(t_size);
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				NoNetPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto src = proxy_data.get_src_addr();
+					auto dst = proxy_data.get_dst_addr();
+
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelUDPViewScheme(pd_b, pd_e);
+
+					auto t_header = UdpPacket_View::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_length());
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto nnp = NoNetPacket(t_b, t_e, begin, end);
+					nnp.recalculate_lengths();
+					nnp.recalculate_checksums(src, dst, total_size);
+
+					return nnp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto nnp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = nnp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
 				}
 
 				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
@@ -5679,6 +6241,24 @@ namespace QVPN {
 					return NoNetPacket(begin, end);
 				}
 
+				void recalculate_lengths()
+				{
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				NoNetPacket new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					return NoNetPacket(begin, end);
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					std::vector<UByte> res{};
+
+					return res;
+				}
+
 				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
 				{
 					
@@ -5706,7 +6286,7 @@ namespace QVPN {
 			public:
 				template <std::random_access_iterator Iter>
 				NoNetPacket(Iter begin, Iter end)
-					: TcpPacket_View(begin, end), DataPacket_View(TcpPacket_View::get_next_protocol_byte(), end)
+					: TcpPacket_View(begin, end), DataPacket_View(begin + TcpPacket_View::get_size(), end)
 				{
 
 				}
@@ -5746,14 +6326,62 @@ namespace QVPN {
 				}
 
 				template <std::random_access_iterator Iter>
-				NoNetPacket new_packet_by_payload(const NetAddr& src, const NetAddr& dst, UShort length, Iter begin, Iter end) const
+				NoNetPacketTcpObject new_packet_by_payload(const NetAddr& src, const NetAddr& dst, UShort length, Iter begin, Iter end) const
 				{
 					auto [t_b, t_e] = TcpPacket_View::to_bytes();
-					NoNetPacket np(t_b, t_e, begin, end);
+					NoNetPacketTcpObject np(t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					np.set_transport_length(size);
 					np.recalculate_checksums(src, dst, length);
 					return np;
+				}
+
+				void recalculate_lengths()
+				{
+					auto [t_b, t_e] = TcpPacket_View::to_bytes();
+					auto [d_b, d_e] = DataPacket_View::to_bytes();
+
+					auto t_size = std::distance(t_b, t_e);
+					auto d_size = std::distance(d_b, d_e);
+
+					set_transport_length(t_size);
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				NoNetPacketTcpObject new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto src = proxy_data.get_src_addr();
+					auto dst = proxy_data.get_dst_addr();
+
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelTCPViewScheme(pd_b, pd_e);
+					auto [opt_b, opt_e] = scheme.get_options();
+
+					auto t_header = TcpPacket_View::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_seq(), scheme.get_ack(),
+						scheme.get_offset(), scheme.get_flags(), scheme.get_window(), scheme.get_urgent_pointer(), opt_b, opt_e);
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto nnp = NoNetPacketTcpObject(t_b, t_e, begin, end);
+					nnp.recalculate_lengths();
+					nnp.recalculate_checksums(src, dst, total_size);
+
+					return nnp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto nnp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = nnp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
 				}
 
 				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
@@ -5783,7 +6411,7 @@ namespace QVPN {
 			public:
 				template <std::random_access_iterator Iter>
 				NoNetPacket(Iter begin, Iter end)
-					: UdpPacket_View(begin, end), DataPacket_View(UdpPacket_View::get_next_protocol_byte(), end)
+					: UdpPacket_View(begin, end), DataPacket_View(begin + UdpPacket_View::get_size(), end)
 				{
 
 				}
@@ -5823,14 +6451,60 @@ namespace QVPN {
 				}
 
 				template <std::random_access_iterator Iter>
-				NoNetPacket new_packet_by_payload(const NetAddr& src, const NetAddr& dst, UShort length, Iter begin, Iter end) const
+				NoNetPacketUdpObject new_packet_by_payload(const NetAddr& src, const NetAddr& dst, UShort length, Iter begin, Iter end) const
 				{
 					auto [t_b, t_e] = UdpPacket_View::to_bytes();
-					NoNetPacket np(t_b, t_e, begin, end);
+					NoNetPacketUdpObject np(t_b, t_e, begin, end);
 					auto size = static_cast<UShort>(std::distance(begin, end));
 					np.set_transport_length(size);
 					np.recalculate_checksums(src, dst, length);
 					return np;
+				}
+
+				void recalculate_lengths()
+				{
+					auto [t_b, t_e] = UdpPacket_View::to_bytes();
+					auto [d_b, d_e] = DataPacket_View::to_bytes();
+
+					auto t_size = std::distance(t_b, t_e);
+					auto d_size = std::distance(d_b, d_e);
+
+					set_transport_length(t_size);
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				NoNetPacketUdpObject new_packet_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto src = proxy_data.get_src_addr();
+					auto dst = proxy_data.get_dst_addr();
+
+					auto data_size = std::distance(begin, end);
+					auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+					auto scheme = QTunnelUDPViewScheme(pd_b, pd_e);
+
+					auto t_header = UdpPacket_View::generate_object(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_length());
+					auto [t_b, t_e] = t_header.to_bytes();
+					auto t_size = std::distance(t_b, t_e);
+
+					auto total_size = t_size + data_size;
+
+					auto nnp = NoNetPacketUdpObject(t_b, t_e, begin, end);
+					nnp.recalculate_lengths();
+					nnp.recalculate_checksums(src, dst, total_size);
+
+					return nnp;
+				}
+
+				template <std::random_access_iterator Iter, is_addr Addr = NetAddr>
+				std::vector<UByte> new_packet_bytes_by_this(const QTunnelProxy<Addr>& proxy_data, Iter begin, Iter end)
+				{
+					auto nnp = new_packet_by_this(proxy_data, begin, end);
+
+					auto [b, e] = nnp.bytes();
+
+					std::vector<UByte> res{ b, e };
+
+					return res;
 				}
 
 				void set_seq_ack_flags(UInt seq, UInt ack, UByte flags)
@@ -5847,35 +6521,92 @@ namespace QVPN {
 
 			};
 
-
 			// Default instances for no net packet
 			template class NoNetPacket<TcpPacket, DataPacket, ClassType::OBJECT>;
 			template class NoNetPacket<UdpPacket, DataPacket, ClassType::OBJECT>;
 			template class NoNetPacket<DummyTransportPacket, DummyDataPacket, ClassType::OBJECT>;
 
-			// default usings
-			using NoNetPacketTcpFatObject = NoNetPacket<TcpPacket, DataPacket, ClassType::OBJECT>;
-			using NoNetPacketUdpFatObject = NoNetPacket<UdpPacket, DataPacket, ClassType::OBJECT>;
-
-			using NoNetDummyPacketObject = NoNetPacket<DummyTransportPacket, DummyDataPacket, ClassType::OBJECT>;
-
 			// optimized instances
 			template class NoNetPacket<TcpPacket_View, DataPacket_View, ClassType::OBJECT>;
 			template class NoNetPacket<UdpPacket_View, DataPacket_View, ClassType::OBJECT>;
-
-			// optimized using
-			using NoNetPacketTcpObject = NoNetPacket<TcpPacket_View, DataPacket_View, ClassType::OBJECT>;
-			using NoNetPacketUdpObject = NoNetPacket<UdpPacket_View, DataPacket_View, ClassType::OBJECT>;
 
 			// View instances for no net packet
 			template class NoNetPacket<TcpPacket_View, DataPacket_View, ClassType::VIEW>;
 			template class NoNetPacket<UdpPacket_View, DataPacket_View, ClassType::VIEW>;
 
-			// view usings
-			using NoNetPacketTcpView = NoNetPacket<TcpPacket_View, DataPacket_View, ClassType::VIEW>;
-			using NoNetPacketUdpView = NoNetPacket<UdpPacket_View, DataPacket_View, ClassType::VIEW>;
 
-		}
+			// inline definitions, need for QTunnelTCPViewScheme
+			template<is_addr Addr>
+			inline std::vector<UByte> TcpPacketLittleEndian::generate_object_bytes(const QTunnelProxy<Addr>& proxy_data)
+			{
+				auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+				QTunnelTCPViewScheme tcp_scheme = QTunnelTCPViewScheme(pd_b, pd_e);
+
+				auto [opt_b, opt_e] = tcp_scheme.get_options();
+
+				return generate_object_bytes(proxy_data.get_src_port(), proxy_data.get_dst_port(), tcp_scheme.get_seq(), tcp_scheme.get_ack(),
+					tcp_scheme.get_offset(), tcp_scheme.get_flags(), tcp_scheme.get_window(), tcp_scheme.get_urgent_pointer(), opt_b, opt_e);
+			}
+
+			template<is_addr Addr>
+			inline TcpPacketLittleEndian::ObjectType TcpPacketLittleEndian::generate_object(const QTunnelProxy<Addr>& proxy_data)
+			{
+				auto object_bytes = generate_object_bytes<Addr>(proxy_data);
+				return ObjectType(object_bytes.data(), object_bytes.data() + object_bytes.size());
+			}
+
+			template<is_addr Addr>
+			inline std::vector<UByte> TcpPacketView::generate_object_bytes(const QTunnelProxy<Addr>& proxy_data)
+			{
+				auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+				QTunnelTCPViewScheme tcp_scheme = QTunnelTCPViewScheme(pd_b, pd_e);
+
+				auto [opt_b, opt_e] = tcp_scheme.get_options();
+
+				return generate_object_bytes(proxy_data.get_src_port(), proxy_data.get_dst_port(), tcp_scheme.get_seq(), tcp_scheme.get_ack(),
+					tcp_scheme.get_offset(), tcp_scheme.get_flags(), tcp_scheme.get_window(), tcp_scheme.get_urgent_pointer(), opt_b, opt_e);
+			}
+
+			template<is_addr Addr>
+			inline TcpPacketView::ObjectType TcpPacketView::generate_object(const QTunnelProxy<Addr>& proxy_data)
+			{
+				auto object_bytes = generate_object_bytes<Addr>(proxy_data);
+				return ObjectType(object_bytes.data(), object_bytes.data() + object_bytes.size());
+			}
+
+			template<is_addr Addr>
+			inline std::vector<UByte> UdpPacketLittleEndian::generate_object_bytes(const QTunnelProxy<Addr>& proxy_data)
+			{
+				auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+				QTunnelUDPViewScheme udp_scheme = QTunnelUDPViewScheme(pd_b, pd_e);
+
+				return generate_object_bytes(proxy_data.get_src_port(), proxy_data.get_dst_port(), udp_scheme.get_length());
+			}
+
+			template<is_addr Addr>
+			inline UdpPacketLittleEndian::ObjectType UdpPacketLittleEndian::generate_object(const QTunnelProxy<Addr>& proxy_data)
+			{
+				auto object_bytes = generate_object_bytes<Addr>(proxy_data);
+				return ObjectType(object_bytes.data(), object_bytes.data() + object_bytes.size());
+			}
+
+			template<is_addr Addr>
+			inline std::vector<UByte> UdpPacketView::generate_object_bytes(const QTunnelProxy<Addr>& proxy_data)
+			{
+				auto [pd_b, pd_e] = proxy_data.get_proto_data_bytes();
+				QTunnelUDPViewScheme udp_scheme = QTunnelUDPViewScheme(pd_b, pd_e);
+
+				return generate_object_bytes(proxy_data.get_src_port(), proxy_data.get_dst_port(), udp_scheme.get_length());
+			}
+
+			template<is_addr Addr>
+			inline UdpPacketView::ObjectType UdpPacketView::generate_object(const QTunnelProxy<Addr>& proxy_data)
+			{
+				auto object_bytes = generate_object_bytes<Addr>(proxy_data);
+				return ObjectType(object_bytes.data(), object_bytes.data() + object_bytes.size());
+			}
+
+}
 	}
 }
 

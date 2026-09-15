@@ -1106,6 +1106,7 @@ namespace QVPN
 				if (res.success) {
 					ss << "Successfully connected to QVPN Server (" << socket_.get_remote_addr().to_string() << ":" << socket_.get_remote_port() << ")";
 					logger_.success(ss.str());
+					QVPNVerboser::register_addr_verbose(addr, "QVPN Host");
 				}
 				else {
 					ss << "Connection to QVPN Server (" << settings_.get_ip_address().to_string() << ":" << settings_.get_port() << ") failed";
@@ -1747,7 +1748,6 @@ namespace QVPN
 				gLogger.success("[SYN ACK] check successfully passed");
 
 
-				// TODO: разобраться с seq, ack и убрать\разделить генерацию без ip-header
 				// ack gen
 				auto tcp_ack = generate_transport_header<Addr>(data, NetTools::hton(scheme.get_seq()) - NetTools::hton(static_cast<UShort>(1)), NetTools::hton(static_cast<UInt>(server_seq + 1)), TCPFlags::ACK);
 				auto [bt_ack, et_ack] = tcp_ack.to_bytes();
@@ -1789,7 +1789,6 @@ namespace QVPN
 
 		};
 
-		// TODO: разобраться с генерацией/ответом на syn пакет
 		// no net header + tcp spec
 		template <class RawSocket, class Socket, class NetTools>
 		class ConnectionInstaller<NetProtocol::NET_UNDEFINED, TransportProtocol::TCP, RawSocket, Socket, NetTools>
@@ -2039,16 +2038,10 @@ namespace QVPN
 
 			decltype(auto) add_to_response_socket_map(Socket& response_socket, RawSocket& raw_socket, Socket& shadow_socket, QVPNServerSocketData& remote_key)
 			{
-				bool legal_addr = false;
-				while (!legal_addr)
+				if (!response_sockets_.contains(remote_key))
 				{
-					if (!response_sockets_.contains(remote_key))
-					{
-						response_sockets_[remote_key] = std::make_pair<>(response_socket, PackedSocket{ shadow_socket, raw_socket });
-						legal_addr = true;
-						logger_.success("Socket added to response map");
-						break;
-					}
+					response_sockets_[remote_key] = std::make_pair<>(response_socket, PackedSocket{ shadow_socket, raw_socket });
+					logger_.success("Socket added to response map");
 				}
 				return true;
 			}
@@ -2127,7 +2120,7 @@ namespace QVPN
 				auto raw_socket = NetTools::create_raw_socket(key.remote_addr.get_addr_family(), key.transport_proto);
 				auto shadow_socket = NetTools::create_socket(key.remote_addr.get_addr_family(), key.transport_proto);
 
-				QVPNSocketSettings settings(true, 100000); // ip_hrdincl, timeout
+				QVPNSocketSettings settings(true, 1'000'000); // ip_hrdincl, timeout (nano secs)
 				raw_socket.apply_settings(settings);
 
 				if (!raw_socket.is_valid())
@@ -2178,26 +2171,8 @@ namespace QVPN
 				sock_map[key] = p_socket;
 			}
 
-			void connect_to_server_(Socket& response_socket, QVPNServerSocketData& key, std::unordered_map<QVPNServerSocketData, PackedSocket>& sock_map, const QTunnelProxyData& proxy_data)
-			{
-				/*
-				auto sock = connect_to_server_impl_(response_socket, key, sock_map, proxy_data);
-				if (sock.has_value())
-				{
-					sock_map[key] = *sock;
-				}
-				*/
-			}
-
 			void connect_if_not_to_server(Socket& response_socket, QVPNServerSocketData& key, std::unordered_map<QVPNServerSocketData, PackedSocket>& sock_map, const QTunnelProxyData& proxy_data)
 			{
-				/*
-				auto it = sock_map.find(key); //TODO: вставлять адрес сервера нужно раньше чем эта точка, иначе он постоянно будет пытаться подключиться, т.к. адрес пустой
-				if (it == sock_map.end())
-				{
-					connect_to_server_(response_socket, key, sock_map, proxy_data);
-				}
-				*/
 				connect_to_server_impl_(response_socket, key, sock_map, proxy_data);
 			}
 
@@ -2361,13 +2336,10 @@ namespace QVPN
 			{
 				std::stringstream ss{};
 
-				//auto receive_data = client_socket->receive();
 				logger_.info("Waiting for packet from client {}:{}", (*client_socket).get_remote_addr().to_string(), (*client_socket).get_remote_port());
 				auto receive_data = (*client_socket).template safe_recv<TLS13_Record>();
 
 				const auto& status = receive_data.get_status();
-				//auto& data = receive_data.data;
-				//auto size = receive_data.size;
 
 				if (!status.success)
 				{
@@ -2431,12 +2403,11 @@ namespace QVPN
 
 					std::visit([](auto& p) { std::cout << "Send (raw)" << std::endl << p.to_packet_friendly_view() << std::endl; }, packet);
 
+
 					auto [res_b, res_e] = std::visit([](auto& p)
 						{
 							return p.bytes();
 						}, packet);
-
-					//auto send_status = server_socket.send_to(key.remote_addr, key.remote_port, res_b, res_e);
 
 					auto send_status = server_socket.send(res_b, res_e);
 
@@ -2453,6 +2424,14 @@ namespace QVPN
 					ss.str("");
 					ss << "Sended (raw) " << send_size << " bytes to " << server_socket.get_remote_addr().to_string() << ":" << server_socket.get_remote_port() << " from " << server_socket.get_local_addr().to_string() << ":" << server_socket.get_local_port();
 					logger_.info(ss.view());
+
+					auto reset = std::visit([](auto& p) { return p.is_reset_connection_packet(); }, packet);
+					if (reset)
+					{
+						drop_response_socket_(key);
+						logger_.info("Connection ({}:{}) reset.", key.remote_addr.to_string(), key.remote_port);
+						return true;
+					}
 
 					// statistics
 					////
@@ -2657,6 +2636,9 @@ namespace QVPN
 
 			void listen_response_sockets_()
 			{
+				std::unordered_map<QVPNSocketData, int> socket_num_tries{};
+				int default_num_tries = 10;
+				// TODO: сделать тест, создать сокет и отправить с него пакет, и принять, доходит ли ответ (проверять на VM)
 				while (true)
 				{
 					for (auto it = response_sockets_.begin(); it != response_sockets_.end();)
@@ -2673,17 +2655,22 @@ namespace QVPN
 						else
 						{
 							std::stringstream ss{};
-
-							if (!rec_data.status.success)
-							{
-								ss.str("");
-								ss << "Cannot receive (raw) packet from (" << sock.raw_socket.get_remote_addr().to_string() << ":" << sock.raw_socket.get_remote_port() << "). Error " << rec_data.status.status;
-								logger_.fail(ss.view());
-							}
+							ss.str("");
+							ss << "Cannot receive (raw) packet from (" << sock.raw_socket.get_remote_addr().to_string() << ":" << sock.raw_socket.get_remote_port() << 
+								"). Error #" << rec_data.status.status << "("<< strerror(rec_data.status.status) << ") [resp socket pool = " << response_sockets_.size() << "]";
+							logger_.fail(ss.view());
+							++it;
 						}
 					}
 				}
 
+			}
+
+			void drop_response_socket_(const QVPNServerSocketData& key)
+			{
+				std::unique_lock<std::mutex> lk{ m_ };
+				response_sockets_.erase(key);
+				logger_.warning("Socket to {}:{} dropped.", key.remote_addr.to_string(), key.remote_port);
 			}
 
 			auto drop_response_socket_(const QVPNServerSocketData& key, auto it)
@@ -2747,6 +2734,7 @@ namespace QVPN
 					logger_.success(ss.str());
 					ss.clear();
 
+					QVPNVerboser::register_addr_verbose(i->get_ip_address(), "QTunnel host");
 					vpn_sockets_.emplace_back(std::move(sock));
 				}
 				if (vpn_sockets_.size() > 0)

@@ -550,6 +550,47 @@ std::string QVPN::Core::QVPNVerboser::tcp_flags(TcpFlagsObject flags)
 	return flags_data;
 }
 
+std::string QVPN::Core::QVPNVerboser::ipv4_flags(UByte flags)
+{
+	std::string flags_data{ "[" };
+
+	for (size_t i = 0; i < ipv4_flags_.size(); i++)
+	{
+		auto flag = flags >> i & 0x01;
+		if (flag)
+		{
+			flags_data.append(ipv4_flags_[i]);
+			flags_data.append(" ");
+		}
+	}
+	flags_data.pop_back();
+	flags_data.append("]");
+	return flags_data;
+}
+
+void QVPN::Core::QVPNVerboser::register_addr_verbose(const NetAddr& addr, std::string_view verbose, std::string_view cmd_color)
+{
+	VerbosedNetAddr v_addr(addr, verbose, cmd_color);
+	verb_addrs_[addr] = v_addr;
+}
+
+std::string QVPN::Core::QVPNVerboser::addr_verbose(const NetAddr& addr)
+{
+	std::stringstream ss{};
+
+	if (!verb_addrs_.contains(addr))
+	{
+		ss << addr.to_string();
+		return ss.str();
+	}
+		
+	auto& v_addr = verb_addrs_[addr];
+	ss << v_addr.get_color() << v_addr.to_string() << " [" << CmdColorizer::BOLD << v_addr.get_verbose() << "]" << CmdColorizer::ENDC << CmdColorizer::DEFAULT;
+	return ss.str();
+	
+}
+
+
 QVPN::Core::TcpFlagsObject::TcpFlagsObject(TCPFlags flags)
 	: flags_(flags)
 {}

@@ -1,16 +1,16 @@
 {
-	"mode": 0,
-    "addr_type": 4,
-    "addr": "0.0.0.0",
-    "port": 5151,
-	"proto": 6,
+  "mode": 0,
+  "addr_type": 4,
+  "addr": "127.0.0.1",
+  "port": 5151,
+  "proto": 6,
 
-    "crypto_method": 0,
-    "key": "crypto_key",
+  "crypto_method": 0,
+  "key": "crypto_key",
 
-    "auth_data": "test_user",
-	
-	"whitelists": [
-		"./RU_whitelist.qwlist"
-	]
+  "auth_data": "test_user",
+
+  "whitelists": [
+    "./RU_whitelist.qwlist"
+  ]
 }

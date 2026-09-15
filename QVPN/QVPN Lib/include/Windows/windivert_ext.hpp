@@ -260,7 +260,6 @@ namespace QVPN {
 						logger_.fail("Failed to read packet. Error #{}", GetLastError());
 						continue;
 					}
-
 					auto package = pp.pre_parse(packet, packet + packet_len);
 
 					auto ver = std::visit([](auto& p) { return p.get_protocol_version(); }, package);
@@ -348,8 +347,6 @@ namespace QVPN {
 
 					auto package = pp.pre_parse(packet, packet + packet_len);
 
-					std::visit([](auto& p) { std::cout << "Incoming packet" << std::endl << p.to_packet_friendly_view() << std::endl; }, package);
-
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, package);
 
 					auto data_size = std::distance(data_b, data_e);
@@ -364,6 +361,8 @@ namespace QVPN {
 						logger_.warning("Packet (not our) succesfully reinjected.");
 						continue;
 					}
+
+					std::visit([](auto& p) { std::cout << "Incoming packet" << std::endl << p.to_packet_friendly_view() << std::endl; }, package);
 
 					auto decoded_data = driver_.decode_data(data_b, data_e);
 
@@ -381,23 +380,20 @@ namespace QVPN {
 
 						auto [b, e] = decoded_data->get_raw_data();
 
-						std::visit([&src_addr, &src_port, &dst_addr, &dst_port, &qtp_b, &qtp_e, &b, &e](auto& p)
-							{
-								// TODO: recalc size
-								p.set_src_addr(src_addr);
-								p.set_src_port(src_port);
-								p.set_dst_port(dst_port); 
-								p.set_dst_addr(dst_addr);
-								p.set_qtunnel_proto_data(qtp_b, qtp_e);
-								p.set_payload(b, e);
-								p.recalculate_lengths();
-								p.recalculate_checksums();
-							}, 
-							package);
+						using ProxyData = QVPN::Core::DataStructures::QTunnelProxy<Addr>;
 
-						std::visit([](auto& p) { std::cout << "Incoming packet (after modified)" << std::endl << p.to_packet_friendly_view() << std::endl; }, package);
-						auto [res_b, res_e] = std::visit([](auto& p) { return p.bytes(); }, package);
+						auto proxy_data = decoded_data->create(*decoded_data);
+						
+						auto inj_p_bytes = std::visit([&proxy_data, &b, &e](auto& p) { return p.new_packet_bytes_by_this(proxy_data, b, e); }, package); // TODO: ошибка с возвращаемым типом, что-то надо придумать
+						auto inj_packet = pp.pre_parse(inj_p_bytes.data(), inj_p_bytes.data() + inj_p_bytes.size());
+
+						// TODO: сделать аллокатор для пакета, либо выделять память раньше
+
+						std::visit([](auto& p) { std::cout << "Incoming packet (after modified)" << std::endl << p.to_packet_friendly_view() << std::endl; }, inj_packet);
+						auto [res_b, res_e] = std::visit([](auto& p) { return p.bytes(); }, inj_packet);
 						UINT size = static_cast<UINT>(std::distance(res_b, res_e));
+						WinDivertHelperCalcChecksums((void*)res_b, size, &addr, 0);
+						std::visit([](auto& p) { std::cout << "Incoming packet (after recalc)" << std::endl << p.to_packet_friendly_view() << std::endl; }, inj_packet);
 						if (!WinDivertSend(in_hDivert_, res_b, sizeof(packet), &size, &addr))
 						{
 							logger_.fail("Failed to reinject incoming packet. Error #{}", GetLastError());
