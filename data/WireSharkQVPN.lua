@@ -64,7 +64,7 @@ local tcp_pd_urgent = ProtoField.uint16("ProtoData.TCP.Urgent", "TCP Urgent poin
 
 local tcp_pd_options = ProtoField.bytes("ProtoData.TCP.Options", "TCP Options (QVPN Proto data)")
 
-tcp_proto_data.fields = { tcp_pd_length, tcp_pd_seq, tcp_pd_ack, tcp_pd_flags, tcp_pd_offset, tcp_pd_window, tcp_pd_urgent }
+tcp_proto_data.fields = { tcp_pd_length, tcp_pd_seq, tcp_pd_ack, tcp_pd_flags, tcp_pd_offset, tcp_pd_window, tcp_pd_urgent, tcp_pd_options }
 
 
 local tcp_proto_data_flags = Proto("TCPFlags", "TCP Flags")
@@ -93,12 +93,14 @@ local fake_tls_settings = { proto = "tcp", port = 5151 }
 
 function packet_builder.dissector(buffer, pinfo, tree)
 	
-	local subtree = tree:add(packet_builder, buffer(), "QVPN Packet builder")
-	
 	-- Извлекаем PacketBuilder поля
-    local pb_id_ = buffer(0, 1):le_uint()
-    local pb_offset_ = buffer(1, 2):le_uint()
-	local pb_orig_size_ = buffer(3, 2):le_uint()
+    local pb_id_ = buffer(0, 1):uint()
+    local pb_offset_ = buffer(1, 2):uint()
+	local pb_orig_size_ = buffer(3, 2):uint()
+	
+	local pb_str = "[pb_id: " .. pb_id_ .. ", pb_offset: " .. pb_offset_ .. ", pb_orig_size: " .. pb_orig_size_ .. "]"
+	
+	local subtree = tree:add(packet_builder, buffer(), "QVPN Packet builder", pb_str)
 	
     subtree:add(pb_id, buffer(0, 1))
     subtree:add(pb_offset, buffer(1, 2))
@@ -124,18 +126,22 @@ function tcp_proto_data_flags.dissector(buffer, pinfo, tree)
 	
 	local flags = { fin, syn, rst, psh, ack, urg, ece, cwr, ns }
 	local flags_names = { "FIN", "SYN", "RST", "PSH", "ACK", "URG", "ECE", "CWR", "NS" }
-	local flags_str = "TCP Proto data Flags [ "
+	local flags_str = "TCP Proto data Flags "
+	local flags_set = "[ "
 	
 	for i = 1, 9 do
 	
 		if flags[i] ~= 0 then
-			flags_str = flags_str .. flags_names[i] .. " "
+			flags_set = flags_set .. flags_names[i] .. " "
 		end
 		
 	end
-	flags_str = flags_str .. "]"
+	flags_set = flags_set .. "]"
+	flags_str = flags_str .. flags_set
 	
 	local subtree = tree:add(tcp_proto_data_flags, buffer(0, 2), flags_str)
+	tree:append_text(" " .. flags_set)
+	pinfo.cols.info:append(" " .. flags_set)
 	
 	
 	subtree:add(tcp_flag_fin, real_flags)
@@ -151,11 +157,13 @@ function tcp_proto_data_flags.dissector(buffer, pinfo, tree)
 
 end
 
-function tcp_proto_data.dissector(buffer, pinfo, tree)
-	
+
+local function parse_tcp_proto_data(buffer, pinfo, tree)
+
 	local subtree = tree:add(tcp_proto_data, buffer(), "TCP Proto Data (QVPN)")
 	
 	local pd_length = buffer(0, 2):le_uint()
+	local pd_length_int = buffer(0, 2):uint()
 	
 	local pd_seq = buffer(2, 4):le_uint()
 	local pd_ack = buffer(6, 4):le_uint()
@@ -163,7 +171,7 @@ function tcp_proto_data.dissector(buffer, pinfo, tree)
 	local pd_offset = buffer(12, 1):le_uint()
 	local pd_window = buffer(13, 2):le_uint()
 	local pd_urgent = buffer(15, 2):le_uint()
-	
+
 	local pd_options = buffer(17):tvb()
 	
 	subtree:add(tcp_pd_length, buffer(0, 2))
@@ -171,7 +179,11 @@ function tcp_proto_data.dissector(buffer, pinfo, tree)
 	subtree:add(tcp_pd_seq, buffer(2, 4))
     subtree:add(tcp_pd_ack, buffer(6, 4))
 	
-	--subtree:add(tcp_pd_flags, buffer(10, 2))
+	local seq  = buffer(2, 4):uint()
+	local ack = buffer(6, 4):uint()
+	
+	pinfo.cols.info:append(" Seq=" .. seq .. " Ack=" .. ack)
+	
 	local flags = buffer(10, 2):tvb()
 	tcp_proto_data_flags.dissector(flags, pinfo, subtree)
 	
@@ -179,13 +191,22 @@ function tcp_proto_data.dissector(buffer, pinfo, tree)
     subtree:add(tcp_pd_window, buffer(13, 2))
 	subtree:add(tcp_pd_urgent, buffer(15, 2))
 	
-	subtree:add(tcp_pd_options, buffer(17):tvb())
+	subtree:add(tcp_pd_options, buffer(17, pd_length_int - 15))
 	
-	return pd_length
+	return pd_length_int + 2
+
+end 
+
+
+function tcp_proto_data.dissector(buffer, pinfo, tree)
+	
+	return parse_tcp_proto_data(buffer, pinfo, tree)
+
 end
 
-function qtunnel_proto.dissector(buffer, pinfo, tree)
-	
+
+local function parse_qtunnel_proto(buffer, pinfo, tree)
+
     -- Добавляем новый узел в дерево разбора
     local subtree = tree:add(qtunnel_proto, buffer(), "QVPN/QTunnel")
 	
@@ -204,47 +225,80 @@ function qtunnel_proto.dissector(buffer, pinfo, tree)
     subtree:add(qt_dst, buffer(8, 4))
 	subtree:add(qt_dst_port, buffer(12, 2))
 	
+	local src_port_int = buffer(6, 2):uint()
+	local dst_port_int = buffer(12, 2):uint()
+	
+	pinfo.cols.info = src_port_int .. " → " .. dst_port_int
+	
 	local proto_data = buffer(14):tvb()
 	
 	if transport_proto == 6 then
-		tcp_proto_data.dissector(proto_data, pinfo, tree)
+		return tcp_proto_data.dissector(proto_data, pinfo, tree)
 	end
+	return 0
+end
+
+
+function qtunnel_proto.dissector(buffer, pinfo, tree)
+	
+	return parse_qtunnel_proto(buffer, pinfo, tree)
 
 end
 
 
-function fake_tls_rec.dissector(buffer, pinfo, tree)
+local function parse_fake_tls(buffer, pinfo, tree, offset)
+	
+	print("Called with offset: " .. offset)
+	
+	if offset >= buffer:len() then
+		return 0
+	end
 
 	if buffer:len() < 25 then
 		return 0
 	end
 
-	local content_type = buffer(0, 1):le_uint()
-	local version = buffer(1, 2):le_uint()
-	local record_length = buffer(3, 2):le_uint()
+	local content_type = buffer(offset, 1):le_uint()
+	local version = buffer(offset + 1, 2):le_uint()
+	local record_length = buffer(offset + 3, 2):le_uint()
+	
+	local content_type_int = buffer(offset, 1):uint()
+	local version_int = buffer(offset + 1, 2):uint()
+	local record_length_int = buffer(offset + 3, 2):uint()
 	
 	if content_type ~= 0x17 then
-		print("Invalid content_type. Calling default TLS dissector...")
+		print("Content_type: " .. content_type .. ". Invalid content_type. Calling default TLS dissector...")
 		local tls_dissector = Dissector.get("tls")
 		if tls_dissector then
-			tls_dissector:call(buffer, pinfo, tree)
+			tls_dissector:call(buffer():tvb(), pinfo, tree)
 		end
 		return
 	end
-
+	
     pinfo.cols.protocol = "FakeTLS + QVPN/QTunnel"
 
     local subtree = tree:add(fake_tls_rec, buffer(), "Fake TLS Record")
 	
-	subtree:add(fake_tls_rec_type, buffer(0, 1))
-	subtree:add(fake_tls_rec_ver, buffer(1, 2))
-	subtree:add(fake_tls_rec_length, buffer(3, 2))
+	subtree:add(fake_tls_rec_type, buffer(offset, 1))
+	subtree:add(fake_tls_rec_ver, buffer(offset + 1, 2))
+	subtree:add(fake_tls_rec_length, buffer(offset + 3, 2))
 	
-	local pb_payload = buffer(FAKE_TLS_SIZE):tvb()
+	local pb_payload = buffer(offset + FAKE_TLS_SIZE):tvb()
 	packet_builder.dissector(pb_payload, pinfo, subtree)
 	
-	local qt_payload = buffer(FAKE_TLS_SIZE + PB_SIZE):tvb()
+	local qt_payload = buffer(offset + FAKE_TLS_SIZE + PB_SIZE):tvb()
 	qtunnel_proto.dissector(qt_payload, pinfo, subtree)
+	
+	local next_offset = offset + FAKE_TLS_SIZE + record_length_int
+	if (buffer:len() > next_offset) then
+		parse_fake_tls(buffer(), pinfo, tree, next_offset)
+	end
+
+end
+
+function fake_tls_rec.dissector(buffer, pinfo, tree)
+
+	parse_fake_tls(buffer, pinfo, tree, 0)
 	
 end
 

@@ -52,9 +52,6 @@ int filter_by_addr_port_ipv4(struct __sk_buff* skb)
 	__u16 src_port;
 	__u16 dst_port;
 
-	//struct tcphdr* tcp = (struct tcphdr*)(ip + 1);
-	//struct udphdr* udp = (struct udphdr*)(ip + 1);
-	//char* custom = (char*)(ip + 1);
 	struct tcphdr tcp;
 	struct udphdr udp;
 
@@ -114,9 +111,6 @@ int filter_by_addr_port_ipv6(struct __sk_buff* skb)
 SEC("socket")
 int filter_by_addr_port(struct __sk_buff* skb)
 {
-	//void* data = (void*)(long)skb->data;
-	//void* data_end = (void*)(long)skb->data_end;
-
 	struct iphdr ip;
 	if (bpf_skb_load_bytes(skb, 0, &ip, sizeof(ip)) < 0)
 		return 0;

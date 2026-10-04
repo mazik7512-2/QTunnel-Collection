@@ -791,11 +791,13 @@ namespace QVPN {
 			template <QVPN::Core::is_proto_template AppLevelProtoTemplate>
 			SafeReceiveData<AppLevelProtoTemplate> safe_recv(int flags = 0)
 			{
+				int num_calls = 0;
 				int num_tries = 20;
 				SafeReceiveData<AppLevelProtoTemplate> sf_data{};
 				SafeReceiveSignal signal = SafeReceiveSignal::SFR_NO_DATA;
 				while (signal != SafeReceiveSignal::SFR_FULL_DATA || signal == SafeReceiveSignal::SFR_ERROR || num_tries <= 0)
 				{
+					num_calls++;
 					auto data = receive(flags);
 					sf_data.set_status(data.status);
 					if (!data.status.success)
@@ -805,7 +807,7 @@ namespace QVPN {
 					}
 					signal = sf_data.add_objects_and_validate(signal, data.data.data(), data.data.data() + data.size);
 				}
-
+				std::cout << "Times safe_recv called: " << num_calls << std::endl;
 				return sf_data;
 			}
 

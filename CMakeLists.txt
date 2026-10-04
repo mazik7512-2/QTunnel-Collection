@@ -22,6 +22,7 @@ option(QVPN_BUILD_CLIENT "Build QVPN client app only" OFF)
 option(QVPN_BUILD_SERVER "Build QVPN server app only" OFF)
 option(QVPN_BUILD_LIB "Build QVPN library only" OFF)
 option(QVPN_BUILD_ALL "Build QVPN (client and server) apps and lib" ON)
+option(QVPN_BUILD_TEST_ENVIROMENT "Build dummmy client and server" ON)
 
 
 # Settings
@@ -43,11 +44,18 @@ set(QVPN_SERVER_APP "QVPN Server App")
 set(QVPN_CLIENT_APP "QVPN Client App")
 set(QVPN_SOCKET_FILTER "QVPN Socket Filter")
 
+set(QVPN_TEST_USER_SERVER_LINUX "QVPN User Server App Linux")
+set(QVPN_TEST_USER_CLIENT_WINDOWS "QVPN User Client App Windows")
+set(QVPN_TEST_USER_CLIENT_LINUX "QVPN User Client App Linux")
+
 set(QVPN_LIBRARY_NAME "QVPN_Lib")
 set(QVPN_SERVER_APP_NAME "QVPN_Server_App")
 set(QVPN_CLIENT_APP_NAME "QVPN_Client_App")
 set(QVPN_SOCKET_FILTER_NAME "QVPN_Socket_Filter")
 
+set(QVPN_TEST_USER_SERVER_LINUX_NAME "QVPN_Test_Server_User_Linux")
+set(QVPN_TEST_USER_CLIENT_WINDOWS_NAME "QVPN_Test_Client_User_Windows")
+set(QVPN_TEST_USER_CLIENT_LINUX_NAME "QVPN_Test_Client_User_Linux")
 
 # QVPN Data
 set(QVPN_LIBRARY_PATH "QVPN/${QVPN_LIBRARY}")
@@ -55,7 +63,9 @@ set(QVPN_SERVER_APP_PATH "QVPN/${QVPN_SERVER_APP}")
 set(QVPN_CLIENT_APP_PATH "QVPN/${QVPN_CLIENT_APP}")
 set(QVPN_SOCKET_FILTER_PATH "QVPN/${QVPN_SOCKET_FILTER}")
 
-
+set(QVPN_TEST_USER_SERVER_LINUX_APP_PATH "QVPN/${QVPN_TEST_USER_SERVER_LINUX}")
+set(QVPN_TEST_USER_CLIENT_WINDOWS_APP_PATH "QVPN/${QVPN_TEST_USER_CLIENT_WINDOWS}")
+set(QVPN_TEST_USER_CLIENT_LINUX_APP_PATH "QVPN/${QVPN_TEST_USER_CLIENT_LINUX}")
 
 # Includes
 set(PROJ_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/QVPN/${QVPN_LIBRARY}/include")
@@ -373,5 +383,26 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 
 
 endif()
+
+
+if(QVPN_BUILD_TEST_ENVIROMENT)
+
+	if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+
+		file(GLOB user_client_windows_src "${QVPN_TEST_USER_CLIENT_WINDOWS_APP_PATH}/*.cpp")
+		add_executable(${QVPN_TEST_USER_CLIENT_WINDOWS_NAME} ${user_client_windows_src})
+
+	elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+
+		file(GLOB user_server_src "${QVPN_TEST_USER_SERVER_LINUX_APP_PATH}/*.cpp")
+		file(GLOB user_client_linux_src "${QVPN_TEST_USER_CLIENT_LINUX_APP_PATH}/*.cpp")
+
+		add_executable(${QVPN_TEST_USER_SERVER_LINUX_NAME} ${user_server_src})
+		add_executable(${QVPN_TEST_USER_CLIENT_LINUX_NAME} ${user_client_linux_src})
+
+	endif()
+
+endif()
+
 
 #install(FILES ${WINTUN_DLL_PATH} DESTINATION ${TARGET_DIRECTORY})  # cmake --build . --target install - запуск

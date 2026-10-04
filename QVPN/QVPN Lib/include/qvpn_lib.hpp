@@ -114,6 +114,8 @@ namespace QVPN
 				{ l.fail(data, arg1, arg2, arg3) } -> std::same_as<void>;
 				{ l.warning(data) } -> std::same_as<void>;
 				{ l.warning(data, arg1, arg2, arg3) } -> std::same_as<void>;
+				{ l.simple_info(data) } -> std::same_as<void>;
+				{ l.simple_info(data, arg1, arg2, arg3) } -> std::same_as<void>;
 
 				{ l.set_verbosity(level) } -> std::same_as<void>;
 
@@ -134,7 +136,7 @@ namespace QVPN
 			UNDEFINED = -1,
 			CLIENT = 0,
 			SERVER = 1
-			
+
 		};
 
 		enum QVPNClientWorkMode
@@ -511,18 +513,18 @@ namespace QVPN {
 
 		template <class FVPolicy, class OStream = std::stringstream>
 		concept is_friendly_view_policy =
-			requires (FVPolicy p, std::string_view v, OStream& os, std::string_view delim) {
+			requires (FVPolicy p, std::string_view v, OStream & os, std::string_view delim) {
 
 			requires is_output_stream<OStream>;
 
-				{ p.label(v, delim) } -> std::same_as<std::string>;
-				{ p.label(os, v, delim) } -> std::same_as<void>;
+		{ p.label(v, delim) } -> std::same_as<std::string>;
+		{ p.label(os, v, delim) } -> std::same_as<void>;
 
-				{ p.value(v, delim) } -> std::same_as<std::string>;
-				{ p.value(os, v, delim) } -> std::same_as<void>;
+		{ p.value(v, delim) } -> std::same_as<std::string>;
+		{ p.value(os, v, delim) } -> std::same_as<void>;
 
-				{ p.label_value(v, v, delim, delim) } -> std::same_as<std::string>;
-				{ p.label_value(os, v, v, delim, delim) } -> std::same_as<void>;
+		{ p.label_value(v, v, delim, delim) } -> std::same_as<std::string>;
+		{ p.label_value(os, v, v, delim, delim) } -> std::same_as<void>;
 
 		};
 
@@ -694,7 +696,7 @@ namespace QVPN {
 			// дл€ std::unordered_map
 			bool operator==(const QVPNSocketData& other) const
 			{
-				return net_proto == other.net_proto && 
+				return net_proto == other.net_proto &&
 					transport_proto == other.transport_proto &&
 					local_addr == other.local_addr &&
 					local_port == other.local_port &&
@@ -793,7 +795,7 @@ namespace QVPN {
 
 			class DummyTransportLevelProtoTemplate
 			{
-				public:
+			public:
 				DummyTransportLevelProtoTemplate(UByte* begin, UByte* end) {}
 
 				static inline ProtoTemplateParseResult bytes_parse(UByte* begin, UByte* end) { return ProtoTemplateParseResult{}; };
@@ -822,7 +824,7 @@ namespace QVPN {
 
 		template <class SafeReceiveDataType>
 		concept is_safe_receive_data =
-			requires (SafeReceiveDataType sfr, const SafeReceiveDataType csfr, SafeReceiveSignal signal, BaseTypes::UByte * b, BaseTypes::UByte * e, size_t i, const NetStatus& status) {
+			requires (SafeReceiveDataType sfr, const SafeReceiveDataType csfr, SafeReceiveSignal signal, BaseTypes::UByte * b, BaseTypes::UByte * e, size_t i, const NetStatus & status) {
 
 			typename SafeReceiveDataType::AppLevelProtoTemplateType;
 
@@ -1022,34 +1024,34 @@ namespace QVPN {
 
 		template <class SockFilter>
 		concept is_socket_filter =
-			requires (SockFilter sf, const NetAddr& addr, QVPN::Core::BaseTypes::UShort port, BaseTypes::UByte proto, BaseTypes::UByte net, const SockFilter& csf_ref, const QVPNSocketData& csd_r, const QVPNServerSocketData& cssd_r) {
+			requires (SockFilter sf, const NetAddr & addr, QVPN::Core::BaseTypes::UShort port, BaseTypes::UByte proto, BaseTypes::UByte net, const SockFilter & csf_ref, const QVPNSocketData & csd_r, const QVPNServerSocketData & cssd_r) {
 
 			typename SockFilter::SocketFilter_t;
 
 			SockFilter{ csd_r };
 			SockFilter{ cssd_r };
 
-				{ sf.net_ver(net) } -> std::same_as<void>;
-				{ sf.ipv4() } -> std::same_as<void>;
-				{ sf.ipv6() } -> std::same_as<void>;
+			{ sf.net_ver(net) } -> std::same_as<void>;
+			{ sf.ipv4() } -> std::same_as<void>;
+			{ sf.ipv6() } -> std::same_as<void>;
 
-				{ sf.src(addr) } -> std::same_as<void>;
-				{ sf.dst(addr) } -> std::same_as<void>;
-				{ sf.src_port(port) } -> std::same_as<void>;
-				{ sf.dst_port(port) } -> std::same_as<void>;
-				{ sf.custom_protocol(proto) } -> std::same_as<void>;
-				{ sf.tcp() } -> std::same_as<void>;
-				{ sf.udp() } -> std::same_as<void>;
+			{ sf.src(addr) } -> std::same_as<void>;
+			{ sf.dst(addr) } -> std::same_as<void>;
+			{ sf.src_port(port) } -> std::same_as<void>;
+			{ sf.dst_port(port) } -> std::same_as<void>;
+			{ sf.custom_protocol(proto) } -> std::same_as<void>;
+			{ sf.tcp() } -> std::same_as<void>;
+			{ sf.udp() } -> std::same_as<void>;
 
-				{ sf.get_filters() } -> std::same_as<typename SockFilter::SocketFilter_t&>;
+			{ sf.get_filters() } -> std::same_as<typename SockFilter::SocketFilter_t&>;
 
 		};
 
 
 		template <class SocketImpl, class Addr>
 		concept is_socket =
-			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit, 
-		const QVPNSocketSettings & sock_settings, BaseTypes::UInt arg, const QVPNSocketData& sock_data) {
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit,
+		const QVPNSocketSettings & sock_settings, BaseTypes::UInt arg, const QVPNSocketData & sock_data) {
 
 			SocketImpl::buffer_size;
 
@@ -1089,67 +1091,67 @@ namespace QVPN {
 
 		template <class SocketImpl, class Addr, class SockFilter>
 		concept is_raw_socket =
-			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit, const QVPNSocketSettings & sock_settings, SockFilter& csf) {
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit, const QVPNSocketSettings & sock_settings, SockFilter & csf) {
 
 			requires is_socket_filter<SockFilter>;
 
-			SocketImpl::buffer_size;
-			typename SocketImpl::SocketFilter;
+		SocketImpl::buffer_size;
+		typename SocketImpl::SocketFilter;
 
-			{ t.reconnect(addr, port) } -> std::same_as<NetStatus>;
-			{ t.connect(addr, port) } -> std::same_as<NetStatus>;
-			{ t.disconnect() } -> std::same_as<NetStatus>;
-			{ t.close_socket() } -> std::same_as<void>;
-			{ t.disconnect_if_connected() } -> std::same_as<void>;
+		{ t.reconnect(addr, port) } -> std::same_as<NetStatus>;
+		{ t.connect(addr, port) } -> std::same_as<NetStatus>;
+		{ t.disconnect() } -> std::same_as<NetStatus>;
+		{ t.close_socket() } -> std::same_as<void>;
+		{ t.disconnect_if_connected() } -> std::same_as<void>;
 
-			{ t.bind(addr, port) } -> std::same_as<NetStatus>;
-			{ t.listen(con_limit) } -> std::same_as<NetStatus>;
-			{ t. template accept<Addr>() } -> std::same_as<SocketImpl>;
+		{ t.bind(addr, port) } -> std::same_as<NetStatus>;
+		{ t.listen(con_limit) } -> std::same_as<NetStatus>;
+		{ t. template accept<Addr>() } -> std::same_as<SocketImpl>;
 
-			{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
-			{ t.receive(flags) } -> std::same_as<ReceiveData>;
+		{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
+		{ t.receive(flags) } -> std::same_as<ReceiveData>;
 
-			{ t.get_local_addr() } -> std::same_as<const Addr&>;
-			{ t.get_local_port() } -> std::same_as<BaseTypes::UShort>;
+		{ t.get_local_addr() } -> std::same_as<const Addr&>;
+		{ t.get_local_port() } -> std::same_as<BaseTypes::UShort>;
 
-			{ t.get_remote_addr() } -> std::same_as<const Addr&>;
-			{ t.get_remote_port() } -> std::same_as<BaseTypes::UShort>;
+		{ t.get_remote_addr() } -> std::same_as<const Addr&>;
+		{ t.get_remote_port() } -> std::same_as<BaseTypes::UShort>;
 
-			{ t.get_transport_protocol() } -> std::same_as<TransportProtocol>;
+		{ t.get_transport_protocol() } -> std::same_as<TransportProtocol>;
 
-			{ t.apply_settings(sock_settings) } -> std::same_as<void>;
+		{ t.apply_settings(sock_settings) } -> std::same_as<void>;
 
-			{ t.template send_to<Addr>(addr, port, begin, end, flags) } -> std::same_as<NetStatus>;
-			{ t.template recv_from<Addr>(flags) } -> std::same_as<ReceiveDataWInfo<Addr>>;
+		{ t.template send_to<Addr>(addr, port, begin, end, flags) } -> std::same_as<NetStatus>;
+		{ t.template recv_from<Addr>(flags) } -> std::same_as<ReceiveDataWInfo<Addr>>;
 
-			{ t.template safe_recv<details::DummyNetLevelProtoTemplate, details::DummyTransportLevelProtoTemplate, details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
+		{ t.template safe_recv<details::DummyNetLevelProtoTemplate, details::DummyTransportLevelProtoTemplate, details::DummyAppLevelProtoTemplate>(flags) } -> is_safe_receive_data;
 
-			{ t.is_valid() } -> std::same_as<bool>;
-			{ t.get_socket_data() } -> std::same_as<const QVPNSocketData&>;
+		{ t.is_valid() } -> std::same_as<bool>;
+		{ t.get_socket_data() } -> std::same_as<const QVPNSocketData&>;
 
-			{ t.filter(csf) } -> std::same_as<void>;
+		{ t.filter(csf) } -> std::same_as<void>;
 		};
 
 
 		template <class NetToolsImpl>
 		concept is_net_tools =
-			requires (NetToolsImpl t, NetProtocol net_proto, TransportProtocol t_proto, BaseTypes::UShort us, BaseTypes::UInt ui, BaseTypes::ULong ul, const QVPNSocketData& csd_r) {
+			requires (NetToolsImpl t, NetProtocol net_proto, TransportProtocol t_proto, BaseTypes::UShort us, BaseTypes::UInt ui, BaseTypes::ULong ul, const QVPNSocketData & csd_r) {
 
 			typename NetToolsImpl::Socket;
 			typename NetToolsImpl::RawSocket;
 			typename NetToolsImpl::SocketFilter;
 
-				{ NetToolsImpl::create_socket(net_proto, t_proto) } -> std::same_as<typename NetToolsImpl::Socket>;
-				{ NetToolsImpl::create_raw_socket(net_proto, t_proto) } -> std::same_as<typename NetToolsImpl::RawSocket>;
-				{ NetToolsImpl::create_socket_filter(csd_r) } -> std::same_as<typename NetToolsImpl::SocketFilter>;
+			{ NetToolsImpl::create_socket(net_proto, t_proto) } -> std::same_as<typename NetToolsImpl::Socket>;
+			{ NetToolsImpl::create_raw_socket(net_proto, t_proto) } -> std::same_as<typename NetToolsImpl::RawSocket>;
+			{ NetToolsImpl::create_socket_filter(csd_r) } -> std::same_as<typename NetToolsImpl::SocketFilter>;
 
-				{ NetToolsImpl::hton(us) } -> std::same_as<BaseTypes::UShort>;
-				{ NetToolsImpl::hton(ui) } -> std::same_as<BaseTypes::UInt>;
-				{ NetToolsImpl::hton(ul) } -> std::same_as<BaseTypes::ULong>;
+			{ NetToolsImpl::hton(us) } -> std::same_as<BaseTypes::UShort>;
+			{ NetToolsImpl::hton(ui) } -> std::same_as<BaseTypes::UInt>;
+			{ NetToolsImpl::hton(ul) } -> std::same_as<BaseTypes::ULong>;
 
-				{ NetToolsImpl::ntoh(us) } -> std::same_as<BaseTypes::UShort>;
-				{ NetToolsImpl::ntoh(ui) } -> std::same_as<BaseTypes::UInt>;
-				{ NetToolsImpl::ntoh(ul) } -> std::same_as<BaseTypes::ULong>;
+			{ NetToolsImpl::ntoh(us) } -> std::same_as<BaseTypes::UShort>;
+			{ NetToolsImpl::ntoh(ui) } -> std::same_as<BaseTypes::UInt>;
+			{ NetToolsImpl::ntoh(ul) } -> std::same_as<BaseTypes::ULong>;
 		};
 
 
@@ -1317,6 +1319,50 @@ namespace QVPN {
 			SYN_ACK = 0x12,
 		};
 
+		enum TCPOptions : BaseTypes::UByte
+		{
+			// --- —пециальные опции (1 байт, без Length) ---
+			TCP_EOL = 0,   // End of Option List
+			TCP_NOP = 1,   // No-Operation
+
+			// --- —тандартные опции ---
+			TCP_MSS = 2,   // Maximum Segment Size
+			TCP_WS = 3,   // Window Scale
+			TCP_SACK_PERM = 4,   // SACK-Permitted
+			TCP_SACK = 5,   // Selective ACK
+			TCP_ECHO = 6,   // Echo (устарело)
+			TCP_ECHO_REPLY = 7,   // Echo Reply (устарело)
+			TCP_TS = 8,   // Timestamps
+
+			// --- Ёкспериментальные / устаревшие ---
+			TCP_POC_PERM = 9,   // Partial Order Connection Permitted
+			TCP_POC_PROFILE = 10,  // Partial Order Service Profile
+			TCP_CC = 11,  // Connection Count (устарело)
+			TCP_CC_NEW = 12,  // CC.NEW (устарело)
+			TCP_CC_ECHO = 13,  // CC.ECHO (устарело)
+			TCP_ALTCHK_REQ = 14,  // Alternate Checksum Request (устарело)
+			TCP_ALTCHK_DATA = 15,  // Alternate Checksum Data (устарело)
+			TCP_SKEETER = 16,  // Skeeter (устарело)
+			TCP_BUBBA = 17,  // Bubba (устарело)
+			TCP_TRAILER_CK = 18,  // Trailer Checksum (устарело)
+
+			// --- јутентификаци€ ---
+			TCP_MD5SIG = 19,  // MD5 Signature (RFC 2385)
+			TCP_SCPS = 20,  // SCPS Capabilities
+			TCP_SNA = 21,  // Selective Negative ACKs
+			TCP_RECB = 22,  // Record Boundaries
+			TCP_CORRUPT = 23,  // Corruption Experienced
+			TCP_SNAP = 24,  // SNAP
+			TCP_COMP_FILTER = 25,  // TCP Compression Filter
+
+			// --- —овременные расширени€ ---
+			TCP_QS = 26,  // Quick-Start Response (RFC 4782)
+			TCP_USER_TIMEOUT = 27,  // User Timeout Option (RFC 5482)
+			TCP_AO = 28,  // TCP Authentication Option (RFC 5925)
+			TCP_MPTCP = 29,  // Multipath TCP (RFC 8684)
+			// Kind 30 Ч зарезервирован
+			TCP_TFO = 34,  // TCP Fast Open (RFC 7413)
+		};
 
 		class TcpFlagsObject
 		{
@@ -1462,6 +1508,14 @@ namespace QVPN {
 
 		};
 
+
+		enum QVPN_Crypto : BaseTypes::UShort
+		{
+			NO_CRYPTO = 0,
+
+		};
+
+
 		class QVPNVerboser
 		{
 		private:
@@ -1470,10 +1524,63 @@ namespace QVPN {
 
 			static inline std::unordered_map<NetProtocol, std::string> net_verbose_ = { { NetProtocol::IPv4, "IPv4"}, { NetProtocol::IPv6, "IPv6"} };
 			static inline std::unordered_map<TransportProtocol, std::string> transport_verbose_ = { { TransportProtocol::TCP, "TCP"}, { TransportProtocol::UDP, "UDP"} };
-			static inline std::array<std::string_view, 9> tcp_flags_ = { "FIN", "SYN", "RST", "PSH", "ACK", "URG", "ECE", "CWR", "NS"};
+			static inline std::array<std::string_view, 9> tcp_flags_ = { "FIN", "SYN", "RST", "PSH", "ACK", "URG", "ECE", "CWR", "NS" };
 			static inline std::array<std::string_view, 3> ipv4_flags_ = { "RESERVED", "DF", "MF" };
-			
+			static inline std::array<std::string_view, 5> client_work_modes_ = { "VPN Client", "Proxy client", "Anti DPI + server", "Anti DPI", "DPI Terror" };
+			static inline std::array<std::string_view, 4> server_work_modes_ = { "VPN Server", "Server Proxy Node", "Anti DPI Server", "DPI Terror Server" };
+			static inline std::array<std::string_view, 1> crypto_modes_ = { "No crypto" };
+
+			static inline std::unordered_map<UByte, std::string> tcp_options_ = {
+				// --- —пециальные (1 байт) ---
+				{0,  "End of Option List"},
+				{1,  "No-Operation"},
+
+				// --- —тандартные ---
+				{2,  "Maximum Segment Size"},
+				{3,  "Window Scale"},
+				{4,  "SACK-Permitted"},
+				{5,  "Selective ACK"},
+				{8,  "Timestamps"},
+
+				// --- ”старевшие / исторические ---
+				{6,  "Echo (устарело, RFC 1072)"},
+				{7,  "Echo Reply (RFC 1072)"},
+				{11, "Connection Count (RFC 1644)"},
+				{12, "CC.NEW (RFC 1644)"},
+				{13, "CC.ECHO (RFC 1644)"},
+				{14, "Alternate Checksum Request (RFC 1146)"},
+				{15, "Alternate Checksum Data (RFC 1146)"},
+				{16, "Skeeter"},
+				{17, "Bubba"},
+				{18, "Trailer Checksum"},
+
+				// --- јутентификаци€ ---
+				{19, "MD5 Signature"},
+				{28, "TCP Authentication Option"},
+
+				// --- Ёкспериментальные ---
+				{9,  "Partial Order Connection Permitted (RFC 1693)"},
+				{10, "Partial Order Service Profile (RFC 1693)"},
+				{20, "SCPS Capabilities"},
+				{21, "Selective Negative ACKs"},
+				{22, "Record Boundaries"},
+				{23, "Corruption Experienced"},
+				{24, "SNAP"},
+				{25, "TCP Compression Filter"},
+
+				// --- —овременные ---
+				{26, "Quick-Start Response"},
+				{27, "User Timeout Option"},
+				{29, "Multipath TCP"},
+				{34, "TCP Fast Open"},
+
+				// --- Ёкспериментальные коды (RFC 4727 / RFC 6994) ---
+				{253, "Experimental (RFC 4727)"},
+				{254, "Experimental (RFC 4727)"},
+			};
+
 			static inline std::unordered_map<NetAddr, VerbosedNetAddr, NetAddrHasher> verb_addrs_ = {};
+
 
 		public:
 
@@ -1482,17 +1589,26 @@ namespace QVPN {
 
 			static std::string_view transport_verbose(TransportProtocol transport);
 			static void register_transport_verbose(TransportProtocol transport, std::string_view verbose);
-			
+
 			static std::string tcp_flags(TcpFlagsObject flags);
 			static std::string ipv4_flags(UByte flags);
+
+			static std::string_view tcp_option(UByte option);
+			static void register_tcp_option(TCPOptions option, std::string_view verbose);
 
 			static void register_addr_verbose(const NetAddr& addr, std::string_view verbose, std::string_view cmd_color = CmdColorizer::OKBLUE);
 			static std::string addr_verbose(const NetAddr& addr);
 
+			static std::string_view client_mode_verbose(QVPNClientWorkMode mode);
+			static std::string_view server_mode_verbose(QVPNServerWorkMode mode);
+			static std::string work_mode_verbose(BaseTypes::UInt mode);
+
+			static std::string_view crypto_mode_verbose(QVPN_Crypto crypto);
+
 		};
 
 
-}
+	}
 
 }
 

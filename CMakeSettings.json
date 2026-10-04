@@ -37,6 +37,11 @@
           "name": "QVPN_BUILD_LIB",
           "value": "True",
           "type": "BOOL"
+        },
+        {
+          "name": "QVPN_BUILD_TEST_ENVIROMENT",
+          "value": "True",
+          "type": "BOOL"
         }
       ],
       "intelliSenseMode": "linux-gcc-x64"
@@ -48,11 +53,12 @@
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeExecutable": "cmake",
-      "cmakeCommandArgs": "",
+      "cmakeCommandArgs": "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "linux_clang_x64" ],
-      "wslPath": "Ubuntu"
+      "wslPath": "Ubuntu",
+      "remoteCopyUseCompilerDefaults": true
     },
     {
       "name": "WSL-GCC-Release",

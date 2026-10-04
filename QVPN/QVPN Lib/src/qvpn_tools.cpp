@@ -135,3 +135,80 @@ std::vector<QVPN::Core::BaseTypes::UByte> QVPN::Core::Tools::parse_net_addr(std:
 	}
 	return ip_;
 }
+
+
+void QVPN::Core::Tools::QVPNSpeedMeter::recv_meter_start()
+{
+	recv_first_fixation_ = Clock::now();
+	recv_last_fixation_ = {};
+}
+
+void QVPN::Core::Tools::QVPNSpeedMeter::send_meter_start()
+{
+	send_first_fixation_ = Clock::now();
+	send_last_fixation_ = {};
+}
+
+void QVPN::Core::Tools::QVPNSpeedMeter::add_receive_size(UInt bytes, Clock::time_point fix_time)
+{
+	recv_last_bytes_ = bytes;
+	recv_total_bytes_ += bytes;
+
+	recv_last_fixation_ = fix_time;
+}
+
+void QVPN::Core::Tools::QVPNSpeedMeter::add_send_size(UInt bytes, Clock::time_point fix_time)
+{
+	send_last_bytes_ = bytes;
+	send_total_bytes_ += bytes;
+
+	send_last_fixation_ = fix_time;
+}
+
+double QVPN::Core::Tools::QVPNSpeedMeter::get_last_recv_speed() const
+{
+	constexpr UInt delta_safe = 1;
+
+	auto now = Clock::now();
+	auto delta_time = std::chrono::duration_cast<std::chrono::seconds>(now - recv_last_fixation_);
+	const UInt delta_res = delta_time.count();
+	auto delta = std::max(delta_res, delta_safe);
+	auto speed = recv_last_bytes_ / delta;
+	return speed;
+}
+
+double QVPN::Core::Tools::QVPNSpeedMeter::get_last_send_speed() const
+{
+	constexpr UInt delta_safe = 1;
+
+	auto now = Clock::now();
+	auto delta_time = std::chrono::duration_cast<std::chrono::seconds>(now - send_last_fixation_);
+	const UInt delta_res = delta_time.count();
+	auto delta = std::max(delta_res, delta_safe);
+	auto speed = send_last_bytes_ / delta;
+	return speed;
+}
+
+double QVPN::Core::Tools::QVPNSpeedMeter::get_average_recv_speed() const
+{
+	constexpr UInt delta_safe = 1;
+
+	auto now = Clock::now();
+	auto delta_time = std::chrono::duration_cast<std::chrono::seconds>(now - recv_first_fixation_);
+	const UInt delta_res = delta_time.count();
+	auto delta = std::max(delta_res, delta_safe);
+	auto avg_speed = recv_total_bytes_ / delta;
+	return avg_speed;
+}
+
+double QVPN::Core::Tools::QVPNSpeedMeter::get_average_send_speed() const
+{
+	constexpr UInt delta_safe = 1;
+
+	auto now = Clock::now();
+	auto delta_time = std::chrono::duration_cast<std::chrono::seconds>(now - send_first_fixation_);
+	const UInt delta_res = delta_time.count();
+	auto delta = std::max(delta_res, delta_safe);
+	auto avg_speed = send_total_bytes_ / delta;
+	return avg_speed;
+}

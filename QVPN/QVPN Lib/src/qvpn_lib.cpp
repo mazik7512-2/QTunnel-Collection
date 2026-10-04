@@ -545,8 +545,11 @@ std::string QVPN::Core::QVPNVerboser::tcp_flags(TcpFlagsObject flags)
 			flags_data.append(" ");
 		}
 	}
-	flags_data.pop_back();
-	flags_data.append("]");
+	if (flags_data.size() >= 2)
+	{
+		flags_data.pop_back();
+		flags_data.append("]");
+	}
 	return flags_data;
 }
 
@@ -563,9 +566,22 @@ std::string QVPN::Core::QVPNVerboser::ipv4_flags(UByte flags)
 			flags_data.append(" ");
 		}
 	}
-	flags_data.pop_back();
-	flags_data.append("]");
+	if (flags_data.size() >= 2)
+	{
+		flags_data.pop_back();
+		flags_data.append("]");
+	}
 	return flags_data;
+}
+
+std::string_view QVPN::Core::QVPNVerboser::tcp_option(UByte option)
+{
+	return tcp_options_[option];
+}
+
+void QVPN::Core::QVPNVerboser::register_tcp_option(TCPOptions option, std::string_view verbose)
+{
+	tcp_options_[option] = verbose;
 }
 
 void QVPN::Core::QVPNVerboser::register_addr_verbose(const NetAddr& addr, std::string_view verbose, std::string_view cmd_color)
@@ -588,6 +604,33 @@ std::string QVPN::Core::QVPNVerboser::addr_verbose(const NetAddr& addr)
 	ss << v_addr.get_color() << v_addr.to_string() << " [" << CmdColorizer::BOLD << v_addr.get_verbose() << "]" << CmdColorizer::ENDC << CmdColorizer::DEFAULT;
 	return ss.str();
 	
+}
+
+std::string_view QVPN::Core::QVPNVerboser::client_mode_verbose(QVPNClientWorkMode mode)
+{
+	return client_work_modes_[mode];
+}
+
+std::string_view QVPN::Core::QVPNVerboser::server_mode_verbose(QVPNServerWorkMode mode)
+{
+	return server_work_modes_[mode];
+}
+
+std::string QVPN::Core::QVPNVerboser::work_mode_verbose(BaseTypes::UInt mode)
+{
+	std::stringstream ss{};
+
+	auto cw_mode = static_cast<QVPNClientWorkMode>(mode);
+	auto sw_mode = static_cast<QVPNServerWorkMode>(mode);
+
+	ss << client_mode_verbose(cw_mode) << "/" << server_mode_verbose(sw_mode);
+
+	return ss.str();
+}
+
+std::string_view QVPN::Core::QVPNVerboser::crypto_mode_verbose(QVPN_Crypto crypto)
+{
+	return crypto_modes_[crypto];
 }
 
 

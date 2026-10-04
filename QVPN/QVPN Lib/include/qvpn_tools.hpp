@@ -215,7 +215,7 @@ namespace QVPN {
 
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
-					std::cout << WinColors::ENDC << WinColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::ENDC << WinColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << prefix_ << " " << data << WinColors::ENDC << std::endl;
 				}
 
 				template <class ... Args>
@@ -228,7 +228,7 @@ namespace QVPN {
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
 					auto data = std::vformat(str, std::make_format_args(args...));
-					std::cout << WinColors::ENDC << WinColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::ENDC << WinColors::BOLD << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (INFO) " << prefix_ << " " << data << WinColors::ENDC << std::endl;
 				}
 
 				void success(std::string_view data)
@@ -239,7 +239,7 @@ namespace QVPN {
 
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
-					std::cout << WinColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << prefix_ << " " << data << WinColors::ENDC << std::endl;
 				}
 
 				template <class ... Args>
@@ -252,7 +252,7 @@ namespace QVPN {
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
 					auto data = std::vformat(str, std::make_format_args(args...));
-					std::cout << WinColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::OKGREEN << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (SUCCESS) " << prefix_ << " " << data << WinColors::ENDC << std::endl;
 				}
 
 				void fail(std::string_view data)
@@ -263,7 +263,7 @@ namespace QVPN {
 
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
-					std::cout << WinColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << WinColors::ENDC << std::endl;
 				}
 
 				template <class ... Args>
@@ -276,7 +276,7 @@ namespace QVPN {
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
 					auto data = std::vformat(str, std::make_format_args(args...));
-					std::cout << WinColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::FAIL << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (FAIL) " << prefix_ << " " << data << WinColors::ENDC << std::endl;
 				}
 
 				void warning(std::string_view data)
@@ -287,7 +287,7 @@ namespace QVPN {
 
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
-					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << WinColors::ENDC << std::endl;
 				}
 
 				template <class ... Args>
@@ -300,7 +300,26 @@ namespace QVPN {
 					auto now = sys_clock::now();
 					auto time = sys_clock::to_time_t(now);
 					auto data = std::vformat(str, std::make_format_args(args...));
-					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << WinColors::DEFAULT << std::endl;
+					std::cout << WinColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << WinColors::ENDC << std::endl;
+				}
+
+				void simple_info(std::string_view str)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::INFO);
+					if (l != LoggerVerboseLevel::INFO)
+						return;
+
+					std::cout << WinColors::BOLD << str << WinColors::ENDC << std::endl;
+				}
+
+				template <class ... Args>
+				void simple_info(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::INFO);
+					if (l != LoggerVerboseLevel::INFO)
+						return;
+
+					std::cout << WinColors::BOLD << str << WinColors::ENDC << std::endl;
 				}
 			};
 
@@ -438,7 +457,64 @@ namespace QVPN {
 					auto data = std::vformat(str, std::make_format_args(args...));
 					std::cout << LinuxColors::WARNING << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << "] (WARNING) " << prefix_ << " " << data << LinuxColors::DEFAULT << std::endl;
 				}
+
+				void simple_info(std::string_view str)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::INFO);
+					if (l != LoggerVerboseLevel::INFO)
+						return;
+
+					std::cout << LinuxColors::BOLD << str << LinuxColors::ENDC << std::endl;
+				}
+
+				template <class ... Args>
+				void simple_info(std::string_view str, Args&& ... args)
+				{
+					LoggerVerboseLevel l = static_cast<LoggerVerboseLevel>(verbose_ & LoggerVerboseLevel::INFO);
+					if (l != LoggerVerboseLevel::INFO)
+						return;
+
+					std::cout << LinuxColors::BOLD << str << LinuxColors::ENDC << std::endl;
+				}
 			};
+
+
+			// Speed meter in seconds
+			class QVPNSpeedMeter
+			{
+				using Clock = std::chrono::high_resolution_clock;
+
+				using ULong = BaseTypes::ULong;
+				using UInt = BaseTypes::UInt;
+				using UShort = BaseTypes::UShort;
+
+				Clock::time_point recv_last_fixation_{};
+				Clock::time_point send_last_fixation_{};
+
+				Clock::time_point recv_first_fixation_{};
+				Clock::time_point send_first_fixation_{};
+
+				ULong recv_total_bytes_{};
+				ULong send_total_bytes_{};
+
+				UInt recv_last_bytes_{};
+				UInt send_last_bytes_{};
+
+			public:
+
+				void recv_meter_start();
+				void send_meter_start();
+
+				void add_receive_size(UInt bytes, Clock::time_point fix_time = Clock::now());
+				void add_send_size(UInt bytes, Clock::time_point fix_time = Clock::now());
+
+				double get_last_recv_speed() const; // TODO: доразобраться с last speed
+				double get_last_send_speed() const;
+
+				double get_average_recv_speed() const;
+				double get_average_send_speed() const;
+			};
+
 		}
 		
 

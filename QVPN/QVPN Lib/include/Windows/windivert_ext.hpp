@@ -198,6 +198,8 @@ namespace QVPN {
 			VPNDriver driver_;
 			Logger logger_{};
 
+			QVPN::Core::Tools::QVPNSpeedMeter speed_meter_{};
+
 			void clear_outgoing_filters()
 			{
 				filters_out_.clear();
@@ -217,10 +219,13 @@ namespace QVPN {
 			void apply_default_outgoing_filter()
 			{
 				filters_out_.push_back(!Filter::source(driver_.get_vpn_address())); //for localhost server
-				filters_out_.push_back(!Filter::dest(driver_.get_vpn_address())); // for client outgoing traffic
+				//filters_out_.push_back(!Filter::dest(driver_.get_vpn_address())); // for client outgoing traffic
 				filters_out_.push_back(Filter::outgoing_traffic());
 				filters_out_.push_back(!Filter::tcp_dst_port(22)); // not ssh
 				filters_out_.push_back(!Filter::local_traffic());
+
+				filters_out_.push_back(Filter::dest(Addr("195.82.146.78")));
+				filters_out_.push_back(Filter::tcp_dst_port(8080));
 			}
 
 			void start_capture_outgoing_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
@@ -260,6 +265,7 @@ namespace QVPN {
 						logger_.fail("Failed to read packet. Error #{}", GetLastError());
 						continue;
 					}
+
 					auto package = pp.pre_parse(packet, packet + packet_len);
 
 					auto ver = std::visit([](auto& p) { return p.get_protocol_version(); }, package);
@@ -275,6 +281,8 @@ namespace QVPN {
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, package);
 					std::visit([](auto& p) {std::cout << "outgoing capture" << std::endl << p.to_packet_friendly_view() << std::endl; }, package);
 					driver_.encode_and_send(proxy_data, data_b, data_e);
+					speed_meter_.add_send_size(std::distance(data_b, data_e));
+					logger_.info("Send speed. Avg Speed = {}.", speed_meter_.get_average_send_speed()); // TODO: разобраться со спидометром
 
 				}
 			}
@@ -301,6 +309,8 @@ namespace QVPN {
 				filters_in_.push_back(Filter::source(driver_.get_vpn_address()));
 				filters_in_.push_back(!Filter::tcp_src_port(22)); // not ssh
 				filters_in_.push_back(!Filter::local_traffic());
+
+				filters_in_.push_back(Filter::source(Addr("195.82.146.78")));
 			}
 
 			void start_capture_incoming_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
@@ -342,8 +352,10 @@ namespace QVPN {
 						logger_.fail("Failed to read packet. Error #{}", GetLastError());
 						continue;
 					}
+					
+					speed_meter_.add_receive_size(packet_len);
+					logger_.success("Received packet. Packet size = {}. Avg Speed = {}.", packet_len, speed_meter_.get_average_recv_speed());
 
-					logger_.success("Received packet. Packet size = {}", packet_len);
 
 					auto package = pp.pre_parse(packet, packet + packet_len);
 
@@ -384,7 +396,7 @@ namespace QVPN {
 
 						auto proxy_data = decoded_data->create(*decoded_data);
 						
-						auto inj_p_bytes = std::visit([&proxy_data, &b, &e](auto& p) { return p.new_packet_bytes_by_this(proxy_data, b, e); }, package); // TODO: ошибка с возвращаемым типом, что-то надо придумать
+						auto inj_p_bytes = std::visit([&proxy_data, &b, &e](auto& p) { return p.new_packet_bytes_by_this(proxy_data, b, e); }, package);
 						auto inj_packet = pp.pre_parse(inj_p_bytes.data(), inj_p_bytes.data() + inj_p_bytes.size());
 
 						// TODO: сделать аллокатор для пакета, либо выделять память раньше
@@ -394,7 +406,7 @@ namespace QVPN {
 						UINT size = static_cast<UINT>(std::distance(res_b, res_e));
 						WinDivertHelperCalcChecksums((void*)res_b, size, &addr, 0);
 						std::visit([](auto& p) { std::cout << "Incoming packet (after recalc)" << std::endl << p.to_packet_friendly_view() << std::endl; }, inj_packet);
-						if (!WinDivertSend(in_hDivert_, res_b, sizeof(packet), &size, &addr))
+						if (!WinDivertSend(in_hDivert_, res_b, sizeof(inj_packet), &size, &addr))
 						{
 							logger_.fail("Failed to reinject incoming packet. Error #{}", GetLastError());
 							continue;
@@ -444,7 +456,7 @@ namespace QVPN {
 				apply_default_outgoing_filter();
 				calculate_outgoing_filters();
 				new_adapter_id = adapter_id;
-				out_worker_ = std::thread([this, &adapter_addr]() { start_capture_outgoing_traffic_(adapter_addr); });
+				out_worker_ = std::thread([this, &adapter_addr]() {  speed_meter_.send_meter_start(); start_capture_outgoing_traffic_(adapter_addr); });
 				//start_capture_outgoing_traffic_(adapter_addr);
 			}
 
@@ -453,7 +465,7 @@ namespace QVPN {
 				//add_incoming_traffic_filter(Filter::dest(adapter_addr));
 				apply_default_incoming_filter();
 				calculate_incoming_filters();
-				in_worker_ = std::thread([this, &adapter_addr]() { start_capture_incoming_traffic_(adapter_addr); });
+				in_worker_ = std::thread([this, &adapter_addr]() { speed_meter_.recv_meter_start(); start_capture_incoming_traffic_(adapter_addr); });
 				//start_capture_incoming_traffic_(adapter_addr);
 			}
 

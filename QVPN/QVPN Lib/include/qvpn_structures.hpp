@@ -1345,6 +1345,133 @@ namespace QVPN {
 			}&& UnifiedTransportLike<TcpImpl>&& UnifiedPacketLike<TcpImpl>;
 
 
+			class TcpOptionView;
+
+
+			class TcpOptionObject
+			{
+			private:
+				std::vector<UByte> data_;
+
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+				using ObjectType = TcpOptionObject;
+				using ViewType = TcpOptionView;
+
+				TcpOptionObject();
+				TcpOptionObject(UByte* begin, UByte* end);
+
+				void set_data(UByte* begin, UByte* end);
+				UShort get_size() const;
+
+				TCPOptions get_option_kind() const;
+				UByte get_option_length() const;
+				std::pair<DataIterator_t, DataIterator_t> get_option_data();
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_option_data() const;
+
+				std::string to_tcp_option_friendly_view() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+			};
+
+			class TcpOptionView
+			{
+			private:
+				UByte* data_;
+				UByte length_;
+
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+				using ObjectType = TcpOptionObject;
+				using ViewType = TcpOptionView;
+
+				TcpOptionView();
+				TcpOptionView(UByte* begin, UByte* end);
+
+				void set_data(UByte* begin, UByte* end);
+				UShort get_size() const;
+
+				TCPOptions get_option_kind() const;
+				UByte get_option_length() const;
+				std::pair<DataIterator_t, DataIterator_t> get_option_data();
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> get_option_data() const;
+
+				std::string to_tcp_option_friendly_view() const;
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+			};
+
+			class TcpOptionsView;
+
+
+			class TcpOptionsObject
+			{
+			private:
+				std::vector<UByte> data_;
+
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+				using ObjectType = TcpOptionsObject;
+				using ViewType = TcpOptionsView;
+
+				TcpOptionsObject();
+				TcpOptionsObject(UByte* begin, UByte* end);
+
+				void set_data(UByte* begin, UByte* end);
+				UShort get_size() const;
+
+				std::string to_tcp_options_friendly_view() const;
+				static std::string to_tcp_options_friendly_view(const UByte* begin, const UByte* end);
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				static UShort get_next_option_offset(const UByte* begin, const UByte* end);
+
+			};
+
+
+			class TcpOptionsView
+			{
+			private:
+				UByte* data_;
+				UShort length_;
+
+			public:
+
+				using DataIterator_t = UByte*;
+				using ConstDataIterator_t = const UByte*;
+
+				using ObjectType = TcpOptionsObject;
+				using ViewType = TcpOptionsView;
+
+				TcpOptionsView();
+				TcpOptionsView(UByte* begin, UByte* end);
+
+				void set_data(UByte* begin, UByte* end);
+				UShort get_size() const;
+
+				std::string to_tcp_options_friendly_view() const;
+				static std::string to_tcp_options_friendly_view(const UByte* begin, const UByte* end);
+
+				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+				std::pair<DataIterator_t, DataIterator_t> to_bytes();
+
+				static UShort get_next_option_offset(const UByte* begin, const UByte* end);
+			};
+
 			class QTunnelTCPViewScheme;
 
 			class TcpPacketView;
@@ -4152,6 +4279,27 @@ namespace QVPN {
 				TLSExtensionsView get_tls_extensions_data() const;
 
 				std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const;
+			};
+
+
+			// TODO: доделать, разобраться с Finished/ServerHelloDone
+			class TLS_ServerHelloDonePacketObject
+			{
+			private:
+				std::vector<UByte> data_;
+
+			public:
+
+				UInt get_length() const;
+				TLSMessageType get_message_type() const;
+
+
+			};
+
+
+			class TLS_ServerHelloDonePacketView
+			{
+
 			};
 
 

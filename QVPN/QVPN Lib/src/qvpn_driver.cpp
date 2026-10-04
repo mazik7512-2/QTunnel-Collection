@@ -30,6 +30,16 @@ QVPN::Core::QVPN_Crypto QVPN::Core::QVPNClientCryptoSettings::get_crypto_method(
     return crypto_method_;
 }
 
+std::string QVPN::Core::QVPNClientCryptoSettings::get_crypto_info() const
+{
+    std::stringstream ss{};
+
+    ss << "Crypto info:" << std::endl;
+    ss << QVPNVerboser::crypto_mode_verbose(crypto_method_) << std::endl;
+
+    return ss.str();
+}
+
 QVPN::Core::QVPNClientAuthSettings::QVPNClientAuthSettings(std::string_view auth_data)
 {
     auth_data_ = auth_data_;
@@ -43,6 +53,16 @@ void QVPN::Core::QVPNClientAuthSettings::set_auth_data(std::string_view auth_dat
 std::string_view QVPN::Core::QVPNClientAuthSettings::get_auth_data() const
 {
     return auth_data_;
+}
+
+std::string QVPN::Core::QVPNClientAuthSettings::get_auth_info() const
+{
+    std::stringstream ss{};
+
+    ss << "Authentication data:" << std::endl;
+    ss << auth_data_ << std::endl;
+
+    return ss.str();
 }
 
 // QVPN Net Settings
@@ -67,6 +87,20 @@ std::pair<QVPN::Core::QVPNServerConnectionSettings::DataIterator_t, QVPN::Core::
     return std::pair<DataIterator_t, DataIterator_t>(data_.cbegin(), data_.cend());
 }
 
+std::string QVPN::Core::QVPNServerConnectionSettings::get_addrs_info() const
+{
+    std::stringstream ss{};
+
+    ss << "Listens on:" << std::endl;
+    
+    for (size_t i = 0; i < data_.size(); i++)
+    {
+        ss << QVPNVerboser::net_verbose(data_[i].get_net_proto()) << " " << QVPNVerboser::transport_verbose(data_[i].get_transport_proto()) << " " << data_[i].to_string() << std::endl;
+    }
+
+    return ss.str();
+}
+
 // QVPN Crypto Server Settings
 
 void QVPN::Core::QVPNServerCryptoSettings::add_crypto_method(QVPN_Crypto crypto)
@@ -77,6 +111,20 @@ void QVPN::Core::QVPNServerCryptoSettings::add_crypto_method(QVPN_Crypto crypto)
 std::pair<QVPN::Core::QVPNServerCryptoSettings::DataIterator_t, QVPN::Core::QVPNServerCryptoSettings::DataIterator_t> QVPN::Core::QVPNServerCryptoSettings::get_supported_crypto() const
 {
     return std::pair<DataIterator_t, DataIterator_t>(data_.cbegin(), data_.cend());
+}
+
+std::string QVPN::Core::QVPNServerCryptoSettings::get_supported_crypto_info() const
+{
+    std::stringstream ss{};
+
+    ss << "Supported crypto methods: " << std::endl;
+
+    for (size_t i = 0; i < data_.size(); i++)
+    {
+        ss << QVPNVerboser::crypto_mode_verbose(data_[i]) << std::endl;
+    }
+
+    return ss.str();
 }
 
 // QVPN Database settings

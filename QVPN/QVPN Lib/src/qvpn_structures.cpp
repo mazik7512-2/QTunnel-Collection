@@ -414,7 +414,9 @@ std::string QVPN::Core::DataStructures::TcpPacketLittleEndian::to_tcp_friendly_v
 	ss << "Checksum: 0x" << std::hex << get_tcp_checksum() << std::dec << " Urgent: " << std::to_string(get_tcp_urgent_pointer()) << std::endl;
 
 	auto [opt_b, opt_e] = get_tcp_options();
-	ss << "Options size: " << std::distance(opt_b, opt_e) << " bytes" << std::endl << std::endl;
+	ss << "Options size: " << std::distance(opt_b, opt_e) << " bytes" << std::endl;
+
+	ss << "Options: " << QVPN::Core::DataStructures::TcpOptionsView::to_tcp_options_friendly_view(opt_b, opt_e) << std::endl << std::endl;
 
 	return ss.str();
 }
@@ -1455,6 +1457,8 @@ std::string QVPN::Core::DataStructures::TcpPacketView::to_tcp_friendly_view() co
 
 	auto [opt_b, opt_e] = get_tcp_options();
 	ss << "Options size: " << std::distance(opt_b, opt_e) << " bytes" << std::endl << std::endl;
+
+	ss << "Options: " << QVPN::Core::DataStructures::TcpOptionsView::to_tcp_options_friendly_view(opt_b, opt_e) << std::endl << std::endl;
 
 	return ss.str();
 }
@@ -4658,4 +4662,330 @@ QVPN::Core::DataStructures::DummyDataPacket::ObjectType QVPN::Core::DataStructur
 QVPN::Core::DataStructures::DummyDataPacket::ViewType QVPN::Core::DataStructures::DummyDataPacket::to_data_view()
 {
 	return ViewType();
+}
+
+QVPN::Core::DataStructures::TcpOptionsObject::TcpOptionsObject()
+	: data_{}
+{
+}
+
+QVPN::Core::DataStructures::TcpOptionsObject::TcpOptionsObject(UByte * begin, UByte * end)
+	: data_(begin, end)
+{
+}
+
+void QVPN::Core::DataStructures::TcpOptionsObject::set_data(UByte * begin, UByte * end)
+{
+	data_.clear();
+	data_.insert(data_.begin(), begin, end);
+}
+
+UShort QVPN::Core::DataStructures::TcpOptionsObject::get_size() const
+{
+	return data_.size();
+}
+
+std::string QVPN::Core::DataStructures::TcpOptionsObject::to_tcp_options_friendly_view() const
+{
+	using Verb = QVPNVerboser;
+	std::stringstream ss{};
+
+	auto start = data_.data();
+	auto end = data_.data() + data_.size();
+	UShort opt_len = 0;
+
+	for (size_t i = 0; i < data_.size(); i += opt_len)
+	{
+		opt_len = TcpOptionsView::get_next_option_offset(start + i, end);
+		ss << Verb::tcp_option(data_[i]) << " (" << opt_len << "), ";
+	}
+	auto str = ss.str();
+	if (str.size() >= 2)
+	{
+		str.pop_back();
+		str.pop_back();
+	}
+	return str;
+}
+
+std::string QVPN::Core::DataStructures::TcpOptionsObject::to_tcp_options_friendly_view(const UByte* begin, const UByte* end)
+{
+	using Verb = QVPNVerboser;
+	std::stringstream ss{};
+
+	auto start_ = begin;
+	auto end_ = end;
+
+	auto size = std::distance(begin, end);
+	UShort opt_len = 0;
+
+	for (size_t i = 0; i < size; i += opt_len)
+	{
+		opt_len = TcpOptionsView::get_next_option_offset(start_ + i, end_);
+		ss << Verb::tcp_option(begin[i]) << " (" << opt_len << "), ";
+	}
+	auto str = ss.str();
+	if (str.size() >= 2)
+	{
+		str.pop_back();
+		str.pop_back();
+	}
+	return str;
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionsObject::ConstDataIterator_t, QVPN::Core::DataStructures::TcpOptionsObject::ConstDataIterator_t> QVPN::Core::DataStructures::TcpOptionsObject::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.data(), data_.data() + data_.size());
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionsObject::DataIterator_t, QVPN::Core::DataStructures::TcpOptionsObject::DataIterator_t> QVPN::Core::DataStructures::TcpOptionsObject::to_bytes()
+{
+	return std::pair<DataIterator_t, DataIterator_t>(data_.data(), data_.data() + data_.size());
+}
+
+UShort QVPN::Core::DataStructures::TcpOptionsObject::get_next_option_offset(const UByte* begin, const UByte* end)
+{
+	UByte kind = *begin;
+	
+	if (kind == TCPOptions::TCP_NOP || kind == TCPOptions::TCP_EOL)
+		return 1;
+
+	UByte length = *(begin + 1);
+	return length;
+}
+
+QVPN::Core::DataStructures::TcpOptionsView::TcpOptionsView()
+	: data_(nullptr), length_(0)
+{}
+
+QVPN::Core::DataStructures::TcpOptionsView::TcpOptionsView(UByte * begin, UByte * end)
+	: data_(begin), length_(std::distance(begin, end))
+{}
+
+void QVPN::Core::DataStructures::TcpOptionsView::set_data(UByte * begin, UByte * end)
+{
+	data_ = begin;
+	length_ = std::distance(begin, end);
+}
+
+UShort QVPN::Core::DataStructures::TcpOptionsView::get_size() const
+{
+	return length_;
+}
+
+std::string QVPN::Core::DataStructures::TcpOptionsView::to_tcp_options_friendly_view() const
+{
+	using Verb = QVPNVerboser;
+	std::stringstream ss{};
+
+	auto start = data_;
+	auto end = data_ + length_;
+	UShort opt_len = 0;
+
+	for (size_t i = 0; i < length_; i += opt_len)
+	{
+		opt_len = TcpOptionsView::get_next_option_offset(start + i, end);
+		ss << Verb::tcp_option(data_[i]) << " (" << opt_len << "), ";
+	}
+	auto str = ss.str();
+	if (str.size() >= 2)
+	{
+		str.pop_back();
+		str.pop_back();
+	}
+	return str;
+}
+
+std::string QVPN::Core::DataStructures::TcpOptionsView::to_tcp_options_friendly_view(const UByte* begin, const UByte* end)
+{
+	using Verb = QVPNVerboser;
+	std::stringstream ss{};
+
+	auto start_ = begin;
+	auto end_ = end;
+
+	auto size = std::distance(begin, end);
+	UShort opt_len = 0;
+
+	for (size_t i = 0; i < size; i += opt_len)
+	{
+		opt_len = TcpOptionsView::get_next_option_offset(start_ + i, end_);
+		ss << Verb::tcp_option(begin[i]) << " (" << opt_len << "), ";
+	}
+	auto str = ss.str();
+	if (str.size() >= 2)
+	{
+		str.pop_back();
+		str.pop_back();
+	}
+	return str;
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionsView::ConstDataIterator_t, QVPN::Core::DataStructures::TcpOptionsView::ConstDataIterator_t> QVPN::Core::DataStructures::TcpOptionsView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + length_);
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionsView::DataIterator_t, QVPN::Core::DataStructures::TcpOptionsView::DataIterator_t> QVPN::Core::DataStructures::TcpOptionsView::to_bytes()
+{
+	return std::pair<DataIterator_t, DataIterator_t>(data_, data_ + length_);
+}
+
+UShort QVPN::Core::DataStructures::TcpOptionsView::get_next_option_offset(const UByte* begin, const UByte* end)
+{
+	UByte kind = *begin;
+
+	if (kind == TCPOptions::TCP_NOP || kind == TCPOptions::TCP_EOL)
+		return 1;
+
+	UByte length = *(begin + 1);
+	return length;
+}
+
+QVPN::Core::DataStructures::TcpOptionObject::TcpOptionObject()
+	: data_{}
+{}
+
+QVPN::Core::DataStructures::TcpOptionObject::TcpOptionObject(UByte * begin, UByte * end)
+	: data_(begin, end)
+{}
+
+void QVPN::Core::DataStructures::TcpOptionObject::set_data(UByte * begin, UByte * end)
+{
+	data_.clear();
+	data_.insert(data_.begin(), begin, end);
+}
+
+UShort QVPN::Core::DataStructures::TcpOptionObject::get_size() const
+{
+	return data_.size();
+}
+
+QVPN::Core::TCPOptions QVPN::Core::DataStructures::TcpOptionObject::get_option_kind() const
+{
+	return static_cast<TCPOptions>(data_[0]);
+}
+
+UByte QVPN::Core::DataStructures::TcpOptionObject::get_option_length() const
+{
+	return static_cast<UByte>(data_[1]);
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionObject::DataIterator_t, QVPN::Core::DataStructures::TcpOptionObject::DataIterator_t> QVPN::Core::DataStructures::TcpOptionObject::get_option_data()
+{
+	auto kind = get_option_kind();
+	auto offset = 2;
+	if (kind == TCPOptions::TCP_EOL || kind == TCP_NOP)
+		offset = 1;
+	return std::pair<DataIterator_t, DataIterator_t>(data_.data() + offset, data_.data() + data_.size());
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionObject::ConstDataIterator_t, QVPN::Core::DataStructures::TcpOptionObject::ConstDataIterator_t> QVPN::Core::DataStructures::TcpOptionObject::get_option_data() const
+{
+	auto kind = get_option_kind();
+	auto offset = 2;
+	if (kind == TCPOptions::TCP_EOL || kind == TCP_NOP)
+		offset = 1;
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.data() + offset, data_.data() + data_.size());
+}
+
+std::string QVPN::Core::DataStructures::TcpOptionObject::to_tcp_option_friendly_view() const
+{
+	std::stringstream ss{};
+
+	ss << "Kind: " << QVPNVerboser::tcp_option(data_[0]);
+
+	if (data_[0] == TCPOptions::TCP_EOL || data_[0] == TCPOptions::TCP_NOP)
+	{
+		ss << std::endl;
+		return ss.str();
+	}
+	
+	ss << "Length: " << data_[1] << std::endl;
+
+	return ss.str();
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionObject::ConstDataIterator_t, QVPN::Core::DataStructures::TcpOptionObject::ConstDataIterator_t> QVPN::Core::DataStructures::TcpOptionObject::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_.data(), data_.data() + data_.size());
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionObject::DataIterator_t, QVPN::Core::DataStructures::TcpOptionObject::DataIterator_t> QVPN::Core::DataStructures::TcpOptionObject::to_bytes()
+{
+	return std::pair<DataIterator_t, DataIterator_t>(data_.data(), data_.data() + data_.size());
+}
+
+QVPN::Core::DataStructures::TcpOptionView::TcpOptionView()
+	: data_(nullptr), length_(0)
+{}
+
+QVPN::Core::DataStructures::TcpOptionView::TcpOptionView(UByte * begin, UByte * end)
+	: data_(begin), length_(std::distance(begin, end))
+{}
+
+void QVPN::Core::DataStructures::TcpOptionView::set_data(UByte * begin, UByte * end)
+{
+	data_ = begin;
+	length_ = std::distance(begin, end);
+}
+
+UShort QVPN::Core::DataStructures::TcpOptionView::get_size() const
+{
+	return length_;
+}
+
+QVPN::Core::TCPOptions QVPN::Core::DataStructures::TcpOptionView::get_option_kind() const
+{
+	return static_cast<TCPOptions>(*data_);
+}
+
+UByte QVPN::Core::DataStructures::TcpOptionView::get_option_length() const
+{
+	return *(data_ + 1);
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionView::DataIterator_t, QVPN::Core::DataStructures::TcpOptionView::DataIterator_t> QVPN::Core::DataStructures::TcpOptionView::get_option_data()
+{
+	auto kind = get_option_kind();
+	auto offset = 2;
+	if (kind == TCPOptions::TCP_EOL || kind == TCP_NOP)
+		offset = 1;
+	return std::pair<DataIterator_t, DataIterator_t>(data_ + offset, data_ + length_);
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionView::ConstDataIterator_t, QVPN::Core::DataStructures::TcpOptionView::ConstDataIterator_t> QVPN::Core::DataStructures::TcpOptionView::get_option_data() const
+{
+	auto kind = get_option_kind();
+	auto offset = 2;
+	if (kind == TCPOptions::TCP_EOL || kind == TCP_NOP)
+		offset = 1;
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_ + offset, data_ + length_);
+}
+
+std::string QVPN::Core::DataStructures::TcpOptionView::to_tcp_option_friendly_view() const
+{
+	std::stringstream ss{};
+
+	ss << "Kind: " << QVPNVerboser::tcp_option(data_[0]);
+
+	if (data_[0] == TCPOptions::TCP_EOL || data_[0] == TCPOptions::TCP_NOP)
+	{
+		ss << std::endl;
+		return ss.str();
+	}
+
+	ss << "Length: " << data_[1] << std::endl;
+
+	return ss.str();
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionView::ConstDataIterator_t, QVPN::Core::DataStructures::TcpOptionView::ConstDataIterator_t> QVPN::Core::DataStructures::TcpOptionView::to_bytes() const
+{
+	return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data_, data_ + length_);
+}
+
+std::pair<QVPN::Core::DataStructures::TcpOptionView::DataIterator_t, QVPN::Core::DataStructures::TcpOptionView::DataIterator_t> QVPN::Core::DataStructures::TcpOptionView::to_bytes()
+{
+	return std::pair<DataIterator_t, DataIterator_t>(data_, data_ + length_);
 }
