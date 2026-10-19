@@ -12,7 +12,7 @@
 int main(int argc, char* argv[]) {
     // Arguments: [server_address] [port]
     // Defaults: 127.0.0.1, 8080
-    std::string server_addr = "127.0.0.1";
+    std::string server_addr = "0.0.0.0";
     int port = 8080;
 
     if (argc >= 2) {

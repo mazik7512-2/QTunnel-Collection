@@ -613,11 +613,23 @@ namespace QVPN {
 			{
 				char optval = static_cast<char>(settings.ip_header());
 				int optlen = sizeof(optval);
-				setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen);
+				if (setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen))
+				{
+					perror("Failed to apply IP_HDRINCL option to socket");
+				}
 
 				int timeout = settings.receive_timeout_ms();
 				optlen = sizeof(timeout);
-				setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), optlen);
+				if (setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), optlen))
+				{
+					perror("Failed to apply timeout option to socket");
+				}
+
+				char no_delay = static_cast<char>(settings.tcp_no_delay());
+				if (setsockopt(socket_, IPPROTO_TCP, TCP_NODELAY, &no_delay, sizeof(no_delay)))
+				{
+					perror("Failed to apply TCP_NO_DELAY option to socket");
+				}
 			}
 
 			template <QVPN::Core::is_addr Addr>
@@ -810,11 +822,23 @@ namespace QVPN {
 			{
 				char optval = static_cast<char>(settings.ip_header());
 				int optlen = sizeof(optval);
-				setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen);
+				if (setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen))
+				{
+					perror("Failed to apply IP_HDRINCL option to raw socket");
+				}
 
 				int timeout = settings.receive_timeout_ms();
 				optlen = sizeof(timeout);
-				setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), optlen);
+				if (setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), optlen))
+				{
+					perror("Failed to apply timeout option to raw socket");
+				}
+
+				char no_delay = static_cast<char>(settings.tcp_no_delay());
+				if (setsockopt(socket_, IPPROTO_TCP, TCP_NODELAY, &no_delay, sizeof(no_delay)))
+				{
+					perror("Failed to apply TCP_NO_DELAY option to raw socket");
+				}
 			}
 
 			template <QVPN::Core::is_addr Addr>

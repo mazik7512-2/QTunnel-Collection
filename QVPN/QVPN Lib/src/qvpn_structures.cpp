@@ -3996,13 +3996,14 @@ QVPN::Core::ProtoTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordLit
 	TLS13_RecordView rv(begin, end);
 	auto length = rv.get_tls_record_full_length();
 
-
 	if (length == real_size)
 		signal = BytesParseSignal::BP_FULL_OBJECT;
 	else if (length > real_size)
 		signal = BytesParseSignal::BP_NOT_FULL_OBJECT;
 	else
 		signal = BytesParseSignal::BP_FULL_OBJECT_AND_TAIL;
+
+	std::cout << "(bytes parse) Length: " << length << " real_size: " << real_size << " bp signal: " << static_cast<int>(signal) << " pb_id: " << static_cast<int>(begin[5]) << std::endl;
 
 	return ProtoTemplateParseResult{ begin, begin + length, signal, begin + real_size };
 }
@@ -4059,13 +4060,14 @@ QVPN::Core::ProtoTemplateParseResult QVPN::Core::DataStructures::TLS13_RecordVie
 	TLS13_RecordView rv(begin, end);
 	auto length = rv.get_tls_record_full_length();
 
-
 	if (length == real_size)
 		signal = BytesParseSignal::BP_FULL_OBJECT;
 	else if (length > real_size)
 		signal = BytesParseSignal::BP_NOT_FULL_OBJECT;
 	else
 		signal = BytesParseSignal::BP_FULL_OBJECT_AND_TAIL;
+
+	std::cout << "(bytes parse) Length: " << length << " real_size: " << real_size << " bp signal: " << static_cast<int>(signal) << std::endl;
 
 	return ProtoTemplateParseResult{ begin, begin + length, signal, begin + real_size };
 }

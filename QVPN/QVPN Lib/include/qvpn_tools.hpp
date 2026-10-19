@@ -532,7 +532,7 @@ namespace QVPN {
 		private:
 
 			template <std::random_access_iterator Iter>
-			std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView, DummyPacket> pre_parse_ipv4(Iter begin, Iter end)
+			std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView, DummyPacket> pre_parse_ipv4(Iter begin, Iter end) const
 			{
 				using TransportProtocol = QVPN::Core::TransportProtocol;
 				//std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> ret;
@@ -559,7 +559,7 @@ namespace QVPN {
 			using NoNetPacketType = std::variant<NoNetTcpPacketView, NoNetUdpPacketView>;
 
 			template <std::random_access_iterator Iter>
-			FullPacketType pre_parse(Iter begin, Iter end)
+			FullPacketType pre_parse(Iter begin, Iter end) const
 			{
 				using NetProtocol = QVPN::Core::NetProtocol;
 				//std::variant<Ipv4TcpPacketView, Ipv4UdpPacketView> ret;

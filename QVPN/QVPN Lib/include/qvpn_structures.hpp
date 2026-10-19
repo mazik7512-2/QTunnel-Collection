@@ -3932,7 +3932,8 @@ namespace QVPN {
 					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSKeyShareClientHelloLittleEndian, std::pair<KeyShareIter, KeyShareIter>> key_share(key_shares_iters);
 					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSServerNameIndicationExtensionLittleEndian, std::pair<SNIIter, SNIIter>> sni(hosts_iters);
 
-					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver), std::move(key_share), std::move(sni));
+					//auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver), std::move(key_share), std::move(sni));
+					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver), std::move(key_share));
 					//auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver));
 					std::copy(extensions.begin(), extensions.end(), std::back_inserter(obj_bytes));
 
@@ -3987,7 +3988,8 @@ namespace QVPN {
 					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSKeyShareClientHelloLittleEndian, std::pair<KeyShareIter, KeyShareIter>> key_share(key_shares_iters);
 					TLSExtensionWrapper<TLSExtensionLittleEndian, TLSServerNameIndicationExtensionLittleEndian, std::pair<SNIIter, SNIIter>> sni(hosts_iters);
 
-					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver), std::move(key_share), std::move(sni));
+					//auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver), std::move(key_share), std::move(sni));
+					auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver), std::move(key_share));
 					//auto extensions = TLSExtensionsLittleEndian::generate_object_bytes(std::move(sup_ver));
 					std::copy(extensions.begin(), extensions.end(), std::back_inserter(obj_bytes));
 

@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
 
     EnableANSI();
 
-    std::string server_addr = "127.0.0.1";
+    std::string server_addr = "0.0.0.0";
     int port = 8080;
     if (port <= 0 || port > 65535) {
         std::cerr << "Некорректный порт" << std::endl;

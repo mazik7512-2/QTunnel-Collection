@@ -85,6 +85,13 @@ local tcp_flags_arr = { tcp_flag_fin, tcp_flag_syn, tcp_flag_rst, tcp_flag_psh, 
 tcp_proto_data_flags.fields = { tcp_flag_fin, tcp_flag_syn, tcp_flag_rst, tcp_flag_psh, tcp_flag_ack, tcp_flag_urg, tcp_flag_ece, tcp_flag_cwr, tcp_flag_ns }
 
 
+local qvpn_payload = Proto("QVPNPayload", "QVPN Payload")
+
+local q_payload = ProtoField.bytes("QVPNPayload.Data", "Payload")
+
+qvpn_payload.fields = { q_payload }
+
+
 -- Settings
 local fake_tls_settings = { proto = "tcp", port = 5151 }
 
@@ -101,6 +108,8 @@ function packet_builder.dissector(buffer, pinfo, tree)
 	local pb_str = "[pb_id: " .. pb_id_ .. ", pb_offset: " .. pb_offset_ .. ", pb_orig_size: " .. pb_orig_size_ .. "]"
 	
 	local subtree = tree:add(packet_builder, buffer(), "QVPN Packet builder", pb_str)
+
+	tree:append_text(" " .. pb_str)
 	
     subtree:add(pb_id, buffer(0, 1))
     subtree:add(pb_offset, buffer(1, 2))
@@ -200,7 +209,7 @@ end
 
 function tcp_proto_data.dissector(buffer, pinfo, tree)
 	
-	return parse_tcp_proto_data(buffer, pinfo, tree)
+	return parse_tcp_proto_data(buffer(), pinfo, tree)
 
 end
 
@@ -232,23 +241,31 @@ local function parse_qtunnel_proto(buffer, pinfo, tree)
 	
 	local proto_data = buffer(14):tvb()
 	
+	local payload_offset = 0
+
 	if transport_proto == 6 then
-		return tcp_proto_data.dissector(proto_data, pinfo, tree)
+		payload_offset = tcp_proto_data.dissector(proto_data, pinfo, tree)
 	end
-	return 0
+
+	-- payload
+
+	local payload_size = buffer:len() - (14 + payload_offset) -- TODO: доделать размеры
+
+	--local payload_tree = tree:add(qvpn_payload, buffer(14 + payload_offset, payload_size), "QVPN Payload (" .. payload_size .. " bytes)")
+	--payload_tree:add(q_payload, buffer(14 + payload_offset):tvb())
+
+	return payload_offset
 end
 
 
 function qtunnel_proto.dissector(buffer, pinfo, tree)
 	
-	return parse_qtunnel_proto(buffer, pinfo, tree)
+	return parse_qtunnel_proto(buffer(), pinfo, tree)
 
 end
 
 
 local function parse_fake_tls(buffer, pinfo, tree, offset)
-	
-	print("Called with offset: " .. offset)
 	
 	if offset >= buffer:len() then
 		return 0
@@ -277,7 +294,7 @@ local function parse_fake_tls(buffer, pinfo, tree, offset)
 	
     pinfo.cols.protocol = "FakeTLS + QVPN/QTunnel"
 
-    local subtree = tree:add(fake_tls_rec, buffer(), "Fake TLS Record")
+    local subtree = tree:add(fake_tls_rec, buffer(offset, record_length_int), "Fake TLS Record")
 	
 	subtree:add(fake_tls_rec_type, buffer(offset, 1))
 	subtree:add(fake_tls_rec_ver, buffer(offset + 1, 2))

@@ -760,7 +760,7 @@ namespace QVPN {
 				int optlen = sizeof(optval);
 				if (setsockopt(socket_, IPPROTO_IP, IP_HDRINCL, &optval, optlen) == -1)
 				{
-					perror("Failed to apply IP_HDRINCL to raw socket");
+					perror("Failed to apply IP_HDRINCL to socket");
 				}
 
 				int timeout = settings.receive_timeout_ms();
@@ -770,7 +770,13 @@ namespace QVPN {
 				optlen = sizeof(tv);
 				if (setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, &tv, optlen) == -1)
 				{
-					perror("Failed to apply timeout option to raw socket");
+					perror("Failed to apply timeout option to socket");
+				}
+
+				int no_delay = static_cast<int>(settings.tcp_no_delay());
+				if (setsockopt(socket_, IPPROTO_TCP, TCP_NODELAY, &no_delay, sizeof(no_delay)))
+				{
+					perror("Failed to apply TCP_NO_DELAY option to socket");
 				}
 			}
 
@@ -807,7 +813,6 @@ namespace QVPN {
 					}
 					signal = sf_data.add_objects_and_validate(signal, data.data.data(), data.data.data() + data.size);
 				}
-				std::cout << "Times safe_recv called: " << num_calls << std::endl;
 				return sf_data;
 			}
 
@@ -979,6 +984,12 @@ namespace QVPN {
 				if (setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, &tv, optlen) == -1)
 				{
 					perror("Failed to apply timeout option to raw socket");
+				}
+
+				int no_delay = static_cast<int>(settings.tcp_no_delay());
+				if (setsockopt(socket_, IPPROTO_TCP, TCP_NODELAY, &no_delay, sizeof(no_delay)))
+				{
+					perror("Failed to apply TCP_NO_DELAY option to raw socket");
 				}
 			}
 

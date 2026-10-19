@@ -69,17 +69,17 @@ std::string QVPN::Core::QVPNClientAuthSettings::get_auth_info() const
 
 void QVPN::Core::QVPNServerConnectionSettings::add_addr(const Ipv4AddressType& addr, UShort port, TransportProtocol t_proto, QVPNServerWorkMode mode)
 {
-    data_.emplace_back(addr, port, t_proto);
+    data_.emplace_back(addr, port, t_proto, mode);
 }
 
 void QVPN::Core::QVPNServerConnectionSettings::add_addr(const Ipv6AddressType& addr, UShort port, TransportProtocol t_proto, QVPNServerWorkMode mode)
 {
-    data_.emplace_back(addr, port, t_proto);
+    data_.emplace_back(addr, port, t_proto, mode);
 }
 
 void QVPN::Core::QVPNServerConnectionSettings::add_addr(const NetAddr& addr, UShort port, TransportProtocol t_proto, QVPNServerWorkMode mode)
 {
-    data_.emplace_back(addr, port, t_proto);
+    data_.emplace_back(addr, port, t_proto, mode);
 }
 
 std::pair<QVPN::Core::QVPNServerConnectionSettings::DataIterator_t, QVPN::Core::QVPNServerConnectionSettings::DataIterator_t> QVPN::Core::QVPNServerConnectionSettings::get_addrs() const
@@ -95,7 +95,14 @@ std::string QVPN::Core::QVPNServerConnectionSettings::get_addrs_info() const
     
     for (size_t i = 0; i < data_.size(); i++)
     {
-        ss << QVPNVerboser::net_verbose(data_[i].get_net_proto()) << " " << QVPNVerboser::transport_verbose(data_[i].get_transport_proto()) << " " << data_[i].to_string() << std::endl;
+        auto addr_ = data_[i].get_ip_address();
+        auto t_proto_ = data_[i].get_transport_proto();
+        auto port_ = data_[i].get_port();
+
+        ss << "Connection info:" << std::endl;
+        ss << "Work mode: " << QVPNVerboser::server_mode_verbose(data_[i].get_work_mode()) << std::endl;
+        ss << "Net protocol: " << QVPNVerboser::net_verbose(addr_.get_addr_family()) << " Transport protocol: " << QVPNVerboser::transport_verbose(t_proto_) << std::endl;
+        ss << "Server addr: " << addr_.to_string() << ":" << port_ << std::endl;
     }
 
     return ss.str();
@@ -276,7 +283,12 @@ std::pair<QVPN::Core::SplittedPacket::DataIterator_t, QVPN::Core::SplittedPacket
 
 bool QVPN::Core::PacketBuilder::is_full() const
 {
-    return is_full_;
+    using QVPN::Core::Tools::gLogger;
+
+    gLogger.info("packet build - fact_size: {}, orig_size: {}", fact_size_, original_size_);
+    if (fact_size_ == original_size_)
+        return true;
+    return false;
 }
 
 std::pair<UByte*, UByte*> QVPN::Core::PacketBuilder::get_raw_data()
@@ -286,13 +298,24 @@ std::pair<UByte*, UByte*> QVPN::Core::PacketBuilder::get_raw_data()
     return std::pair<UByte*, UByte*>(start, end);
 }
 
+std::string QVPN::Core::PacketBuilder::build_info() const
+{
+    std::stringstream ss{};
+
+    ss << "fact size: " << fact_size_ << " orig size: " << original_size_;
+
+    return ss.str();
+}
+
 
 // Packet Manager
 
 bool QVPN::Core::QVPNPacketManager::have_full_packets()
 {
+    using QVPN::Core::Tools::gLogger;
     for (auto& it : packets_)
     {
+        gLogger.info("Packet builder info: [p_id: {}, {}]", it.first, it.second.build_info());
         if (it.second.is_full())
         {
             cache_.cached_full_packet = &it;
@@ -319,6 +342,7 @@ QVPN::Core::PacketBuilder QVPN::Core::QVPNPacketManager::get_and_pop_packet()
             {
                 packet = std::move(it.second);
                 packets_.erase(it.first);
+                break;
             }
         }
     }

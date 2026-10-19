@@ -166,6 +166,11 @@ namespace QVPN {
 				return Filter_t("loopback");
 			}
 			
+			Filter_t injected() const noexcept
+			{
+				return Filter_t("impostor");
+			}
+
 		};
 
 
@@ -176,8 +181,12 @@ namespace QVPN {
 
 			using Filter_t = Filter::Filter_t;
 			using Addr = VPNDriver::AddrType;
+			using UByte = QVPN::Core::BaseTypes::UByte;
 
 		private:
+
+			template <class AppLevelProtoTemplate>
+			using SafeReceiveData = QVPN::Core::SafeReceiveData<AppLevelProtoTemplate>;
 
 			std::vector<Filter_t> filters_out_;
 			std::vector<Filter_t> filters_in_;
@@ -187,6 +196,7 @@ namespace QVPN {
 
 			std::thread out_worker_;
 			std::thread in_worker_;
+			std::thread dummy_worker_;
 
 			HANDLE out_hDivert_;
 			HANDLE in_hDivert_;
@@ -199,6 +209,68 @@ namespace QVPN {
 			Logger logger_{};
 
 			QVPN::Core::Tools::QVPNSpeedMeter speed_meter_{};
+
+		private:
+
+
+			auto generate_transport_bytes_by_proxy_data(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& proxy_data) const
+			{
+				auto t_proto = proxy_data.get_transport_proto();
+				auto [b, e] = proxy_data.get_proto_data_bytes();
+
+				switch (t_proto)
+				{
+				case QVPN::Core::TransportProtocol::TCP:
+				{
+					QVPN::Core::DataStructures::QTunnelTCPViewScheme scheme(b, e);
+					auto [opt_b, opt_e] = scheme.get_options();
+					return QVPN::Core::DataStructures::TcpPacketView::generate_object_bytes(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_seq(), scheme.get_ack(), scheme.get_offset(),
+						scheme.get_flags(), scheme.get_window(), scheme.get_urgent_pointer(), opt_b, opt_e);
+				}
+				case QVPN::Core::TransportProtocol::UDP:
+				{
+					QVPN::Core::DataStructures::QTunnelUDPViewScheme scheme(b, e);
+					return QVPN::Core::DataStructures::UdpPacketView::generate_object_bytes(proxy_data.get_src_port(), proxy_data.get_dst_port(), scheme.get_length());
+				}
+				default:
+					return std::vector<UByte>{};
+				}
+			}
+
+			auto generate_net_bytes_by_proxy_data(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& proxy_data, UByte* begin, UByte* end, QVPN::Core::BaseTypes::UShort transport_length, bool dont_fragment = true, bool more_fragment = false, QVPN::Core::BaseTypes::UShort offset = 0) const
+			{
+				auto packet_data_size = std::distance(begin, end);
+				auto total_length = packet_data_size + transport_length;
+				auto n_proto = proxy_data.get_net_proto();
+				QVPN::Core::DataStructures::IPv4DefaultGenStrategy ipv4_gen{};
+				switch (n_proto)
+				{
+				case QVPN::Core::NetProtocol::IPv4:
+					return QVPN::Core::DataStructures::Ipv4PacketView::generate_object_bytes<QVPN::Core::DataStructures::IPv4DefaultGenStrategy>(ipv4_gen, proxy_data.get_src_addr(), proxy_data.get_dst_addr(), proxy_data.get_transport_proto(), 
+						total_length, dont_fragment, more_fragment, offset);
+				default:
+					return std::vector<UByte>{};
+				}
+			}
+
+			auto generate_packet_bytes_by_proxy_data(const QVPN::Core::DataStructures::QTunnelProxy<Addr>& proxy_data, UByte* begin, UByte* end) const
+			{
+				auto t_header = generate_transport_bytes_by_proxy_data(proxy_data);
+				auto n_header = generate_net_bytes_by_proxy_data(proxy_data, begin, end, t_header.size());
+
+				std::vector<UByte> bytes{};
+				bytes.insert(bytes.end(), n_header.begin(), n_header.end());
+				bytes.insert(bytes.end(), t_header.begin(), t_header.end());
+				bytes.insert(bytes.end(), begin, end);
+
+				auto packet = pp.pre_parse(bytes.data(), bytes.data() + bytes.size());
+
+				std::visit([](auto& p) { p.recalculate_lengths(); p.recalculate_checksums(); }, packet);
+
+				return bytes;
+
+			}
+
 
 			void clear_outgoing_filters()
 			{
@@ -223,8 +295,9 @@ namespace QVPN {
 				filters_out_.push_back(Filter::outgoing_traffic());
 				filters_out_.push_back(!Filter::tcp_dst_port(22)); // not ssh
 				filters_out_.push_back(!Filter::local_traffic());
+				filters_out_.push_back(!Filter::injected());
 
-				filters_out_.push_back(Filter::dest(Addr("195.82.146.78")));
+				filters_out_.push_back(Filter::dest(Addr("0.0.0.0")));
 				filters_out_.push_back(Filter::tcp_dst_port(8080));
 			}
 
@@ -265,6 +338,7 @@ namespace QVPN {
 						logger_.fail("Failed to read packet. Error #{}", GetLastError());
 						continue;
 					}
+					addr.Impostor = true;
 
 					auto package = pp.pre_parse(packet, packet + packet_len);
 
@@ -309,8 +383,9 @@ namespace QVPN {
 				filters_in_.push_back(Filter::source(driver_.get_vpn_address()));
 				filters_in_.push_back(!Filter::tcp_src_port(22)); // not ssh
 				filters_in_.push_back(!Filter::local_traffic());
+				filters_in_.push_back(!Filter::injected());
 
-				filters_in_.push_back(Filter::source(Addr("195.82.146.78")));
+				filters_in_.push_back(Filter::source(Addr("0.0.0.0")));
 			}
 
 			void start_capture_incoming_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
@@ -332,6 +407,10 @@ namespace QVPN {
 
 			void incoming_capture_loop(const QVPN::Core::IPv4Address& adapter_addr)
 			{
+
+				// TODO: попробовать получать данные через driver/socket + safe_recv и внедрять через WinDivert
+				// TODO: попробовать WinDivertRecvEX
+
 				WINDIVERT_ADDRESS addr;
 				UINT8 packet[MAXBUF];
 				UINT packet_len;
@@ -343,10 +422,14 @@ namespace QVPN {
 				using UShort = QVPN::Core::BaseTypes::UShort;
 				using UByte = QVPN::Core::BaseTypes::UByte;
 				using UInt = QVPN::Core::BaseTypes::UInt;
-				
+
+
+				WinDivertSetParam(in_hDivert_, WINDIVERT_PARAM_QUEUE_TIME, 2000000);
 
 				while (true)
 				{
+					// need to fill WINDIVERT_ADDRESS structure
+					// dummy windivert start
 					if (!WinDivertRecv(in_hDivert_, packet, sizeof(packet), &packet_len, &addr))
 					{
 						logger_.fail("Failed to read packet. Error #{}", GetLastError());
@@ -356,14 +439,23 @@ namespace QVPN {
 					speed_meter_.add_receive_size(packet_len);
 					logger_.success("Received packet. Packet size = {}. Avg Speed = {}.", packet_len, speed_meter_.get_average_recv_speed());
 
+					addr.Impostor = true;
 
+					if (!WinDivertSend(in_hDivert_, packet, sizeof(packet), &packet_len, &addr))
+					{
+						logger_.fail("Failed to reinject incoming packet. Error #{}", GetLastError());
+					}
+					// dummy windivert end
+					
 					auto package = pp.pre_parse(packet, packet + packet_len);
-
+					
 					auto [data_b, data_e] = std::visit([](auto& p) { return p.get_payload(); }, package);
 
 					auto data_size = std::distance(data_b, data_e);
 					if (data_size == 0) // this is not our packet
 					{
+						continue;
+						// все что ниже не нужно
 						logger_.warning("This is not our packet. Zero payload size.");
 						if (!WinDivertSend(in_hDivert_, packet, sizeof(packet), &packet_len, &addr))
 						{
@@ -372,48 +464,81 @@ namespace QVPN {
 						}
 						logger_.warning("Packet (not our) succesfully reinjected.");
 						continue;
-					}
-
-					std::visit([](auto& p) { std::cout << "Incoming packet" << std::endl << p.to_packet_friendly_view() << std::endl; }, package);
-
-					auto decoded_data = driver_.decode_data(data_b, data_e);
-
-					if (decoded_data.has_value())
-					{
-						if (!decoded_data->check_validity())
-							continue;
-
-						auto dst_addr = decoded_data->get_dst_addr();
-						auto dst_port = decoded_data->get_dst_port();
-						auto src_addr = decoded_data->get_src_addr();
-						auto src_port = decoded_data->get_src_port();
-
-						auto [qtp_b, qtp_e] = decoded_data->get_proto_data_bytes();
-
-						auto [b, e] = decoded_data->get_raw_data();
-
-						using ProxyData = QVPN::Core::DataStructures::QTunnelProxy<Addr>;
-
-						auto proxy_data = decoded_data->create(*decoded_data);
-						
-						auto inj_p_bytes = std::visit([&proxy_data, &b, &e](auto& p) { return p.new_packet_bytes_by_this(proxy_data, b, e); }, package);
-						auto inj_packet = pp.pre_parse(inj_p_bytes.data(), inj_p_bytes.data() + inj_p_bytes.size());
-
-						// TODO: сделать аллокатор для пакета, либо выделять память раньше
-
-						std::visit([](auto& p) { std::cout << "Incoming packet (after modified)" << std::endl << p.to_packet_friendly_view() << std::endl; }, inj_packet);
-						auto [res_b, res_e] = std::visit([](auto& p) { return p.bytes(); }, inj_packet);
-						UINT size = static_cast<UINT>(std::distance(res_b, res_e));
-						WinDivertHelperCalcChecksums((void*)res_b, size, &addr, 0);
-						std::visit([](auto& p) { std::cout << "Incoming packet (after recalc)" << std::endl << p.to_packet_friendly_view() << std::endl; }, inj_packet);
-						if (!WinDivertSend(in_hDivert_, res_b, sizeof(inj_packet), &size, &addr))
-						{
-							logger_.fail("Failed to reinject incoming packet. Error #{}", GetLastError());
-							continue;
-						}
-						logger_.success("Packet successfully reinject into original connection.");
+						// дальше нужно
 					}
 					
+					SafeReceiveData<QVPN::Core::DataStructures::TLS13_RecordLittleEndian> sf_data{};
+
+					sf_data.add_objects_and_validate(QVPN::Core::SafeReceiveSignal::SFR_NO_DATA, data_b, data_e);
+					auto num_obj = sf_data.get_objects_num();
+					//auto num_obj = data.get_objects_num();
+					logger_.success("Received {} objects from safe receive", num_obj);
+					for (size_t i = 0; i < num_obj; i++)
+					{
+						auto [obj_b, obj_e] = sf_data.get_object_bytes(i);
+						auto decoded_data = driver_.decode_data(obj_b, obj_e); // TODO: подчистить код
+
+						if (decoded_data.has_value())
+						{
+							if (!decoded_data->check_validity())
+								continue;
+
+							auto dst_addr = decoded_data->get_dst_addr();
+							auto dst_port = decoded_data->get_dst_port();
+							auto src_addr = decoded_data->get_src_addr();
+							auto src_port = decoded_data->get_src_port();
+
+							auto [qtp_b, qtp_e] = decoded_data->get_proto_data_bytes();
+
+							auto [b, e] = decoded_data->get_raw_data();
+
+							using ProxyData = QVPN::Core::DataStructures::QTunnelProxy<Addr>;
+
+							auto proxy_data = decoded_data->create(*decoded_data);
+
+							auto inj_p_bytes = std::visit([&proxy_data, &b, &e](auto& p) { return p.new_packet_bytes_by_this(proxy_data, b, e); }, package);
+							auto inj_packet = pp.pre_parse(inj_p_bytes.data(), inj_p_bytes.data() + inj_p_bytes.size());
+							//auto inj_p_bytes = generate_packet_bytes_by_proxy_data(proxy_data, b, e);
+							//auto inj_packet = pp.pre_parse(inj_p_bytes.data(), inj_p_bytes.data() + inj_p_bytes.size());
+
+							// TODO: сделать аллокатор для пакета, либо выделять память раньше
+
+							std::visit([](auto& p) { std::cout << "Incoming packet (after modified)" << std::endl << p.to_packet_friendly_view() << std::endl; }, inj_packet);
+							auto [res_b, res_e] = std::visit([](auto& p) { return p.bytes(); }, inj_packet);
+							UINT size = static_cast<UINT>(std::distance(res_b, res_e));
+							//WinDivertHelperCalcChecksums((void*)res_b, size, &addr, 0);
+							//std::visit([](auto& p) { std::cout << "Incoming packet (after recalc)" << std::endl << p.to_packet_friendly_view() << std::endl; }, inj_packet);
+							if (!WinDivertSend(in_hDivert_, res_b, inj_p_bytes.size(), &size, &addr))
+							{
+								logger_.fail("Failed to reinject incoming packet. Error #{}", GetLastError());
+								continue;
+							}
+							logger_.success("Packet successfully reinject into original connection.");
+						}
+
+					logger_.info("Waiting for packet from safe_get_data...");
+					auto data = driver_.template safe_get_data<QVPN::Core::DataStructures::TLS13_RecordLittleEndian>(); // почему-то теперь не доходит все кроме handshake, а safe_get_data вообще вызывается
+					
+					if (!data.status.success)
+					{
+						logger_.fail("Failed to safe get_data. Error # {}. {}", data.status.status, strerror(data.status.status));
+					}
+
+					//auto data_b = data.data.data();
+					//auto data_e = data.data.data() + data.size;
+
+					//std::visit([](auto& p) { std::cout << "Incoming packet" << std::endl << p.to_packet_friendly_view() << std::endl; }, package);
+					
+					}
+					
+				}
+			}
+
+			void incoming_dummy_loop()
+			{
+				while (true)
+				{
+					auto _ = driver_.get_data();
 				}
 			}
 
@@ -465,6 +590,7 @@ namespace QVPN {
 				//add_incoming_traffic_filter(Filter::dest(adapter_addr));
 				apply_default_incoming_filter();
 				calculate_incoming_filters();
+				//dummy_worker_ = std::thread([this]() { incoming_dummy_loop(); });
 				in_worker_ = std::thread([this, &adapter_addr]() { speed_meter_.recv_meter_start(); start_capture_incoming_traffic_(adapter_addr); });
 				//start_capture_incoming_traffic_(adapter_addr);
 			}

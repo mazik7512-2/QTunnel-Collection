@@ -481,6 +481,7 @@ namespace QVPN {
 			{ f.outgoing_traffic() } -> std::same_as<typename Filter::Filter_t>;
 			{ f.incoming_traffic() } -> std::same_as<typename Filter::Filter_t>;
 			{ f.local_traffic() } -> std::same_as<typename Filter::Filter_t>;
+			{ f.injected() } -> std::same_as<typename Filter::Filter_t>;
 		};
 
 
@@ -653,7 +654,7 @@ namespace QVPN {
 				return net_proto == other.net_proto &&
 					transport_proto == other.transport_proto &&
 					client_local_addr == other.client_local_addr &&
-					server_local_addr == other.server_local_addr &&
+					(server_local_addr == other.server_local_addr || server_local_addr == QVPN::Core::NetAddr{}) && // TODO: вот с этим что-то придумать, либо здесь, либо в server driver
 					local_port == other.local_port &&
 					remote_addr == other.remote_addr &&
 					remote_port == other.remote_port;
@@ -727,11 +728,13 @@ namespace QVPN {
 		{
 			bool ip_header_ = false;
 			int recv_timeout_ = 0;
+			bool tcp_no_delay_ = false;
 
 		public:
-			QVPNSocketSettings(bool ip_data = false, int receive_timeout_ms = 0);
+			QVPNSocketSettings(bool ip_data = false, int receive_timeout_ms = 0, bool tcp_no_delay = false);
 			bool ip_header() const;
 			int receive_timeout_ms() const;
+			bool tcp_no_delay() const;
 		};
 
 
@@ -897,28 +900,29 @@ namespace QVPN {
 				separators[last].second = fin;
 			}
 
-			// basic parse no cycle
 			SafeReceiveSignal parse_data(BaseTypes::UByte* begin, BaseTypes::UByte* end)
 			{
-				auto parse_res = parse_object(begin, end);
-				switch (parse_res.bp_signal)
+				auto& b = begin;
+				auto& e = end;
+				while (true)
 				{
-				case BytesParseSignal::BP_FULL_OBJECT:
-					_add_object(parse_res.begin, parse_res.end);
-					return SafeReceiveSignal::SFR_FULL_DATA;
-					break;
-				case BytesParseSignal::BP_NOT_FULL_OBJECT:
-					_add_object(parse_res.begin, parse_res.real_end);
-					return SafeReceiveSignal::SFR_WAIT_DATA;
-					break;
-				case BytesParseSignal::BP_FULL_OBJECT_AND_TAIL:
-					_add_object(parse_res.begin, parse_res.end);
-					_add_object(parse_res.end, parse_res.real_end);
-					return SafeReceiveSignal::SFR_WAIT_DATA;
-					break;
-				default:
-					return SafeReceiveSignal::SFR_ERROR;
-					break;
+					auto parse_res = parse_object(b, e);
+					switch (parse_res.bp_signal)
+					{
+					case BytesParseSignal::BP_FULL_OBJECT:
+						_add_object(parse_res.begin, parse_res.end);
+						return SafeReceiveSignal::SFR_FULL_DATA;
+					case BytesParseSignal::BP_NOT_FULL_OBJECT:
+						_add_object(parse_res.begin, parse_res.real_end);
+						return SafeReceiveSignal::SFR_WAIT_DATA;
+					case BytesParseSignal::BP_FULL_OBJECT_AND_TAIL:
+						_add_object(parse_res.begin, parse_res.end);
+						b = parse_res.end;
+						e = parse_res.real_end;
+						continue;
+					default:
+						return SafeReceiveSignal::SFR_ERROR;
+					}
 				}
 			}
 
@@ -953,7 +957,7 @@ namespace QVPN {
 						separators.emplace_back(tail_start, tail_start + tail_size); // add tail separator
 						start = tail_start;
 						fin = start + tail_size;
-						break;
+						continue;
 					}
 					default:
 						return SafeReceiveSignal::SFR_ERROR;

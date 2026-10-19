@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::string bind_addr = "127.0.0.1";
+    std::string bind_addr = "0.0.0.0";
 
     // 2. Заполняем адрес привязки
     sockaddr_in server_addr{};

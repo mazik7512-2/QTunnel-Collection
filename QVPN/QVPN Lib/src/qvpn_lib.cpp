@@ -405,10 +405,11 @@ std::string QVPN::Core::QVPNSocketData::to_string() const
 	return str;
 }
 
-QVPN::Core::QVPNSocketSettings::QVPNSocketSettings(bool ip_data, int receive_timeout_ms)
+QVPN::Core::QVPNSocketSettings::QVPNSocketSettings(bool ip_data, int receive_timeout_ms, bool tcp_no_delay)
 {
 	ip_header_ = ip_data;
 	recv_timeout_ = receive_timeout_ms;
+	tcp_no_delay_ = tcp_no_delay;
 }
 
 bool QVPN::Core::QVPNSocketSettings::ip_header() const
@@ -419,6 +420,11 @@ bool QVPN::Core::QVPNSocketSettings::ip_header() const
 int QVPN::Core::QVPNSocketSettings::receive_timeout_ms() const
 {
 	return recv_timeout_;
+}
+
+bool QVPN::Core::QVPNSocketSettings::tcp_no_delay() const
+{
+	return tcp_no_delay_;
 }
 
 
