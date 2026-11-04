@@ -1,5 +1,6 @@
 #include <qvpn_net_tools.hpp>
 #include <WinSock2.h>
+#include <mswsock.h>
 
 
 using QVPNNetTools = QVPN::NetTools::QVPNNetTools;
@@ -409,6 +410,84 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::listen(int con_limit)
 	return QVPN::Core::NetStatus{ s , res };
 }
 
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send_msg(const UByte* begin, const UByte* end, int flags)
+{
+	typedef INT(PASCAL* LPFN_WSASENDMSG)(
+		SOCKET s, LPWSAMSG lpMsg, DWORD dwFlags,
+		LPDWORD lpNumberOfBytesSent, LPWSAOVERLAPPED lpOverlapped,
+		LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
+		);
+
+	LPFN_WSASENDMSG lpfnWSASendMsg = NULL;
+	GUID guid = WSAID_WSASENDMSG;
+	DWORD bytes = 0;
+
+	if (WSAIoctl(socket_, SIO_GET_EXTENSION_FUNCTION_POINTER,
+		&guid, sizeof(guid),
+		&lpfnWSASendMsg, sizeof(lpfnWSASendMsg),
+		&bytes, NULL, NULL) == SOCKET_ERROR) {
+		return QVPN::Core::NetStatus{ false, WSAGetLastError()};
+	}
+
+	WSABUF wsaBuf;
+	wsaBuf.buf = const_cast<char*>(reinterpret_cast<const char*>(begin));
+	wsaBuf.len = static_cast<ULONG>(end - begin);
+
+	// WSAMSG — аналог msghdr
+	WSAMSG wsaMsg;
+	ZeroMemory(&wsaMsg, sizeof(wsaMsg));
+	wsaMsg.name = nullptr;   // Для raw-сокета адрес уже в IP-заголовке
+	wsaMsg.namelen = 0;
+	wsaMsg.lpBuffers = &wsaBuf;
+	wsaMsg.dwBufferCount = 1;
+	wsaMsg.Control.buf = nullptr;
+	wsaMsg.Control.len = 0;
+	wsaMsg.dwFlags = 0;         // Игнорируется при отправке [citation:1]
+
+	DWORD bytesSent = 0;
+
+	// Вызов через указатель на функцию
+	INT result = lpfnWSASendMsg(socket_, &wsaMsg, flags, &bytesSent, nullptr, nullptr);
+
+	if (result == SOCKET_ERROR) {
+		return QVPN::Core::NetStatus{false, WSAGetLastError()};
+	}
+
+	return QVPN::Core::NetStatus{ true, static_cast<int>(bytesSent) };
+}
+
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send_mmsg(ObjectsBufferView& buffer, int flags)
+{
+	QVPN::Core::NetStatus status{};
+	for (size_t i = 0; i < buffer.get_objects_num(); i++)
+	{
+		auto [b, e] = buffer.get_object(i);
+		status = send_msg(b, e, flags);
+	}
+	return status;
+}
+
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::safe_send_mmsg(ObjectsBufferView& buffer, int flags, int num_tries)
+{
+	return send_mmsg(buffer, flags);
+}
+
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send_mmsg(ObjectsBuffer& buffer, int flags)
+{
+	QVPN::Core::NetStatus status{};
+	for (size_t i = 0; i < buffer.get_objects_num(); i++)
+	{
+		auto [b, e] = buffer.get_object(i);
+		status = send_msg(b, e, flags);
+	}
+	return status;
+}
+
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::safe_send_mmsg(ObjectsBuffer& buffer, int flags, int num_tries)
+{
+	return send_mmsg(buffer, flags);
+}
+
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send(const UByte* begin, const UByte* end, int flags)
 {
 	QVPN::Core::NetStatus status{};
@@ -431,6 +510,114 @@ QVPN::Core::ReceiveData QVPN::NetTools::QVPN_RawSocket::receive(int flags)
 	if (!status.success)
 		status.status = errno;
 	return ReceiveData{ status, res, std::move(buff) };
+}
+
+QVPN::Core::ReceiveData QVPN::NetTools::QVPN_RawSocket::recv_msg(int flags)
+{
+	ReceiveData rd{};
+
+	typedef INT(PASCAL* LPFN_WSARECVMSG)(
+		SOCKET s, LPWSAMSG lpMsg, LPDWORD lpNumberOfBytesRecvd,
+		LPWSAOVERLAPPED lpOverlapped,
+		LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine
+		);
+
+	LPFN_WSARECVMSG lpfnWSARecvMsg = NULL;
+	GUID guid = WSAID_WSARECVMSG;
+	DWORD bytes = 0;
+
+	if (WSAIoctl(socket_, SIO_GET_EXTENSION_FUNCTION_POINTER,
+		&guid, sizeof(guid),
+		&lpfnWSARecvMsg, sizeof(lpfnWSARecvMsg),
+		&bytes, NULL, NULL) == SOCKET_ERROR) {
+		printf("WSAIoctl failed: %d\n", WSAGetLastError());
+		return rd;
+	}
+
+	// 3. Готовим буферы
+	char control_buf[512];
+
+	WSABUF wsaBuf;
+	wsaBuf.buf = (CHAR*)rd.data.data();
+	wsaBuf.len = rd.data.size();
+
+	WSAMSG wsaMsg;
+	ZeroMemory(&wsaMsg, sizeof(wsaMsg));
+	wsaMsg.name = NULL;          // Адрес отправителя (если нужен — выделите sockaddr)
+	wsaMsg.namelen = 0;
+	wsaMsg.lpBuffers = &wsaBuf;
+	wsaMsg.dwBufferCount = 1;
+	wsaMsg.Control.buf = control_buf;
+	wsaMsg.Control.len = sizeof(control_buf);
+	wsaMsg.dwFlags = 0;
+
+	DWORD bytesReceived = 0;
+
+	// 4. Приём (синхронный, т.к. overlapped = NULL)
+	INT result = lpfnWSARecvMsg(socket_, &wsaMsg, &bytesReceived, NULL, NULL);
+
+	if (result == SOCKET_ERROR) {
+		printf("WSARecvMsg failed: %d\n", WSAGetLastError());
+		rd.status = QVPN::Core::NetStatus{ false, errno };
+	}
+	else {
+		printf("Received %lu bytes\n", bytesReceived);
+		rd.status = QVPN::Core::NetStatus{ true, 0 };
+		// Для raw-сокета: если пакет больше буфера, возвращается WSAEMSGSIZE
+		// (в отличие от Linux, где можно проверить MSG_TRUNC)
+	}
+	return rd;
+}
+
+QVPN::Core::ReceiveDataEx QVPN::NetTools::QVPN_RawSocket::recv_mmsg(size_t max_packets, size_t packet_size, int flags)
+{
+	ReceiveDataEx rd_ex(max_packets, packet_size);
+
+	// Получение указателя на функцию WSARecvMsg
+	LPFN_WSARECVMSG lpfnWSARecvMsg = NULL;
+	GUID guidWSARecvMsg = WSAID_WSARECVMSG;
+	DWORD bytesReturned = 0;
+
+	if (WSAIoctl(socket_, SIO_GET_EXTENSION_FUNCTION_POINTER,
+		&guidWSARecvMsg, sizeof(guidWSARecvMsg),
+		&lpfnWSARecvMsg, sizeof(lpfnWSARecvMsg),
+		&bytesReturned, NULL, NULL) == SOCKET_ERROR) {
+		printf("WSAIoctl failed: %d\n", WSAGetLastError());
+		return rd_ex;
+	}
+
+	UByte* buffer = rd_ex.get_raw_buffer_pointer();
+	WSABUF wsaBuf;
+	wsaBuf.buf = (CHAR*)buffer;
+	wsaBuf.len = sizeof(buffer);
+
+	WSAMSG wsaMsg;
+	ZeroMemory(&wsaMsg, sizeof(wsaMsg));
+	wsaMsg.name = NULL;        // Адрес отправителя (если нужен)
+	wsaMsg.namelen = 0;
+	wsaMsg.lpBuffers = &wsaBuf;
+	wsaMsg.dwBufferCount = 1;
+	wsaMsg.Control.buf = NULL; // Для управляющих данных
+	wsaMsg.Control.len = 0;
+	wsaMsg.dwFlags = 0;
+
+	DWORD bytesReceived = 0;
+
+	// Вызов через указатель на функцию
+	INT result = lpfnWSARecvMsg(socket_, &wsaMsg, &bytesReceived, NULL, NULL);
+
+	if (result == SOCKET_ERROR) {
+		rd_ex.set_status(QVPN::Core::NetStatus{ false, WSAGetLastError()});
+		printf("WSARecvMsg failed: %d\n", WSAGetLastError());
+	}
+	else {
+		rd_ex.add_raw_object(0, bytesReceived);
+		printf("Received %lu bytes\n", bytesReceived);
+		rd_ex.add_status(QVPN::Core::NetStatus{ true, 0 });
+		// buffer содержит IP-заголовок + данные (для raw-сокета)
+	}
+
+	return rd_ex;
 }
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::disconnect() const

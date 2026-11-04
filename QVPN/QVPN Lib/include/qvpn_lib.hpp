@@ -487,8 +487,8 @@ namespace QVPN {
 
 		struct NetStatus
 		{
-			bool success;
-			int status;
+			bool success = false;
+			int status = 0;
 		};
 
 		struct NetData
@@ -754,6 +754,97 @@ namespace QVPN {
 			BaseTypes::UShort port;
 		};
 
+
+		class ObjectsSeparator
+		{
+		protected:
+			using SeparatorType = std::pair<size_t, size_t>;
+
+			std::vector<SeparatorType> separators_{};
+
+		public:
+
+			ObjectsSeparator() = default;
+
+			ObjectsSeparator(const ObjectsSeparator& other);
+			ObjectsSeparator(ObjectsSeparator&& other) noexcept;
+
+			ObjectsSeparator& operator=(const ObjectsSeparator& other);
+			ObjectsSeparator& operator=(ObjectsSeparator&& other) noexcept;
+
+		protected:
+
+			size_t find_last_sep_by_size(size_t size) const;
+
+			void add_object_separators(size_t offset, size_t size);
+			void add_data_to_object_separators(size_t i, size_t size);
+			void add_data_to_last_object_separators(size_t size);
+
+			void split_last_object_separators(size_t size);
+
+			size_t get_objects_num() const;
+
+			size_t get_object_offset(size_t i) const;
+
+			std::pair<size_t, size_t> get_objects_separators_by_num(size_t size) const;
+
+			std::pair<size_t, size_t> get_object_separators(size_t i);
+			std::pair<size_t, size_t> get_objects_separators_by_size(size_t size);
+
+			std::pair<size_t, size_t> get_object_separators(size_t i) const;
+			std::pair<size_t, size_t> get_objects_separators_by_size(size_t size) const;
+
+			std::pair<size_t, size_t> get_last_object_separators();
+			std::pair<size_t, size_t> get_last_object_separators() const;
+
+			std::pair<size_t, size_t> get_first_object_separators();
+			std::pair<size_t, size_t> get_first_object_separators() const;
+
+			void pop_last_separators();
+			void pop_first_separators();
+
+			void pop_object_separators(size_t i);
+			void pop_objects_separators(size_t size);
+			void pop_separators_by_size(size_t size);
+
+		};
+
+
+		class ReceiveDataEx : ObjectsSeparator
+		{
+		private:
+			using UByte = BaseTypes::UByte;
+
+			NetStatus status_{};
+			size_t real_size_ = 0;
+			std::vector<UByte> data_{};
+
+		public:
+
+			ReceiveDataEx();
+			ReceiveDataEx(size_t max_packets, size_t packet_size);
+			ReceiveDataEx(size_t buffer_size);
+
+			void add_data(UByte* begin, UByte* end);
+			void add_raw_object(size_t offset, size_t size);
+			void split_last_object(size_t size);
+			UByte* get_raw_buffer_pointer();
+
+			void set_status(NetStatus status);
+			void add_status(NetStatus status);
+			const NetStatus& get_status() const;
+
+			std::pair<UByte*, UByte*> get_object(size_t i);
+			std::pair<const UByte*, const UByte*> get_object(size_t i) const;
+
+			size_t get_objects_num() const;
+
+			std::pair<UByte*, UByte*> to_bytes();
+			std::pair<const UByte*, const UByte*> to_bytes() const;
+
+		};
+
+
 		enum class BytesParseSignal
 		{
 			BP_FULL_OBJECT = 0,
@@ -817,6 +908,151 @@ namespace QVPN {
 		};
 
 
+		class ObjectsBuffer : ObjectsSeparator
+		{
+		private:
+			using UByte = BaseTypes::UByte;
+
+			std::vector<UByte> data_{};
+
+		public:
+
+			ObjectsBuffer() = default;
+
+			// 1 object from this constructor
+			ObjectsBuffer(UByte* begin, UByte* end);
+
+			ObjectsBuffer(const ObjectsBuffer& other);
+			ObjectsBuffer(ObjectsBuffer&& other) noexcept;
+
+			ObjectsBuffer& operator=(const ObjectsBuffer& other);
+			ObjectsBuffer& operator=(ObjectsBuffer&& other) noexcept;
+			
+			size_t get_objects_num() const;
+			void add_object(UByte* begin, UByte* end);
+			void add_data_to_object(size_t i, UByte* begin, UByte* end);
+			void add_data_to_last_object(UByte* begin, UByte* end);
+
+			void split_last_object(size_t size);
+
+			size_t get_object_offset(size_t i) const;
+			size_t get_full_size() const;
+
+			std::pair<UByte*, UByte*> get_object(size_t i);
+			std::pair<const UByte*, const UByte*> get_object(size_t i) const;
+			
+			std::vector<UByte> get_object_data(size_t i) const;
+
+			std::pair<UByte*, UByte*> get_objects_by_size(size_t size);
+			std::pair<const UByte*, const UByte*> get_objects_by_size(size_t size) const;
+
+			std::pair<UByte*, UByte*> get_objects_by_num(size_t size);
+			std::pair<const UByte*, const UByte*> get_objects_by_num(size_t size) const;
+
+			std::vector<UByte> get_objects_data_by_size(size_t size) const;
+
+			std::pair<UByte*, UByte*> get_last_object();
+			std::pair<const UByte*, const UByte*> get_last_object() const;
+
+			std::vector<UByte> get_last_object_data() const;
+
+			void weak_pop_last();
+			void weak_pop_first();
+
+			void weak_pop_by_size(size_t size);
+			void weak_pop_objects(size_t size);
+
+			void pop_last();
+			void pop_first();
+
+			void pop(size_t i);
+			void pop_by_size(size_t size);
+			void pop_objects(size_t size);
+
+			void clear_weak_pop();
+
+			std::pair<UByte*, UByte*> to_bytes();
+			std::pair<const UByte*, const UByte*> to_bytes() const;
+
+		};
+
+
+		class ObjectsBufferView : ObjectsSeparator
+		{
+		private:
+			using UByte = BaseTypes::UByte;
+
+			UByte* data_ = nullptr;
+			size_t data_size_ = 0;
+
+		public:
+
+			ObjectsBufferView() = default;
+
+			// 1 object from this constructor
+			ObjectsBufferView(UByte* begin, UByte* end);
+
+			ObjectsBufferView(const ObjectsBufferView& other);
+			ObjectsBufferView(ObjectsBufferView&& other) noexcept;
+
+			ObjectsBufferView& operator=(const ObjectsBufferView& other);
+			ObjectsBufferView& operator=(ObjectsBufferView&& other) noexcept;
+
+			size_t get_objects_num() const;
+			void add_object(UByte* begin, UByte* end);
+			void add_data_to_object(size_t i, UByte* begin, UByte* end);
+			void add_data_to_last_object(UByte* begin, UByte* end);
+
+			void split_last_object(size_t size);
+
+			size_t get_object_offset(size_t i) const;
+			size_t get_full_size() const;
+
+			std::pair<UByte*, UByte*> get_object(size_t i);
+			std::pair<const UByte*, const UByte*> get_object(size_t i) const;
+
+			std::vector<UByte> get_object_data(size_t i) const;
+
+			std::pair<UByte*, UByte*> get_objects_by_size(size_t size);
+			std::pair<const UByte*, const UByte*> get_objects_by_size(size_t size) const;
+
+			std::pair<UByte*, UByte*> get_objects_by_num(size_t size);
+			std::pair<const UByte*, const UByte*> get_objects_by_num(size_t size) const;
+
+			std::vector<UByte> get_objects_data_by_size(size_t size) const;
+
+			std::pair<UByte*, UByte*> get_last_object();
+			std::pair<const UByte*, const UByte*> get_last_object() const;
+
+			std::vector<UByte> get_last_object_data() const;
+
+			void weak_pop_last();
+			void weak_pop_first();
+
+			// All pops are weak
+			void pop_last();
+			// All pops are weak
+			void pop_first();
+			// All pops are weak
+			void weak_pop_by_size(size_t size);
+			// All pops are weak
+			void weak_pop_objects(size_t size);
+
+			// All pops are weak
+			void pop(size_t i);
+			// All pops are weak
+			void pop_by_size(size_t size);
+			// All pops are weak
+			void pop_objects(size_t size);
+
+			// do nothing (because all pops are weak)
+			void clear_weak_pop();
+
+			std::pair<UByte*, UByte*> to_bytes();
+			std::pair<const UByte*, const UByte*> to_bytes() const;
+		};
+
+
 		enum class SafeReceiveSignal
 		{
 			SFR_FULL_DATA = 0,
@@ -838,6 +1074,11 @@ namespace QVPN {
 			{ csfr.get_object_bytes(i) } -> std::same_as<std::pair<const BaseTypes::UByte*, const BaseTypes::UByte*>>;
 			{ sfr.get_object_bytes(i) } -> std::same_as<std::pair<BaseTypes::UByte*, BaseTypes::UByte*>>;
 
+			{ csfr.get_objects_bytes_by_size(i) } -> std::same_as<std::pair<const BaseTypes::UByte*, const BaseTypes::UByte*>>;
+			{ sfr.get_objects_bytes_by_size(i) } -> std::same_as<std::pair<BaseTypes::UByte*, BaseTypes::UByte*>>;
+
+			{ sfr.pop_objects_bytes_by_size(i) } -> std::same_as<void>;
+
 			{ csfr.get_objects_num() } -> std::same_as<BaseTypes::UInt>;
 
 			{ csfr.get_object(i) } -> std::same_as<typename SafeReceiveDataType::AppLevelProtoTemplateType>;
@@ -846,6 +1087,10 @@ namespace QVPN {
 			{ sfr.to_bytes() } -> std::same_as<std::pair<BaseTypes::UByte*, BaseTypes::UByte*>>;
 
 			{ sfr.set_status(status) } -> std::same_as<void>;
+			{ sfr.add_status(status) } -> std::same_as<void>;
+
+			{ sfr.get_objects_buffer() } -> std::same_as<ObjectsBuffer&>;
+			{ csfr.get_objects_buffer() } -> std::same_as<const ObjectsBuffer&>;
 
 		};
 
@@ -860,8 +1105,10 @@ namespace QVPN {
 			using BytesParseSignal = QVPN::Core::BytesParseSignal;
 
 			NetStatus status{};
-			std::vector<SeparatorType> separators;
-			std::vector<UByte> data{};
+			//std::vector<SeparatorType> separators;
+			//std::vector<UByte> data{};
+
+			ObjectsBuffer data_{};
 
 			using DataIterator_t = UByte*;
 			using ConstDataIterator_t = const UByte*;
@@ -872,7 +1119,8 @@ namespace QVPN {
 			{
 				return AppLevelProtoTemplate::bytes_parse(begin, end);
 			}
-
+			
+			/*
 			size_t get_last_object()
 			{
 				if (separators.size() == 0)
@@ -880,24 +1128,31 @@ namespace QVPN {
 				auto last = separators.size() - 1;
 				return last;
 			}
+			*/
 
 			// add full object
 			void _add_object(UByte* begin, UByte* end)
 			{
+				data_.add_object(begin, end);
+				/*
 				data.insert(data.end(), begin, end);
 				auto start = data.size() - std::distance(begin, end);
 				auto fin = data.size();
 				separators.emplace_back(start, fin);
+				*/
 			}
 
 			// add data to not full object
 			void _add_data_to_object(UByte* begin, UByte* end)
 			{
+				data_.add_data_to_last_object(begin, end);
+				/*
 				auto last = get_last_object();
 				auto start = separators[last].first;
 				data.insert(data.end(), begin, end);
 				auto fin = data.size();
 				separators[last].second = fin;
+				*/
 			}
 
 			SafeReceiveSignal parse_data(BaseTypes::UByte* begin, BaseTypes::UByte* end)
@@ -929,6 +1184,28 @@ namespace QVPN {
 			// add data to object and parse with existing data
 			SafeReceiveSignal _add_data_and_parse(UByte* begin, UByte* end)
 			{
+				data_.add_data_to_last_object(begin, end);
+				while (true)
+				{
+					auto [b, e] = data_.get_last_object();
+					auto parse_res = parse_object(b, e);
+					switch (parse_res.bp_signal)
+					{
+					case BytesParseSignal::BP_FULL_OBJECT:
+						return SafeReceiveSignal::SFR_FULL_DATA;
+					case BytesParseSignal::BP_NOT_FULL_OBJECT:
+						return SafeReceiveSignal::SFR_WAIT_DATA;
+					case BytesParseSignal::BP_FULL_OBJECT_AND_TAIL:
+					{
+						auto size = std::distance(parse_res.begin, parse_res.end);
+						data_.split_last_object(size);
+						continue;
+					}
+					default:
+						return SafeReceiveSignal::SFR_ERROR;
+					}
+				}
+				/*
 				auto last = get_last_object();
 				auto start = separators[last].first;
 
@@ -964,8 +1241,26 @@ namespace QVPN {
 						break;
 					}
 				}
+				*/
 			}
-
+			/*
+			size_t find_last_sep_by_size(size_t size) const
+			{
+				size_t last_sep_iter = 0;
+				size_t last_size = 0;
+				for (size_t i = 0; i < separators.size(); i++)
+				{
+					if (last_size <= size)
+					{
+						last_size = separators[i].second;
+						last_sep_iter = i;
+					}
+					else
+						break;
+				}
+				return last_sep_iter;
+			}
+			*/
 		public:
 
 			SafeReceiveSignal add_objects_and_validate(SafeReceiveSignal prev_signal, BaseTypes::UByte* begin, BaseTypes::UByte* end)
@@ -989,37 +1284,102 @@ namespace QVPN {
 				status.success = net_status.success;
 			}
 
+			void add_status(const NetStatus& net_status)
+			{
+				status.status |= net_status.status;
+				status.success = net_status.success;
+			}
+
 			std::pair<ConstDataIterator_t, ConstDataIterator_t> get_object_bytes(size_t i) const
 			{
+				return data_.get_object(i);
+				/*
 				auto [b, e] = separators[i];
 				return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data.data() + b, data.data() + e);
+				*/
 			}
 
 			std::pair<DataIterator_t, DataIterator_t> get_object_bytes(size_t i)
 			{
+				return data_.get_object(i);
+				/*
 				auto [b, e] = separators[i];
 				return std::pair<DataIterator_t, DataIterator_t>(data.data() + b, data.data() + e);
+				*/
+			}
+
+			std::pair<DataIterator_t, DataIterator_t> get_objects_bytes_by_size(size_t size = USHRT_MAX)
+			{
+				return data_.get_objects_by_size(size);
+				/*
+				auto last_iter = find_last_sep_by_size(size);
+
+				auto b = separators[0].first;
+				auto e = separators[last_iter].second;
+
+				return std::make_pair<>(data.data() + b, data.data() + e);
+				*/
+			}
+
+			std::pair<ConstDataIterator_t, ConstDataIterator_t> get_objects_bytes_by_size(size_t size = USHRT_MAX) const
+			{
+				return data_.get_objects_by_size(size);
+				/*
+				auto last_iter = find_last_sep_by_size(size);
+
+				const auto b = separators[0].first;
+				const auto e = separators[last_iter].second;
+
+				return std::make_pair<>(data.data() + b, data.data() + e);
+				*/
+			}
+
+			void pop_objects_bytes_by_size(size_t size)
+			{
+				data_.pop_by_size(size);
+				/*
+				auto last_iter = find_last_sep_by_size();
+
+				auto b = separators[0].first;
+				auto e = separators[last_iter].second;
+
+				separators.erase(separators.begin(), separators.begin() + last_iter + 1);
+				*/
 			}
 
 			UInt get_objects_num() const
 			{
-				return separators.size();
+				return data_.get_objects_num();
+				//return separators.size();
 			}
 
 			AppLevelProtoTemplate get_object(size_t i) const
 			{
-				auto [b, e] = separators[i];
+				auto [b, e] = get_object(i);
+				//auto [b, e] = separators[i];
 				return AppLevelProtoTemplate(b, e);
+			}
+
+			ObjectsBuffer& get_objects_buffer()
+			{
+				return data_;
+			}
+
+			const ObjectsBuffer& get_objects_buffer() const
+			{
+				return data_;
 			}
 
 			std::pair<ConstDataIterator_t, ConstDataIterator_t> to_bytes() const
 			{
-				return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data.data(), data.data() + data.size());
+				return data_.to_bytes();
+				//return std::pair<ConstDataIterator_t, ConstDataIterator_t>(data.data(), data.data() + data.size());
 			}
 
 			std::pair<DataIterator_t, DataIterator_t> to_bytes()
 			{
-				return std::pair<DataIterator_t, DataIterator_t>(data.data(), data.data() + data.size());
+				return data_.to_bytes();
+				//return std::pair<DataIterator_t, DataIterator_t>(data.data(), data.data() + data.size());
 			}
 
 		};
@@ -1095,7 +1455,8 @@ namespace QVPN {
 
 		template <class SocketImpl, class Addr, class SockFilter>
 		concept is_raw_socket =
-			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit, const QVPNSocketSettings & sock_settings, SockFilter & csf) {
+			requires (SocketImpl t, const BaseTypes::UByte * begin, const BaseTypes::UByte * end, const Addr & addr, const BaseTypes::UShort port, int flags, int con_limit, 
+		const QVPNSocketSettings & sock_settings, SockFilter & csf, size_t max_p, size_t p_size, ObjectsBufferView& obv_ref, const ObjectsBufferView& c_obv_ref, ObjectsBuffer& ob_ref, const ObjectsBuffer& c_ob_ref, int num_tries) {
 
 			requires is_socket_filter<SockFilter>;
 
@@ -1112,8 +1473,19 @@ namespace QVPN {
 		{ t.listen(con_limit) } -> std::same_as<NetStatus>;
 		{ t. template accept<Addr>() } -> std::same_as<SocketImpl>;
 
+		{ t.send_msg(begin, end, flags) } -> std::same_as<NetStatus>;
+
+		{ t.send_mmsg(c_obv_ref, flags) } -> std::same_as<NetStatus>;
+		{ t.safe_send_mmsg(obv_ref, flags, num_tries) } -> std::same_as<NetStatus>;
+
+		{ t.send_mmsg(c_ob_ref, flags) } -> std::same_as<NetStatus>;
+		{ t.safe_send_mmsg(ob_ref, flags, num_tries) } -> std::same_as<NetStatus>;
+
 		{ t.send(begin, end, flags) } -> std::same_as<NetStatus>;
 		{ t.receive(flags) } -> std::same_as<ReceiveData>;
+
+		{ t.recv_msg(flags) } -> std::same_as<ReceiveData>;
+		{ t.recv_mmsg(max_p, p_size, flags) } -> std::same_as<ReceiveDataEx>;
 
 		{ t.get_local_addr() } -> std::same_as<const Addr&>;
 		{ t.get_local_port() } -> std::same_as<BaseTypes::UShort>;
@@ -1164,12 +1536,13 @@ namespace QVPN {
 
 		template <class PreParserImpl>
 		concept is_preparser =
-			requires (PreParserImpl pp) {
+			requires (PreParserImpl pp, BaseTypes::UByte* begin, BaseTypes::UByte* end) {
 
 			typename PreParserImpl::FullPacketType;
 			typename PreParserImpl::NoNetPacketType;
 
-			{ pp.pre_parse() }; //TODO:  ак сюда засунуть шаблонный параметр?
+			{ pp.pre_parse(begin, end) }; //TODO:  ак сюда засунуть шаблонный параметр?
+			{ pp.pre_parse_cycled(begin, end) };
 
 		};
 

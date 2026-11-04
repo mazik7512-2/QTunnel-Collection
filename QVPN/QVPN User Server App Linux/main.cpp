@@ -69,8 +69,11 @@ void handle_client(int client_sock, sockaddr_in client_addr) {
             sent_total += sent;
         }
 
+        constexpr ssize_t max_str_size = 20;
+        auto str_size = std::min(max_str_size, received);
+
         std::cout << "[<] " << client_ip << ":" << client_port
-            << " -> " << received << " bytes (echo)"
+            << " -> " << received << " bytes (echo)" << "str view: " << std::string_view(buffer, buffer + str_size)
             << std::endl;
     }
 

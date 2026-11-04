@@ -713,3 +713,665 @@ UByte QVPN::Core::TcpFlagsObject::operator[](size_t i) const
 {
 	return static_cast<UByte>(flags_ >> i & 0x1);
 }
+
+
+// Objects Buffer
+
+
+QVPN::Core::ObjectsBuffer::ObjectsBuffer(UByte* begin, UByte* end)
+	: data_(begin, end)
+{
+	add_object_separators(0, std::distance(begin, end));
+}
+
+QVPN::Core::ObjectsBuffer::ObjectsBuffer(const ObjectsBuffer & other)
+	: ObjectsSeparator(other)
+{
+	data_ = other.data_;
+}
+
+QVPN::Core::ObjectsBuffer::ObjectsBuffer(ObjectsBuffer && other) noexcept
+	: ObjectsSeparator(std::move(other))
+{
+	data_ = std::move(other.data_);
+}
+
+QVPN::Core::ObjectsBuffer& QVPN::Core::ObjectsBuffer::operator=(const ObjectsBuffer & other)
+{
+	ObjectsSeparator::operator=(other);
+	data_ = other.data_;
+	return *this;
+}
+
+QVPN::Core::ObjectsBuffer& QVPN::Core::ObjectsBuffer::operator=(ObjectsBuffer&& other) noexcept
+{
+	ObjectsSeparator::operator=(std::move(other));
+	data_ = std::move(other.data_);
+	return *this;
+}
+
+size_t QVPN::Core::ObjectsBuffer::get_objects_num() const
+{
+	return ObjectsSeparator::get_objects_num();
+}
+
+void QVPN::Core::ObjectsBuffer::add_object(UByte* begin, UByte* end)
+{
+	auto start = data_.size();
+	data_.insert(data_.end(), begin, end);
+	add_object_separators(start, std::distance(begin, end));
+
+}
+
+void QVPN::Core::ObjectsBuffer::add_data_to_object(size_t i, UByte * begin, UByte * end)
+{
+	const auto& [b, e] = get_object_separators(i);
+	data_.insert(data_.begin() + e, begin, end);
+	add_data_to_object_separators(i, std::distance(begin, end));
+}
+
+void QVPN::Core::ObjectsBuffer::add_data_to_last_object(UByte * begin, UByte * end)
+{
+	data_.insert(data_.end(), begin, end);
+	add_data_to_last_object_separators(std::distance(begin, end));
+}
+
+void QVPN::Core::ObjectsBuffer::split_last_object(size_t size)
+{
+	split_last_object_separators(size);
+}
+
+size_t QVPN::Core::ObjectsBuffer::get_object_offset(size_t i) const
+{
+	return ObjectsSeparator::get_object_offset(i);
+}
+
+size_t QVPN::Core::ObjectsBuffer::get_full_size() const
+{
+	return data_.size();
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBuffer::get_object(size_t i)
+{
+	auto [b, e] = get_object_separators(i);
+	return std::pair<UByte*, UByte*>(data_.data() + b, data_.data() + e);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBuffer::get_object(size_t i) const
+{
+	const auto& [b, e] = get_object_separators(i);
+	return std::pair<const UByte*, const UByte*>(data_.data() + b, data_.data() + e);
+}
+
+std::vector<UByte> QVPN::Core::ObjectsBuffer::get_object_data(size_t i) const
+{
+	auto [b, e] = get_object_separators(i);
+	return std::vector<UByte>(data_.data() + b, data_.data() + e);
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBuffer::get_objects_by_size(size_t size)
+{
+	auto [b, e] = get_objects_separators_by_size(size);
+	return std::pair<UByte*, UByte*>(data_.data() + b, data_.data() + e);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBuffer::get_objects_by_size(size_t size) const
+{
+	auto [b, e] = get_objects_separators_by_size(size);
+	return std::pair<const UByte*, const UByte*>(data_.data() + b, data_.data() + e);
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBuffer::get_objects_by_num(size_t size)
+{
+	auto [b, e] = get_objects_separators_by_num(size);
+	return std::pair<UByte*, UByte*>(data_.data() + b, data_.data() + e);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBuffer::get_objects_by_num(size_t size) const
+{
+	auto [b, e] = get_objects_separators_by_num(size);
+	return std::pair<const UByte*, const UByte*>(data_.data() + b, data_.data() + e);
+}
+
+std::vector<UByte> QVPN::Core::ObjectsBuffer::get_objects_data_by_size(size_t size) const
+{
+	auto [b, e] = get_objects_separators_by_size(size);
+	return std::vector<UByte>(data_.data() + b, data_.data() + e);
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBuffer::get_last_object()
+{
+	auto [b, e] = get_last_object_separators();
+	return std::pair<UByte*, UByte*>(data_.data()  + b, data_.data() + e);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBuffer::get_last_object() const
+{
+	auto [b, e] = get_last_object_separators();
+	return std::pair<const UByte*, const UByte*>(data_.data() + b, data_.data() + e);
+}
+
+std::vector<UByte> QVPN::Core::ObjectsBuffer::get_last_object_data() const
+{
+	auto [b, e] = get_last_object_separators();
+	return std::vector<UByte>(data_.begin() + b, data_.begin() + e);
+}
+
+void QVPN::Core::ObjectsBuffer::weak_pop_last()
+{
+	pop_last_separators();
+}
+
+void QVPN::Core::ObjectsBuffer::weak_pop_first()
+{
+	pop_first_separators();
+}
+
+void QVPN::Core::ObjectsBuffer::pop_last()
+{
+	auto [b, e] = get_last_object_separators();
+	pop_last_separators();
+	data_.erase(data_.begin() + b, data_.begin() + e);
+}
+
+void QVPN::Core::ObjectsBuffer::pop_first()
+{
+	auto [b, e] = get_first_object_separators();
+	pop_first_separators();
+	data_.erase(data_.begin() + b, data_.begin() + e);
+}
+
+void QVPN::Core::ObjectsBuffer::pop(size_t i)
+{
+	auto [b, e] = get_object_separators(i);
+	pop_object_separators(i);
+	data_.erase(data_.begin() + b, data_.begin() + e);
+}
+
+void QVPN::Core::ObjectsBuffer::pop_by_size(size_t size)
+{
+	auto [b, e] = get_objects_separators_by_size(size);
+	pop_separators_by_size(size);
+	data_.erase(data_.begin() + b, data_.begin() + e);
+}
+
+void QVPN::Core::ObjectsBuffer::pop_objects(size_t size)
+{
+	auto [b, e] = get_objects_separators_by_num(size);
+	pop_objects_separators(size);
+	data_.erase(data_.begin() + b, data_.begin() + e);
+}
+
+void QVPN::Core::ObjectsBuffer::weak_pop_by_size(size_t size)
+{
+	pop_separators_by_size(size);
+}
+
+void QVPN::Core::ObjectsBuffer::weak_pop_objects(size_t size)
+{
+	pop_objects_separators(size);
+}
+
+void QVPN::Core::ObjectsBuffer::clear_weak_pop()
+{
+	auto [bf, ef] = get_first_object_separators();
+	auto [be, ee] = get_last_object_separators();
+
+	data_.erase(data_.begin(), data_.begin() + bf); // clear from front weak_pop
+	data_.erase(data_.begin() + ee, data_.end()); // clear from back weak_pop
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBuffer::to_bytes()
+{
+	return std::pair<UByte*, UByte*>(data_.data(), data_.data() + data_.size());
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBuffer::to_bytes() const
+{
+	return std::pair<const UByte*, const UByte*>(data_.data(), data_.data() + data_.size());
+}
+
+
+// Objects buffer view
+
+
+QVPN::Core::ObjectsBufferView::ObjectsBufferView(UByte* begin, UByte* end)
+	: data_(begin), data_size_(std::distance(begin, end))
+{
+	add_object_separators(0, data_size_);
+}
+
+QVPN::Core::ObjectsBufferView::ObjectsBufferView(const ObjectsBufferView& other)
+	: ObjectsSeparator(other)
+{
+	data_ = other.data_;
+	data_size_ = other.data_size_;
+}
+
+QVPN::Core::ObjectsBufferView::ObjectsBufferView(ObjectsBufferView&& other) noexcept
+	: ObjectsSeparator(std::move(other))
+{
+	data_ = std::move(other.data_);
+	data_size_ = std::move(other.data_size_);
+}
+
+QVPN::Core::ObjectsBufferView& QVPN::Core::ObjectsBufferView::operator=(const ObjectsBufferView& other)
+{
+	ObjectsSeparator::operator=(other);
+	data_ = other.data_;
+	data_size_ = other.data_size_;
+	return *this;
+}
+
+QVPN::Core::ObjectsBufferView& QVPN::Core::ObjectsBufferView::operator=(ObjectsBufferView&& other) noexcept
+{
+	ObjectsSeparator::operator=(std::move(other));
+	data_ = std::move(other.data_);
+	data_size_ = std::move(other.data_size_);
+	return *this;
+}
+
+size_t QVPN::Core::ObjectsBufferView::get_objects_num() const
+{
+	return ObjectsSeparator::get_objects_num();
+}
+
+void QVPN::Core::ObjectsBufferView::add_object(UByte* begin, UByte* end)
+{
+	if (data_ == nullptr)
+		data_ = begin;
+
+	add_object_separators(data_size_, std::distance(begin, end));
+	data_size_ += std::distance(begin, end);
+}
+
+void QVPN::Core::ObjectsBufferView::add_data_to_object(size_t i, UByte * begin, UByte * end)
+{
+	auto size = std::distance(begin, end);
+	add_data_to_object_separators(i, size);
+}
+
+void QVPN::Core::ObjectsBufferView::add_data_to_last_object(UByte * begin, UByte * end)
+{
+	auto size = std::distance(begin, end);
+	add_data_to_last_object_separators(size);
+}
+
+void QVPN::Core::ObjectsBufferView::split_last_object(size_t size)
+{
+	split_last_object_separators(size);
+}
+
+size_t QVPN::Core::ObjectsBufferView::get_object_offset(size_t i) const
+{
+	return ObjectsSeparator::get_object_offset(i);
+}
+
+size_t QVPN::Core::ObjectsBufferView::get_full_size() const
+{
+	return data_size_;
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBufferView::get_object(size_t i)
+{
+	auto [b, e] = get_object_separators(i);
+	return std::pair<UByte*, UByte*>(data_ + b, data_ + e);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBufferView::get_object(size_t i) const
+{
+	auto [b, e] = get_object_separators(i);;
+	return std::pair<const UByte*, const UByte*>(data_ + b, data_ + e);
+}
+
+std::vector<UByte> QVPN::Core::ObjectsBufferView::get_object_data(size_t i) const
+{
+	auto [b, e] = get_object_separators(i);;
+	return std::vector<UByte>(data_ + b, data_ + e);
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBufferView::get_objects_by_size(size_t size)
+{
+	auto [b, e] = get_objects_separators_by_size(size);
+	return std::pair<UByte*, UByte*>(data_ + b, data_ + e);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBufferView::get_objects_by_size(size_t size) const
+{
+	auto [b, e] = get_objects_separators_by_size(size);
+	return std::pair<const UByte*, const UByte*>(data_ + b, data_ + e);
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBufferView::get_objects_by_num(size_t size)
+{
+	auto [b, e] = get_objects_separators_by_num(size);
+	return std::pair<UByte*, UByte*>(data_ + b, data_ + e);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBufferView::get_objects_by_num(size_t size) const
+{
+	auto [b, e] = get_objects_separators_by_num(size);
+	return std::pair<const UByte*, const UByte*>(data_ + b, data_ + e);
+}
+
+std::vector<UByte> QVPN::Core::ObjectsBufferView::get_objects_data_by_size(size_t size) const
+{
+	auto [b, e] = get_objects_separators_by_size(size);
+	return std::vector<UByte>(data_ + b, data_ + e);
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBufferView::get_last_object()
+{
+	auto [b, e] = get_last_object_separators();
+	return std::pair<UByte*, UByte*>(data_ + b, data_ + e);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBufferView::get_last_object() const
+{
+	auto [b, e] = get_last_object_separators();
+	return std::pair<const UByte*, const UByte*>(data_ + b, data_ + e);
+}
+
+std::vector<UByte> QVPN::Core::ObjectsBufferView::get_last_object_data() const
+{
+	auto [b, e] = get_last_object_separators();
+	return std::vector<UByte>(data_ + b, data_ + e);
+}
+
+void QVPN::Core::ObjectsBufferView::weak_pop_last()
+{
+	pop_last_separators();
+}
+
+void QVPN::Core::ObjectsBufferView::weak_pop_first()
+{
+	pop_first_separators();
+}
+
+void QVPN::Core::ObjectsBufferView::pop_last()
+{
+	weak_pop_last();
+}
+
+void QVPN::Core::ObjectsBufferView::pop_first()
+{
+	weak_pop_first();
+}
+
+void QVPN::Core::ObjectsBufferView::weak_pop_by_size(size_t size)
+{
+	pop_separators_by_size(size);
+}
+
+void QVPN::Core::ObjectsBufferView::weak_pop_objects(size_t size)
+{
+	pop_objects_separators(size);
+}
+
+void QVPN::Core::ObjectsBufferView::pop(size_t i)
+{
+	pop_object_separators(i);
+}
+
+void QVPN::Core::ObjectsBufferView::pop_by_size(size_t size)
+{
+	weak_pop_by_size(size);
+}
+
+void QVPN::Core::ObjectsBufferView::pop_objects(size_t size)
+{
+	weak_pop_objects(size);
+}
+
+void QVPN::Core::ObjectsBufferView::clear_weak_pop()
+{
+
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ObjectsBufferView::to_bytes()
+{
+	return std::pair<UByte*, UByte*>(data_, data_ + data_size_);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ObjectsBufferView::to_bytes() const
+{
+	return std::pair<const UByte*, const UByte*>(data_, data_ + data_size_);
+}
+
+QVPN::Core::ReceiveDataEx::ReceiveDataEx()
+	: ObjectsSeparator{}
+{
+
+}
+
+QVPN::Core::ReceiveDataEx::ReceiveDataEx(size_t max_packets, size_t packet_size)
+	: ObjectsSeparator{}
+{
+	data_.reserve(max_packets * packet_size);
+	data_.resize(max_packets * packet_size);
+}
+
+QVPN::Core::ReceiveDataEx::ReceiveDataEx(size_t buffer_size)
+	: ObjectsSeparator{}
+{
+	data_.reserve(buffer_size);
+	data_.resize(buffer_size);
+}
+
+void QVPN::Core::ReceiveDataEx::add_data(UByte * begin, UByte * end)
+{
+	auto size = std::distance(begin, end);
+	data_.insert(data_.begin() + real_size_, begin, end);
+	add_object_separators(real_size_, size);
+	real_size_ += size;
+}
+
+void QVPN::Core::ReceiveDataEx::add_raw_object(size_t offset, size_t size)
+{
+	ObjectsSeparator::add_object_separators(offset, size);
+}
+
+void QVPN::Core::ReceiveDataEx::split_last_object(size_t size)
+{
+	ObjectsSeparator::split_last_object_separators(size);
+}
+
+UByte* QVPN::Core::ReceiveDataEx::get_raw_buffer_pointer()
+{
+	return data_.data();
+}
+
+void QVPN::Core::ReceiveDataEx::set_status(NetStatus status)
+{
+	status_ = status;
+}
+
+void QVPN::Core::ReceiveDataEx::add_status(NetStatus status)
+{
+	status_.success |= status.success;
+	status_.status = status.status;
+}
+
+const QVPN::Core::NetStatus& QVPN::Core::ReceiveDataEx::get_status() const
+{
+	return status_;
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ReceiveDataEx::get_object(size_t i)
+{
+	auto [b, e] = get_object_separators(i);
+	return std::pair<UByte*, UByte*>(data_.data() + b, data_.data() + e);
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ReceiveDataEx::get_object(size_t i) const
+{
+	auto [b, e] = get_object_separators(i);
+	return std::pair<const UByte*, const UByte*>(data_.data() + b, data_.data() + e);
+}
+
+size_t QVPN::Core::ReceiveDataEx::get_objects_num() const
+{
+	return ObjectsSeparator::get_objects_num();
+}
+
+std::pair<UByte*, UByte*> QVPN::Core::ReceiveDataEx::to_bytes()
+{
+	return std::pair<UByte*, UByte*>(data_.data(), data_.data() + data_.size());
+}
+
+std::pair<const UByte*, const UByte*> QVPN::Core::ReceiveDataEx::to_bytes() const
+{
+	return std::pair<const UByte*, const UByte*>(data_.data(), data_.data() + data_.size());
+}
+
+QVPN::Core::ObjectsSeparator::ObjectsSeparator(const ObjectsSeparator& other)
+{
+	separators_ = other.separators_;
+}
+
+QVPN::Core::ObjectsSeparator::ObjectsSeparator(ObjectsSeparator&& other) noexcept
+{
+	separators_ = std::move(other.separators_);
+}
+
+QVPN::Core::ObjectsSeparator& QVPN::Core::ObjectsSeparator::operator=(const ObjectsSeparator & other)
+{
+	separators_ = other.separators_;
+	return *this;
+}
+
+QVPN::Core::ObjectsSeparator& QVPN::Core::ObjectsSeparator::operator=(ObjectsSeparator&& other) noexcept
+{
+	separators_ = std::move(other.separators_);
+	return *this;
+}
+
+size_t QVPN::Core::ObjectsSeparator::find_last_sep_by_size(size_t size) const
+{
+	size_t last_sep_iter = 0;
+	size_t last_size = 0;
+	for (size_t i = 0; i < separators_.size(); i++)
+	{
+		if (last_size <= size)
+		{
+			last_size = separators_[i].second;
+			last_sep_iter = i;
+		}
+		else
+			break;
+	}
+	return last_sep_iter;
+}
+
+void QVPN::Core::ObjectsSeparator::add_object_separators(size_t offset, size_t size)
+{
+	separators_.emplace_back(offset, offset + size);
+}
+
+void QVPN::Core::ObjectsSeparator::add_data_to_object_separators(size_t i, size_t size)
+{
+	auto& [bi, ei] = separators_[i];
+	ei += size;
+}
+
+void QVPN::Core::ObjectsSeparator::add_data_to_last_object_separators(size_t size)
+{
+	auto& [bl, el] = separators_.back();
+	el += size;
+}
+
+void QVPN::Core::ObjectsSeparator::split_last_object_separators(size_t size)
+{
+	auto& [b, e] = separators_.back();
+	auto old_end = e;
+	e = b + size;
+	separators_.emplace_back(e, old_end);
+}
+
+size_t QVPN::Core::ObjectsSeparator::get_objects_num() const
+{
+	return separators_.size();
+}
+
+size_t QVPN::Core::ObjectsSeparator::get_object_offset(size_t i) const
+{
+	auto& [b, e] = separators_[i];
+	return b;
+}
+
+std::pair<size_t, size_t> QVPN::Core::ObjectsSeparator::get_objects_separators_by_num(size_t size) const
+{
+	auto& [fb, fe] = separators_.front();
+	auto& [sb, se] = separators_[size - 1];
+	return std::pair<size_t, size_t>(fb, se);
+}
+
+std::pair<size_t, size_t> QVPN::Core::ObjectsSeparator::get_object_separators(size_t i)
+{
+	return separators_[i];
+}
+
+std::pair<size_t, size_t> QVPN::Core::ObjectsSeparator::get_objects_separators_by_size(size_t size)
+{
+	auto it = find_last_sep_by_size(size);
+	return separators_[it];
+}
+
+std::pair<size_t, size_t> QVPN::Core::ObjectsSeparator::get_object_separators(size_t i) const
+{
+	return separators_[i];
+}
+
+std::pair<size_t, size_t> QVPN::Core::ObjectsSeparator::get_objects_separators_by_size(size_t size) const
+{
+	auto it = find_last_sep_by_size(size);
+	return separators_[it];
+}
+
+std::pair<size_t, size_t> QVPN::Core::ObjectsSeparator::get_last_object_separators()
+{
+	return separators_.back();;
+}
+
+std::pair<size_t, size_t> QVPN::Core::ObjectsSeparator::get_last_object_separators() const
+{
+	return separators_.back();
+}
+
+std::pair<size_t, size_t> QVPN::Core::ObjectsSeparator::get_first_object_separators()
+{
+	return separators_.front();
+}
+
+std::pair<size_t, size_t> QVPN::Core::ObjectsSeparator::get_first_object_separators() const
+{
+	return separators_.front();
+}
+
+void QVPN::Core::ObjectsSeparator::pop_last_separators()
+{
+	separators_.pop_back();
+}
+
+void QVPN::Core::ObjectsSeparator::pop_first_separators()
+{
+	separators_.erase(separators_.begin());
+}
+
+void QVPN::Core::ObjectsSeparator::pop_object_separators(size_t i)
+{
+	separators_.erase(separators_.begin() + i);
+}
+
+void QVPN::Core::ObjectsSeparator::pop_objects_separators(size_t size)
+{
+	separators_.erase(separators_.begin(), separators_.begin() + size);
+}
+
+void QVPN::Core::ObjectsSeparator::pop_separators_by_size(size_t size)
+{
+	auto last_iter = find_last_sep_by_size(size);
+	auto b = separators_[0].first;
+	auto e = separators_[last_iter].second;
+	separators_.erase(separators_.begin(), separators_.begin() + last_iter + 1);
+}

@@ -192,6 +192,11 @@ namespace QVPN {
 
 			public:
 
+				QVPNLogger()
+				{
+					std::ios_base::sync_with_stdio(false);
+				}
+
 				void set_verbosity(LoggerVerboseLevel level)
 				{
 					verbose_ = level;
@@ -346,6 +351,11 @@ namespace QVPN {
 				LoggerVerboseLevel verbose_ = LoggerVerboseLevel::ALL;
 
 			public:
+
+				QVPNLogger()
+				{
+					std::ios_base::sync_with_stdio(false);
+				}
 
 				void set_verbosity(LoggerVerboseLevel level)
 				{
@@ -576,6 +586,22 @@ namespace QVPN {
 					break;
 				}
 				//return ret;
+			}
+
+			template <std::random_access_iterator Iter>
+			std::vector<FullPacketType> pre_parse_cycled(Iter begin, Iter end) const
+			{
+				std::vector<FullPacketType> res{};
+				auto start = begin;
+				while (start < end)
+				{
+					auto packet = this->pre_parse<Iter>(start, end);
+					auto size = std::visit([](auto& p) { return p.get_full_packet_length(); }, packet);
+					res.emplace_back(packet);
+					start += size;
+				}
+
+				return res;
 			}
 
 		};

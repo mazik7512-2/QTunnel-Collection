@@ -1032,8 +1032,12 @@ QVPN::Core::DataStructures::DataPacketLittleEndian::ViewType QVPN::Core::DataStr
 
 std::string QVPN::Core::DataStructures::DataPacketLittleEndian::to_data_friendly_view() const
 {
+	constexpr size_t str_max_size = 20;
+	auto str_size = std::min(str_max_size, data_.size());
+	std::string data_view{ data_.begin(), data_.begin() + str_size };
 	std::stringstream ss{};
-	ss << "Data size: " << data_.size() << " bytes";
+	ss << "Data size: " << data_.size() << " bytes" << std::endl;
+	ss << "Data: " << data_view << std::endl;
 	auto str = ss.str();
 	return str;
 }
@@ -2058,8 +2062,12 @@ QVPN::Core::DataStructures::DataPacketView::ViewType QVPN::Core::DataStructures:
 
 std::string QVPN::Core::DataStructures::DataPacketView::to_data_friendly_view() const
 {
+	constexpr size_t str_max_size = 20;
+	auto str_size = std::min(str_max_size, static_cast<size_t>(data_size_));
+	std::string data_view{ data_, data_ + str_size };
 	std::stringstream ss{};
-	ss << "Data size: " << data_size_ << " bytes";
+	ss << "Data size: " << data_size_ << " bytes" << std::endl;
+	ss << "Data: " << data_view << std::endl;
 	auto str = ss.str();
 	return str;
 }
@@ -4990,4 +4998,9 @@ std::pair<QVPN::Core::DataStructures::TcpOptionView::ConstDataIterator_t, QVPN::
 std::pair<QVPN::Core::DataStructures::TcpOptionView::DataIterator_t, QVPN::Core::DataStructures::TcpOptionView::DataIterator_t> QVPN::Core::DataStructures::TcpOptionView::to_bytes()
 {
 	return std::pair<DataIterator_t, DataIterator_t>(data_, data_ + length_);
+}
+
+QVPN::Core::DataStructures::TLSMessageType QVPN::Core::DataStructures::TLS_ServerHelloDonePacketObject::get_message_type() const
+{
+	return TLSMessageType::SERVER_HELLO_DONE;
 }

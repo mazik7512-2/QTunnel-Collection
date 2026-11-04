@@ -420,6 +420,143 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::listen(int con_limit)
 	return QVPN::Core::NetStatus{ s , res };
 }
 
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send_msg(const UByte* begin, const UByte* end, int flags)
+{
+	bool s = false;
+
+	struct iovec iov;
+	iov.iov_base = (void*) begin;
+	iov.iov_len = std::distance(begin, end);
+
+	struct msghdr msg;
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+
+	auto sent = ::sendmsg(socket_, &msg, 0);
+	if (sent < 0) {
+		perror("sendmsg");
+		s = false;
+	}
+	else {
+		printf("Отправлено %zd байт\n", sent);
+		s = true;
+	}
+
+
+	return QVPN::Core::NetStatus{ s, static_cast<int>(sent) };
+}
+
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send_mmsg(const ObjectsBufferView& buffer, int flags)
+{
+	auto count = buffer.get_objects_num();
+	std::vector<struct iovec>   iov(count);
+	std::vector<struct mmsghdr> msgs(count);
+
+	msgs.resize(count);
+	iov.resize(count);
+
+	for (size_t i = 0; i < count; ++i) {
+		auto [b, e] = buffer.get_object(i);
+
+		iov[i].iov_base = const_cast<uint8_t*>(b);
+		iov[i].iov_len = std::distance(b, e);
+
+		memset(&msgs[i], 0, sizeof(msgs[i]));
+		msgs[i].msg_hdr.msg_iov = &iov[i];
+		msgs[i].msg_hdr.msg_iovlen = 1;
+	}
+
+	auto sent = ::sendmmsg(socket_, msgs.data(), static_cast<unsigned int>(count), flags);
+	if (sent < 0) {
+		// Фатальная ошибка (например, EINVAL, EBADF)
+		return QVPN::Core::NetStatus{ false, errno }; // error
+	}
+
+	if (sent < count)
+	{
+		return QVPN::Core::NetStatus{ true, sent }; // send less then get
+	}
+
+	return QVPN::Core::NetStatus{ true, 0 }; // all good
+}
+
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::safe_send_mmsg(ObjectsBufferView& buffer, int flags, int num_tries)
+{
+	QVPN::Core::NetStatus res{};
+	while (num_tries > 0)
+	{
+		res = send_mmsg(buffer, flags);
+
+		if (!res.success)
+			return res;
+
+		if (res.success && res.status == 0)
+			return res;
+
+		if (res.success && res.status > 0)
+			buffer.pop_objects(res.status);
+
+		--num_tries;
+	}
+	return res;
+}
+
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send_mmsg(const ObjectsBuffer& buffer, int flags)
+{
+	auto count = buffer.get_objects_num();
+	std::vector<struct iovec>   iov(count);
+	std::vector<struct mmsghdr> msgs(count);
+
+	msgs.resize(count);
+	iov.resize(count);
+
+	for (size_t i = 0; i < count; ++i) {
+		auto [b, e] = buffer.get_object(i);
+
+		iov[i].iov_base = const_cast<uint8_t*>(b);
+		iov[i].iov_len = std::distance(b, e);
+
+		memset(&msgs[i], 0, sizeof(msgs[i]));
+		msgs[i].msg_hdr.msg_iov = &iov[i];
+		msgs[i].msg_hdr.msg_iovlen = 1;
+	}
+
+	auto sent = ::sendmmsg(socket_, msgs.data(), static_cast<unsigned int>(count), flags);
+	if (sent < 0) {
+		// Фатальная ошибка (например, EINVAL, EBADF)
+		return QVPN::Core::NetStatus{ false, errno }; // error
+	}
+
+	if (sent < count)
+	{
+		return QVPN::Core::NetStatus{ true, sent }; // send less then get
+	}
+
+	return QVPN::Core::NetStatus{ true, 0 }; // all good
+}
+
+QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::safe_send_mmsg(ObjectsBuffer& buffer, int flags, int num_tries)
+{
+	QVPN::Core::NetStatus res{};
+	while (num_tries > 0)
+	{
+		res = send_mmsg(buffer, flags);
+
+		if (!res.success)
+			return res;
+
+		if (res.success && res.status == 0)
+			return res;
+
+		if (res.success && res.status > 0)
+			buffer.pop_objects(res.status);
+
+		--num_tries;
+	}
+	return res;
+}
+
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send(const UByte* begin, const UByte* end, int flags)
 {
 	QVPN::Core::NetStatus status{};
@@ -442,6 +579,86 @@ QVPN::Core::ReceiveData QVPN::NetTools::QVPN_RawSocket::receive(int flags)
 	if (!status.success)
 		status.status = errno;
 	return ReceiveData{ status, res, std::move(buff) };
+}
+
+QVPN::Core::ReceiveData QVPN::NetTools::QVPN_RawSocket::recv_msg(int flags)
+{
+	ReceiveData rd{};
+	char control_buf[512];        // Буфер под ancillary data
+
+	struct iovec iov = {
+		.iov_base = rd.data.data(),
+		.iov_len = rd.data.size()
+	};
+
+	struct sockaddr_in src_addr;
+	struct msghdr msg;
+	memset(&msg, 0, sizeof(msg));
+
+	msg.msg_name = &src_addr;       // Адрес отправителя
+	msg.msg_namelen = sizeof(src_addr);
+	msg.msg_iov = &iov;            // Данные (пакет)
+	msg.msg_iovlen = 1;
+	msg.msg_control = control_buf;     // Ancillary data
+	msg.msg_controllen = sizeof(control_buf);
+
+	// 3. Приём
+	ssize_t n = recvmsg(socket_, &msg, 0);
+	if (n < 0) {
+		perror("recvmsg");
+		rd.status = QVPN::Core::NetStatus{ false, errno };
+	}
+	else {
+		printf("Received %zd bytes from %s\n",
+			n, inet_ntoa(src_addr.sin_addr));
+
+		// Проверка на обрезку пакета
+		if (msg.msg_flags & MSG_TRUNC) {
+			printf("Packet was truncated!\n");
+		}
+		rd.status = QVPN::Core::NetStatus{ true, 0 };
+		// Здесь packet_buf содержит IP-заголовок + данные
+	}
+	return rd;
+}
+
+QVPN::Core::ReceiveDataEx QVPN::NetTools::QVPN_RawSocket::recv_mmsg(size_t max_packets, size_t packet_size, int flags)
+{
+	auto buf_size = max_packets * packet_size;
+	ReceiveDataEx rd_ex(max_packets, packet_size);
+	struct mmsghdr msgs[max_packets]; // TODO: переделать на std::vector, иначе VLA
+	struct iovec iovs[max_packets];
+	UByte* buffer = rd_ex.get_raw_buffer_pointer();
+
+	memset(msgs, 0, sizeof(msgs));
+
+	for (int i = 0; i < max_packets; i++) {
+		iovs[i].iov_base = buffer + (i * packet_size);
+		iovs[i].iov_len = packet_size;
+
+		msgs[i].msg_hdr.msg_iov = &iovs[i];
+		msgs[i].msg_hdr.msg_iovlen = 1;
+	}
+
+	int n = recvmmsg(socket_, msgs, max_packets, flags, NULL);
+
+	if (n < 0) {
+		perror("recvmmsg");
+		rd_ex.set_status(QVPN::Core::NetStatus{ false, errno });
+	}
+	else {
+		printf("Получено пакетов: %d\n", n);
+		for (int i = 0; i < n; i++) {
+			size_t offset = std::distance(buffer, static_cast<UByte*>(iovs[i].iov_base));
+			rd_ex.add_raw_object(offset, msgs[i].msg_len);
+			//rd_ex.split_last_object(msgs[i].msg_len);
+			// msgs[i].msg_len — длина конкретного пакета
+			// buffers[i] содержит IP-заголовок + полезную нагрузку
+			printf("Пакет %d: %u байт\n", i, msgs[i].msg_len);
+			rd_ex.add_status(QVPN::Core::NetStatus{ true, 0 });
+		}
+	}
+	return rd_ex;
 }
 
 QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::disconnect() const

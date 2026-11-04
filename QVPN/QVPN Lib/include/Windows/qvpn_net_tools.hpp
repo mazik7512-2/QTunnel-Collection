@@ -686,10 +686,13 @@ namespace QVPN {
 			using TransportProtocol = QVPN::Core::TransportProtocol;
 			using QVPNSocketSettings = QVPN::Core::QVPNSocketSettings;
 			using ReceiveData = QVPN::Core::ReceiveData;
+			using ReceiveDataEx = QVPN::Core::ReceiveDataEx;
 			using SafeReceiveSignal = QVPN::Core::SafeReceiveSignal;
 
 			template <class AppLevelProtoTemplate>
 			using SafeReceiveData = QVPN::Core::SafeReceiveData<AppLevelProtoTemplate>;
+			using ObjectsBuffer = QVPN::Core::ObjectsBuffer;
+			using ObjectsBufferView = QVPN::Core::ObjectsBufferView;
 
 		public:
 
@@ -779,9 +782,19 @@ namespace QVPN {
 
 			QVPN::Core::NetStatus listen(int con_limit = SOMAXCONN);
 
+			QVPN::Core::NetStatus send_msg(const UByte* begin, const UByte* end, int flags = 0);
+			QVPN::Core::NetStatus send_mmsg(ObjectsBufferView& buffer, int flags = 0);
+			QVPN::Core::NetStatus safe_send_mmsg(ObjectsBufferView& buffer, int flags = 0, int num_tries = 20);
+
+			QVPN::Core::NetStatus send_mmsg(ObjectsBuffer& buffer, int flags = 0);
+			QVPN::Core::NetStatus safe_send_mmsg(ObjectsBuffer& buffer, int flags = 0, int num_tries = 20);
+
 			QVPN::Core::NetStatus send(const UByte* begin, const UByte* end, int flags = 0);
 
 			ReceiveData receive(int flags = 0);
+
+			ReceiveData recv_msg(int flags = 0);
+			ReceiveDataEx recv_mmsg(size_t max_packets = 3, size_t packet_size = USHRT_MAX, int flags = 0);
 
 			QVPN::Core::NetStatus disconnect() const;
 
