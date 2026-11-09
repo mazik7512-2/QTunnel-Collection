@@ -435,11 +435,9 @@ QVPN::Core::NetStatus QVPN::NetTools::QVPN_RawSocket::send_msg(const UByte* begi
 
 	auto sent = ::sendmsg(socket_, &msg, 0);
 	if (sent < 0) {
-		perror("sendmsg");
 		s = false;
 	}
 	else {
-		printf("Отправлено %zd байт\n", sent);
 		s = true;
 	}
 
@@ -605,16 +603,13 @@ QVPN::Core::ReceiveData QVPN::NetTools::QVPN_RawSocket::recv_msg(int flags)
 	// 3. Приём
 	ssize_t n = recvmsg(socket_, &msg, 0);
 	if (n < 0) {
-		perror("recvmsg");
 		rd.status = QVPN::Core::NetStatus{ false, errno };
 	}
 	else {
-		printf("Received %zd bytes from %s\n",
-			n, inet_ntoa(src_addr.sin_addr));
 
 		// Проверка на обрезку пакета
 		if (msg.msg_flags & MSG_TRUNC) {
-			printf("Packet was truncated!\n");
+			rd.status = QVPN::Core::NetStatus{ true, MSG_TRUNC };
 		}
 		rd.status = QVPN::Core::NetStatus{ true, 0 };
 		// Здесь packet_buf содержит IP-заголовок + данные
@@ -643,18 +638,15 @@ QVPN::Core::ReceiveDataEx QVPN::NetTools::QVPN_RawSocket::recv_mmsg(size_t max_p
 	int n = recvmmsg(socket_, msgs, max_packets, flags, NULL);
 
 	if (n < 0) {
-		perror("recvmmsg");
 		rd_ex.set_status(QVPN::Core::NetStatus{ false, errno });
 	}
 	else {
-		printf("Получено пакетов: %d\n", n);
 		for (int i = 0; i < n; i++) {
 			size_t offset = std::distance(buffer, static_cast<UByte*>(iovs[i].iov_base));
 			rd_ex.add_raw_object(offset, msgs[i].msg_len);
 			//rd_ex.split_last_object(msgs[i].msg_len);
 			// msgs[i].msg_len — длина конкретного пакета
 			// buffers[i] содержит IP-заголовок + полезную нагрузку
-			printf("Пакет %d: %u байт\n", i, msgs[i].msg_len);
 			rd_ex.add_status(QVPN::Core::NetStatus{ true, 0 });
 		}
 	}

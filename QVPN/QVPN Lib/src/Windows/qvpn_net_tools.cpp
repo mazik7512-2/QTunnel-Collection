@@ -530,7 +530,7 @@ QVPN::Core::ReceiveData QVPN::NetTools::QVPN_RawSocket::recv_msg(int flags)
 		&guid, sizeof(guid),
 		&lpfnWSARecvMsg, sizeof(lpfnWSARecvMsg),
 		&bytes, NULL, NULL) == SOCKET_ERROR) {
-		printf("WSAIoctl failed: %d\n", WSAGetLastError());
+		rd.status = { false, WSAGetLastError() };
 		return rd;
 	}
 
@@ -557,11 +557,9 @@ QVPN::Core::ReceiveData QVPN::NetTools::QVPN_RawSocket::recv_msg(int flags)
 	INT result = lpfnWSARecvMsg(socket_, &wsaMsg, &bytesReceived, NULL, NULL);
 
 	if (result == SOCKET_ERROR) {
-		printf("WSARecvMsg failed: %d\n", WSAGetLastError());
-		rd.status = QVPN::Core::NetStatus{ false, errno };
+		rd.status = QVPN::Core::NetStatus{ false, WSAGetLastError()};
 	}
 	else {
-		printf("Received %lu bytes\n", bytesReceived);
 		rd.status = QVPN::Core::NetStatus{ true, 0 };
 		// Для raw-сокета: если пакет больше буфера, возвращается WSAEMSGSIZE
 		// (в отличие от Linux, где можно проверить MSG_TRUNC)
@@ -582,7 +580,7 @@ QVPN::Core::ReceiveDataEx QVPN::NetTools::QVPN_RawSocket::recv_mmsg(size_t max_p
 		&guidWSARecvMsg, sizeof(guidWSARecvMsg),
 		&lpfnWSARecvMsg, sizeof(lpfnWSARecvMsg),
 		&bytesReturned, NULL, NULL) == SOCKET_ERROR) {
-		printf("WSAIoctl failed: %d\n", WSAGetLastError());
+		rd_ex.set_status({ false, WSAGetLastError() });
 		return rd_ex;
 	}
 
@@ -608,11 +606,9 @@ QVPN::Core::ReceiveDataEx QVPN::NetTools::QVPN_RawSocket::recv_mmsg(size_t max_p
 
 	if (result == SOCKET_ERROR) {
 		rd_ex.set_status(QVPN::Core::NetStatus{ false, WSAGetLastError()});
-		printf("WSARecvMsg failed: %d\n", WSAGetLastError());
 	}
 	else {
 		rd_ex.add_raw_object(0, bytesReceived);
-		printf("Received %lu bytes\n", bytesReceived);
 		rd_ex.add_status(QVPN::Core::NetStatus{ true, 0 });
 		// buffer содержит IP-заголовок + данные (для raw-сокета)
 	}

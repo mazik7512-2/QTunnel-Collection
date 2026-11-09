@@ -385,12 +385,18 @@ QVPN::Core::NetAddr::AddrInt_t QVPN::Core::NetAddr::to_uint() const
 
 bool QVPN::Core::NetAddr::operator==(const NetAddr& other) const
 {
-	for (size_t i = 0; i < ip_.size(); i++)
+	// TODO: доделать сравнение на тип + INADDR_ANY
+	bool res = true;
+	auto min_size = std::min(other.get_addr_size(), get_addr_size());
+	for (size_t i = 0; i < min_size; i++)
 	{
 		if (ip_[i] != other.ip_[i])
-			return false;
+		{
+			res = false;
+			break;
+		}
 	}
-	return true;
+	return res;
 }
 
 // QVPN Socket Data
@@ -514,6 +520,16 @@ std::string QVPN::Core::QVPNServerSocketData::to_string() const
 	std::stringstream ss{};
 
 	ss << "(" << static_cast<BaseTypes::UInt>(net_proto) << "," << static_cast<BaseTypes::UInt>(transport_proto) << ") (Client data:" << client_local_addr.to_string() << ":" << local_port << "<=>" << server_local_addr.to_string() << ":" << local_port << ")-" << remote_addr.to_string() << ":" << remote_port;
+
+	auto str = ss.str();
+	return str;
+}
+
+std::string QVPN::Core::QVPNServerSocketData::to_string_no_server_local_addr() const
+{
+	std::stringstream ss{};
+
+	ss << "(" << static_cast<BaseTypes::UInt>(net_proto) << "," << static_cast<BaseTypes::UInt>(transport_proto) << ") (Client data:" << client_local_addr.to_string() << ":" << local_port << ")-" << remote_addr.to_string() << ":" << remote_port;
 
 	auto str = ss.str();
 	return str;

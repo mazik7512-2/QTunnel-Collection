@@ -32,15 +32,15 @@ namespace QVPN
 			static constexpr std::string_view short_lib_name_ = "QVPN Lib";
 
 			static constexpr UInt major_ver_ = 0;
-			static constexpr UInt minor_ver_ = 5;
-			static constexpr UInt patch_ver_ = 5;
+			static constexpr UInt minor_ver_ = 1;
+			static constexpr UInt patch_ver_ = 0;
 
-			//static constexpr std::string_view lib_ver_ = "0.5.5";
+			//static constexpr std::string_view lib_ver_ = "0.1.0";
 
-			//static constexpr std::string_view full_lib_name_ = "QVPN Library v0.5.5";
+			//static constexpr std::string_view full_lib_name_ = "QVPN Library v0.1.0";
 
 			static constexpr UInt last_compatible_major_ver_ = 0;
-			static constexpr UInt last_compatible_minor_ver_ = 5;
+			static constexpr UInt last_compatible_minor_ver_ = 1;
 			static constexpr UInt last_compatible_patch_ver_ = 0;
 
 		private:
@@ -647,6 +647,7 @@ namespace QVPN {
 
 
 			std::string to_string() const;
+			std::string to_string_no_server_local_addr() const;
 
 			// для std::unordered_map
 			bool operator==(const QVPNServerSocketData& other) const
@@ -677,6 +678,15 @@ namespace QVPN {
 				auto remote_str = std::format("{}:{}", remote_addr.to_string(), remote_port);
 				p.label_value(ss, "Remote socket data", remote_str);
 				return ss.str();
+			}
+		};
+
+
+		struct QVPNServerSocketData_NoServerLocalAddrHasher
+		{
+			size_t operator()(const QVPNServerSocketData& data) const noexcept
+			{
+				return std::hash<std::string>()(data.to_string_no_server_local_addr());
 			}
 		};
 

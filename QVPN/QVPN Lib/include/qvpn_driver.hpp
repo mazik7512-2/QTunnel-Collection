@@ -2344,7 +2344,7 @@ namespace QVPN
 				}
 			}
 
-			void connect_to_server_impl_(Socket& response_socket, QVPNServerSocketData& key, std::unordered_map<QVPNServerSocketData, PackedSocket>& sock_map, const QTunnelProxyData& proxy_data)
+			void connect_to_server_impl_(Socket& response_socket, QVPNServerSocketData& key, std::unordered_map<QVPNServerSocketData, PackedSocket, QVPNServerSocketData_NoServerLocalAddrHasher>& sock_map, const QTunnelProxyData& proxy_data)
 			{
 				// TODO: опнакелю б рнл врн йкхемр нропюбкъер RST, рюй йюй елс опхундхр SYN-ACK, ю RAW янйер ме пецхярпхпсер б TCP ярейе, онщрнлс кхан пюгнапюрэяъ я DUMMY SOCKET, кхан опюбхкю дкъ IPTABLES + IPSET
 				// iptables -A OUTPUT -p tcp --tcp-flags RST RST --dport <бюь_онпр> -j DROP
@@ -2408,7 +2408,7 @@ namespace QVPN
 				sock_map[key] = p_socket;
 			}
 
-			void connect_if_not_to_server(Socket& response_socket, QVPNServerSocketData& key, std::unordered_map<QVPNServerSocketData, PackedSocket>& sock_map, const QTunnelProxyData& proxy_data)
+			void connect_if_not_to_server(Socket& response_socket, QVPNServerSocketData& key, std::unordered_map<QVPNServerSocketData, PackedSocket, QVPNServerSocketData_NoServerLocalAddrHasher>& sock_map, const QTunnelProxyData& proxy_data)
 			{
 				if (!sock_map.contains(key))
 				{
@@ -2573,7 +2573,7 @@ namespace QVPN
 			}
 
 
-			bool vpn_request_loop_iteration(std::shared_ptr<Socket> client_socket, std::unordered_map<QVPNServerSocketData, PackedSocket>& sock_map, Stats& stats, std::string_view user)
+			bool vpn_request_loop_iteration(std::shared_ptr<Socket> client_socket, std::unordered_map<QVPNServerSocketData, PackedSocket, QVPNServerSocketData_NoServerLocalAddrHasher>& sock_map, Stats& stats, std::string_view user)
 			{
 				std::stringstream ss{};
 				std::stringstream ss1{};
@@ -2647,6 +2647,7 @@ namespace QVPN
 
 					//auto& server_socket = sock_map[key].raw_socket;
 					send_socket = &sock_map[key].raw_socket;
+					key.server_local_addr = send_socket->get_local_addr();
 
 					//
 					auto packet = generate_sender_packet(original_proxy_data, key, b, e);
@@ -2728,7 +2729,7 @@ namespace QVPN
 				ss << "QTunnel from (" << client_socket->get_remote_addr().to_string() << ":" << client_socket->get_remote_port() << ") initialized";
 				logger_.success(ss.view());
 
-				std::unordered_map<QVPNServerSocketData, PackedSocket> socket_map{};
+				std::unordered_map<QVPNServerSocketData, PackedSocket, QVPNServerSocketData_NoServerLocalAddrHasher> socket_map{};
 				bool status = true;
 				while (status)
 				{

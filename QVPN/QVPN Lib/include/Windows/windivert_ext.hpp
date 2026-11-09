@@ -458,7 +458,7 @@ namespace QVPN {
 			void start_capture_incoming_traffic_(const QVPN::Core::IPv4Address& adapter_addr)
 			{
 				logger_.info("Filters: {}", incoming_filters_data);
-				in_hDivert_ = WinDivertOpen(incoming_filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, 0);
+				in_hDivert_ = WinDivertOpen(incoming_filters_data.c_str(), WINDIVERT_LAYER_NETWORK, 0, WINDIVERT_FLAG_SNIFF); // packets must sniff
 				if (in_hDivert_ != INVALID_HANDLE_VALUE)
 				{
 					logger_.success("Driver is working.");
@@ -508,6 +508,7 @@ namespace QVPN {
 						<< readLen << " bytes total\n";
 
 					UINT sentLen = 0;
+					/* // Dont need if packets sniff
 					if (!WinDivertSendEx(in_hDivert_, packetBuffer_.data(), readLen,
 						&sentLen, 0, addr, addrLen, NULL)) {
 						std::cerr << "First SendEx failed: " << GetLastError() << "\n";
@@ -515,7 +516,7 @@ namespace QVPN {
 					else {
 						std::cout << "First Sent back " << sentLen << " bytes\n";
 					}
-
+					*/
 					auto packets = pp.pre_parse_cycled(packetBuffer_.data(), packetBuffer_.data() + readLen);
 					auto packets_num = packets.size();
 
